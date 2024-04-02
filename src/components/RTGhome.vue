@@ -1,7 +1,6 @@
 <template>
     <div>
       <v-list lines="one">
-        
         <v-list-item
           v-for="(item, index) in driversList"
           :key="index"
@@ -41,33 +40,6 @@
   </script>
   
   <style scoped>
- 
-  .title{
-    background-color: blue;
-  }
 
-  .v-list-item{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 1rem 0;
-    height: fit-content;
-    background-color: red;
-  }
-  
-  .driver{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-  }
-
-
-
-  .v-radio-group{
-   display: flex;
-   justify-content: center;
-   align-items: center;
-  }
   </style>
   
