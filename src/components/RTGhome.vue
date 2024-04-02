@@ -10,7 +10,6 @@
         {{ index }}
       </div>
       
-<<<<<<< HEAD
        </div>
         </v-list-item>
       </v-list>
@@ -39,37 +38,3 @@
 
   </style>
   
-=======
-        <v-radio-group v-model="selectedDriver[i]" inline>
-          <v-radio label="Enable" value=1></v-radio>
-          <v-radio label="Disable" value=0></v-radio>
-        </v-radio-group>
-    
-     </div>
-      </v-list-item>
-    </v-list>
-  </div>
-</template>
-
-<script>
-export default {
-  data() {
-    return {
-      driversList: [
-        "driver1",
-        "driver2",
-        "driver3",
-        "driver4",
-        "driver5",
-        "driver6",
-      ],
-      selectedDriver: []
-    };
-  },
-};
-</script>
-
-<style scoped>
-
-</style>
->>>>>>> dev
