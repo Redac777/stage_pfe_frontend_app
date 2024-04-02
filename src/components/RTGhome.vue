@@ -1,22 +1,22 @@
 <template>
     <div>
       <v-list lines="one">
+        
         <v-list-item
           v-for="(item, index) in driversList"
           :key="index"
         >
-          <div class="driver-info">
-            <!-- Driver title -->
-            <div class="title">{{ item }}</div>
-  
-            <!-- Radio group with two radio buttons -->
-            <div>
-                <v-radio-group v-model="selectedDriver[index]" inline>
-                    <div><v-radio label="Option 1" value="option1" class="radio-button"></v-radio></div>
-                    <div><v-radio label="Option 2" value="option2" class="radio-button"></v-radio></div>
-                </v-radio-group>
-            </div>
-          </div>
+       <div class="driver">
+        <div class="name">
+          {{ index }}
+        </div>
+        
+          <v-radio-group v-model="selectedDriver[i]" inline>
+            <v-radio label="Enable" value=1></v-radio>
+            <v-radio label="Disable" value=0></v-radio>
+          </v-radio-group>
+      
+       </div>
         </v-list-item>
       </v-list>
     </div>
@@ -41,28 +41,33 @@
   </script>
   
   <style scoped>
-  .driver-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    
-  }
+ 
   .title{
     background-color: blue;
   }
 
   .v-list-item{
-    background-color: red;
     display: flex;
+    justify-content: center;
+    align-items: center;
     margin: 1rem 0;
     height: fit-content;
+    background-color: red;
   }
   
-.radio-button{
-    background-color: green;
-}
-  .intcontent{
-    width: 80%;
+  .driver{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+  }
+
+
+
+  .v-radio-group{
+   display: flex;
+   justify-content: center;
+   align-items: center;
   }
   </style>
   
