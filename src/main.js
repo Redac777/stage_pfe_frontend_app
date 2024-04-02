@@ -11,7 +11,6 @@ import { registerPlugins } from '@/plugins'
 import App from './App.vue'
 import Store from './stores/index'
 import Router from "./router/router"
-
 // Composables
 import { createApp } from 'vue'
 

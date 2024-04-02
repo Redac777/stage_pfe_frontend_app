@@ -16,7 +16,7 @@
 .topbar {
     background-color: white;
     border-bottom: 2px solid #15263F;
-    height: 10vh;
+    height: 11vh;
     display: flex;
     justify-content: center;
     align-items: center;

@@ -23,7 +23,7 @@
 <style scoped>
 .main{
     background-color: white;
-    height: 100vh;
+    height: 100%;
 }
 
 .right{
