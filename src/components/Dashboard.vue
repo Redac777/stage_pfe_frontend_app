@@ -6,8 +6,10 @@
                 <Topbar/>
             </div>
             <div class="content">
-            <DashboardNavigation/>
-            <RTGhome/>
+            <DashboardNavigation @updateActiveComponent="updateActiveComponent"/>
+            <RTGhome v-if="activeComponent == 'RTGhome'" />
+            <STShome v-if="activeComponent == 'STShome'"/>
+            <button @click="show">Show</button>
             </div>
         </div>
         
@@ -16,7 +18,19 @@
   </template>
 
 <script>
-
+export default {
+    data(){
+        return{
+            activeComponent: 'RTGhome',
+        }
+    },
+    methods:{
+        updateActiveComponent(value){
+            this.activeComponent = value
+        }
+    }
+    
+}
 
 </script>
 
