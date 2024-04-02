@@ -39,10 +39,7 @@
                 </div>
                 <v-divider></v-divider>
                 <div class="bottomitems">
-                    <v-btn icon 
-                    @click.stop="rail = !rail" 
-                    v-bind:class="{ 'closedrawer': true }"
-                    >
+                    <v-btn icon @click="logout">
                         <v-icon size="small" style="color: white;">
                             mdi-logout
                         </v-icon>
@@ -70,7 +67,13 @@
       this.items.forEach((item, i) => {
         item.selected = i === index;
       });
-    }
+    },
+    logout() {
+            // Perform logout logic here
+            // For example, redirect the user to the logout page or clear session data
+            // After logout, you can navigate to the login page or perform any other required action
+        }
+
   }
     }
 </script>

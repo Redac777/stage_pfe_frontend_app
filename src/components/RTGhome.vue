@@ -1,19 +1,29 @@
 <template>
-  <div>
-    <v-list lines="one">
-      <v-list-item
-        v-for="(item, index) in driversList"
-        :key="index"
-      >
-     <div class="driver">
-      <div class="name">
-        {{ index }}
+  <div class="main-parent">
+    <div class="parent">
+    <div class="drivers-container">
+      <div v-for="(chunk, colIndex) in chunkedDrivers" :key="colIndex" class="column">
+        <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
+          <div class="name">{{ item }}</div>
+          <v-switch v-model="selectedDrivers" :value="item" hide-details></v-switch>
+        </div>
       </div>
-      
-       </div>
-        </v-list-item>
-      </v-list>
     </div>
+ 
+    <div class="rtgs-container">
+      <div v-for="(chunk, colIndex) in chunkedRTGs" :key="colIndex" class="column">
+        <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
+          <div class="name">{{ item }}</div>
+          <v-switch v-model="selectedRTGs" :value="item" hide-details></v-switch>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="start-button">
+    <v-btn @click="getData" density="default" style="background-color:#15263F ; color: white; width: 120px;">Start</v-btn>
+  </div>
+  </div>
+  
   </template>
   
   <script>
@@ -21,20 +31,93 @@
     data() {
       return {
         driversList: [
-          "driver1",
-          "driver2",
-          "driver3",
-          "driver4",
-          "driver5",
-          "driver6",
+          "Driver1",
+          "Driver2",
+          "Driver3",
+          "Driver4",
+          "Driver5",
+          "Driver6",
         ],
-        selectedDriver: []
+        rtgsList: [
+          "RTG1", "RTG2", "RTG3", "RTG4", "RTG5", "RTG6", "RTG7", "RTG8",
+          "RTG9", "RTG10", "RTG11", "RTG12", "RTG13", "RTG14", "RTG15", "RTG16",
+          "RTG17", "RTG18", "RTG19", "RTG20", "RTG21", "RTG22"
+        ],
+        selectedDrivers: [],
+        selectedRTGs: [],
       };
     },
+    computed: {
+      chunkedDrivers() {
+      return this.chunkArray(this.driversList, 6);
+    },
+    chunkedRTGs() {
+      return this.chunkArray(this.rtgsList, 6);
+    },
+  },
+  methods: {
+    chunkArray(arr, size) {
+      return arr.reduce((acc, _, i) => (i % size === 0 ? [...acc, arr.slice(i, i + size)] : acc), []);
+    },
+    getData() {
+      console.log("Selected drivers : " + this.selectedDrivers);
+      console.log("Selected RTGs : " + this.selectedRTGs);
+    }
+  },
   };
   </script>
   
   <style scoped>
+
+  .main-parent{
+    display: flex;
+    width: fit-content;
+    flex-direction: column;
+    height: 88%;
+    gap: 0.3rem;
+  }
+ .parent {
+  display: flex;
+  justify-content: center;
+  gap: 6rem;
+  width: 100%;
+  height: fit-content;
+}
+.start-button{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: fit-content;
+}
+.drivers-container, .rtgs-container {
+  display: flex;
+  gap: 2rem;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.driver {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem; /* Espacement entre les drivers */
+}
+.v-switch {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: x-small !important;
+}
+
+
+.name{
+  font-size: 0.9rem;
+  font-weight: bold;
+}
 
   </style>
   

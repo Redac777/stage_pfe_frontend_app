@@ -29,7 +29,7 @@
     gap: 5%;
     justify-content: center;
     align-items: center;
-    height: 15vh;
+    height: 12vh;
 }
 
 </style>
