@@ -11,12 +11,26 @@
     export default {
         data(){
             return{
-                selected:1
+                selected:1,
             }
         },
         methods:{
             select(x){
                 this.selected = x
+                switch(x){
+                    case 1:
+                        this.$emit('updateActiveComponent', 'RTGhome');
+                        break
+                    case 2:
+                        this.$emit('updateActiveComponent', 'STShome');
+                        break
+                    case 3:
+                        this.$emit('update:activeComponent', 'RTGhome');
+                        break
+                    case 4:
+                        this.$emit('update:activeComponent', 'RTGhome');
+                        break
+                }
             }
         }
     }
