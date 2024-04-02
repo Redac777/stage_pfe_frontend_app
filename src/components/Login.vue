@@ -109,8 +109,8 @@
        });
        },
        redirectAfterLogin(){
-           this.$router.push('/users');
-          // window.location.reload()
+           this.$router.push('/home');
+        
        }
 
    }

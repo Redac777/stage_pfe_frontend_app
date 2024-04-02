@@ -49,3 +49,8 @@ export default {
 }
   //
 </script>
+<style scoped>
+.main{
+  position: relative;
+}
+</style>
