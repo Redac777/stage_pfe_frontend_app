@@ -9,7 +9,6 @@
             <DashboardNavigation @updateActiveComponent="updateActiveComponent"/>
             <RTGhome v-if="activeComponent == 'RTGhome'" />
             <STShome v-if="activeComponent == 'STShome'"/>
-            <button @click="show">Show</button>
             </div>
         </div>
         
