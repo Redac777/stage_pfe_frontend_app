@@ -1,6 +1,7 @@
 <template>
   <div class="main-parent">
     <div class="parent">
+      <!-- List drivers with associated switches -->
     <div class="drivers-container">
       <div v-for="(chunk, colIndex) in chunkedDrivers" :key="colIndex" class="column">
         <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
@@ -9,7 +10,8 @@
         </div>
       </div>
     </div>
- 
+
+      <!-- List rtgs with associated switches -->
     <div class="rtgs-container">
       <div v-for="(chunk, colIndex) in chunkedRTGs" :key="colIndex" class="column">
         <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
@@ -19,6 +21,8 @@
       </div>
     </div>
   </div>
+
+      <!-- Start Button  -->
   <div class="start-button">
     <v-btn @click="getData" density="default" style="background-color:#15263F ; color: white; width: 120px;">Start</v-btn>
   </div>
@@ -48,17 +52,23 @@
       };
     },
     computed: {
+      // returns array of 6 drivers per chunk
       chunkedDrivers() {
       return this.chunkArray(this.driversList, 6);
     },
+
+    // returns array of 6 rtgs per chunk
     chunkedRTGs() {
       return this.chunkArray(this.rtgsList, 6);
     },
   },
   methods: {
+    // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce((acc, _, i) => (i % size === 0 ? [...acc, arr.slice(i, i + size)] : acc), []);
     },
+
+    // returns selected drivers and rtgs
     getData() {
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected RTGs : " + this.selectedRTGs);
@@ -112,7 +122,6 @@
   align-items: center;
   font-size: x-small !important;
 }
-
 
 .name{
   font-size: 0.9rem;
