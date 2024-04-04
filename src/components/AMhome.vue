@@ -1,17 +1,17 @@
 <template>
   <div class="main-parent">
     <div class="parent">
-      <!-- List drivers with associated switches -->
-      <div class="drivers-container">
+      <!-- List ams with associated switches -->
+      <div class="ams-container">
         <div
-          v-for="(chunk, colIndex) in chunkedDrivers"
+          v-for="(chunk, colIndex) in chunkedAMs"
           :key="colIndex"
           class="column"
         >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="ndrivere">{{ item }}</div>
+          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="am">
+            <div class="name">{{ item }}</div>
             <v-switch
-              v-model="selectedDrivers"
+              v-model="selectedAMs"
               :value="item"
               hide-details
             ></v-switch>
@@ -26,7 +26,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div class="ndrivere">{{ item }}</div>
+            <div class="name">{{ item }}</div>
             <v-switch
               v-model="selectedSTSs"
               :value="item"
@@ -41,6 +41,14 @@
               @click:outside="closeDialog(item)"
             >
               <v-card>
+                <v-card-text>
+                  <v-radio-group v-model="selectedRole" row>
+                    <v-radio :label="'TA'" value="TA"></v-radio>
+                    <v-radio :label="'ST'" value="ST"></v-radio>
+                  </v-radio-group>
+                </v-card-text>
+              </v-card>
+              <v-card v-if="selectedRole === 'TA'">
                 <v-card-text
                   v-for="(interval, index) in intervals[item]"
                   :key="index"
@@ -82,6 +90,23 @@
                   <v-btn @click="closeDialog(item)">Close</v-btn>
                 </v-card-actions>
               </v-card>
+              <v-card v-else-if="selectedRole === 'ST'">
+                <v-select
+                  v-model="selectedSTWorker"
+                  :items="stWorkers"
+                  label="Select ST Worker"
+                ></v-select>
+                <v-card-actions>
+                  <v-btn
+                    color="primary"
+                    @click="saveTime(item)"
+                    :disabled="isSaveButtonDisabled(item)"
+                    :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
+                    >Save</v-btn
+                  >
+                  <v-btn @click="closeDialog(item)">Close</v-btn>
+                </v-card-actions>
+              </v-card>
             </v-dialog>
           </div>
         </div>
@@ -104,14 +129,7 @@ export default {
   data() {
     return {
       minTimeIndex: -1,
-      driversList: [
-        "Driver1",
-        "Driver2",
-        "Driver3",
-        "Driver4",
-        "Driver5",
-        "Driver6",
-      ],
+      amsList: ["AM1", "AM2", "AM3", "AM4", "AM5", "AM6"],
       stssList: [
         "STS1",
         "STS2",
@@ -136,20 +154,25 @@ export default {
         "STS21",
         "STS22",
       ],
-      selectedDrivers: [],
+      selectedAMs: [],
       selectedSTSs: [],
       intervals: {},
+      workers : [],
       dialog: {}, // Object to store dialog state for each STS
       startTime: "",
       endTime: "",
       respectedStart: false,
       respectedEnd: false,
+      selectedRole: "TA",
+      selectedSTWorker: "",
+      stWorkers: ["Worker1", "Worker2", "Worker3", "Worker4", "Worker5"],
     };
   },
   computed: {
     isSaveButtonDisabled() {
       return (item) => {
-        if (this.intervals[item]) {
+        if(this.selectedRole === "TA"){
+            if (this.intervals[item]) {
           const isValidIntervals = this.intervals[item].every((interval, i) => {
             if (i === 0) {
               // For the first interval, there's no previous interval to compare with
@@ -169,11 +192,14 @@ export default {
               (interval) => interval.startTime === "" || interval.endTime === ""
             ) ||
             !this.respectedStart ||
-            !this.respectedEnd || 
+            !this.respectedEnd ||
             !isValidIntervals
           );
         }
-        return true; // Disable if intervals are not defined
+        }
+        else if(this.selectedRole === "ST"){
+          return this.selectedSTWorker === ""
+        }
       };
     },
     isAddIntervalButtonDisabled() {
@@ -199,7 +225,7 @@ export default {
             ) ||
             !this.respectedStart ||
             !this.respectedEnd ||
-           !isValidIntervals ||
+            !isValidIntervals ||
             this.intervals[item][this.intervals[item].length - 1].endTime ==
               "15:00"
           );
@@ -207,9 +233,9 @@ export default {
         return true; // Disable if intervals are not defined
       };
     },
-    // returns array of 6 drivers per chunk
-    chunkedDrivers() {
-      return this.chunkArray(this.driversList, 6);
+    // returns array of 6 ams per chunk
+    chunkedAMs() {
+      return this.chunkArray(this.amsList, 6);
     },
 
     // returns array of 6 stss per chunk
@@ -311,14 +337,15 @@ export default {
         []
       );
     },
-    // returns selected drivers and stss
+    // returns selected ams and stss
     getData() {
-      console.log("Selected drivers : " + this.selectedDrivers);
+      console.log("Selected ams : " + this.selectedAMs);
       console.log("Selected STSs : " + JSON.stringify(this.intervals));
+      console.log("Selected STSs : " + JSON.stringify(this.workers));
     },
     // switch on change state
     onChange(item) {
-      this.intervalsSaved=false;
+      this.intervalsSaved = false;
       this.respected = false;
       if (this.selectedSTSs.includes(item)) {
         this.openDialog(item);
@@ -330,34 +357,47 @@ export default {
     //open sts intervals dialog
     openDialog(item) {
       // Set dialog state for the specific STS item to true
+      
+      if (!this.dialog[item]) {
+    this.dialog[item] = true;
+  }
 
-      if (!this.intervals) {
-        this.intervals = {};
-      }
-      this.dialog[item] = true;
-      if (!this.intervals[item]) {
-        this.intervals[item] = [{ startTime: "", endTime: "" }];
-      }
+  // Initialize intervals and workers arrays if not already initialized
+  if (!this.intervals[item]) {
+    this.intervals[item] = [{ startTime: "", endTime: "" }];
+  }
+  
+  if (!this.workers[item] && this.selectedRole === 'ST') {
+    this.workers[item] = [{ STS: item, worker: "" }];
+  }
     },
     // save sts intervals
     saveTime(item) {
-      this.intervalsSaved = true;
-
-      // Close the dialog regardless of whether intervals were saved
-      console.log(this.intervals);
-      this.closeDialog(item);
+        this.intervalsSaved = false;
+    if (this.selectedRole === 'TA') {
+    // Save intervals for TA role
+    if(this.intervals[item]) {
+        this.intervalsSaved = true;
+    }
+  } else if (this.selectedRole === 'ST') {
+    // Save ST worker for ST role
+    this.selectedSTSs.push(item);
+    delete this.intervals[item];
+    this.workers.push({ STS: item, worker: this.selectedSTWorker });
+  }
+  this.closeDialog(item);
     },
 
     // close sts intervals dialog
     closeDialog(item) {
       if (!this.intervalsSaved) {
-      const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
-      this.selectedSTSs[this.selectedSTSs.indexOf(item)] = this.selectedSTSs[this.selectedSTSs.length-1];
-      this.selectedSTSs[this.selectedSTSs.length-1] = tempitem;
-      this.selectedSTSs.pop();
+        const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
+        this.selectedSTSs[this.selectedSTSs.indexOf(item)] =
+        this.selectedSTSs[this.selectedSTSs.length - 1];
+        this.selectedSTSs[this.selectedSTSs.length - 1] = tempitem;
+        this.selectedSTSs.pop();
       }
       this.dialog[item] = false;
-      console.log(this.selectedSTSs)
     },
   },
 };
@@ -385,7 +425,7 @@ export default {
   align-items: center;
   height: fit-content;
 }
-.drivers-container,
+.ams-container,
 .stss-container {
   display: flex;
   gap: 2rem;
@@ -395,13 +435,13 @@ export default {
   flex-direction: column;
   align-items: flex-start;
 }
-.driver,
+.am,
 .sts {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1rem; /* Espacement entre les drivers */
+  margin-bottom: 1rem; /* Espacement entre les ams */
 }
 .v-switch {
   display: flex;
@@ -409,7 +449,7 @@ export default {
   align-items: center;
   font-size: x-small !important;
 }
-.ndrivere {
+.name {
   font-size: 0.9rem;
   font-weight: bold;
   width: 30px;

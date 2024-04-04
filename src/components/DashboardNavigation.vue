@@ -25,10 +25,10 @@
                         this.$emit('updateActiveComponent', 'STShome');
                         break
                     case 3:
-                        this.$emit('update:activeComponent', 'RTGhome');
+                        this.$emit('updateActiveComponent', 'RShome');
                         break
                     case 4:
-                        this.$emit('update:activeComponent', 'RTGhome');
+                        this.$emit('updateActiveComponent', 'AMhome');
                         break
                 }
             }
