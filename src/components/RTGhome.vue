@@ -126,6 +126,7 @@
 .name{
   font-size: 0.9rem;
   font-weight: bold;
+  width: 30px;
 }
 
   </style>
