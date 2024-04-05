@@ -2,6 +2,7 @@
   <div class="main-parent">
     <div class="parent">
       <!-- List drivers with associated switches -->
+      <div class="label-column">Drivers</div>
       <div class="drivers-container">
         <div
           v-for="(chunk, colIndex) in chunkedDrivers"
@@ -19,6 +20,7 @@
         </div>
       </div>
       <!-- List stss with associated switches -->
+      <div class="label-column">STSs</div>
       <div class="stss-container">
         <div
           v-for="(chunk, colIndex) in chunkedSTSs"
@@ -169,7 +171,7 @@ export default {
               (interval) => interval.startTime === "" || interval.endTime === ""
             ) ||
             !this.respectedStart ||
-            !this.respectedEnd || 
+            !this.respectedEnd ||
             !isValidIntervals
           );
         }
@@ -199,7 +201,7 @@ export default {
             ) ||
             !this.respectedStart ||
             !this.respectedEnd ||
-           !isValidIntervals ||
+            !isValidIntervals ||
             this.intervals[item][this.intervals[item].length - 1].endTime ==
               "15:00"
           );
@@ -318,7 +320,7 @@ export default {
     },
     // switch on change state
     onChange(item) {
-      this.intervalsSaved=false;
+      this.intervalsSaved = false;
       this.respected = false;
       if (this.selectedSTSs.includes(item)) {
         this.openDialog(item);
@@ -351,13 +353,14 @@ export default {
     // close sts intervals dialog
     closeDialog(item) {
       if (!this.intervalsSaved) {
-      const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
-      this.selectedSTSs[this.selectedSTSs.indexOf(item)] = this.selectedSTSs[this.selectedSTSs.length-1];
-      this.selectedSTSs[this.selectedSTSs.length-1] = tempitem;
-      this.selectedSTSs.pop();
+        const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
+        this.selectedSTSs[this.selectedSTSs.indexOf(item)] =
+          this.selectedSTSs[this.selectedSTSs.length - 1];
+        this.selectedSTSs[this.selectedSTSs.length - 1] = tempitem;
+        this.selectedSTSs.pop();
       }
       this.dialog[item] = false;
-      console.log(this.selectedSTSs)
+      console.log(this.selectedSTSs);
     },
   },
 };
@@ -374,7 +377,7 @@ export default {
 .parent {
   display: flex;
   justify-content: center;
-  gap: 6rem;
+  gap: 2rem;
   width: 100%;
   height: fit-content;
 }
@@ -442,5 +445,12 @@ export default {
 }
 .disabled-button {
   cursor: not-allowed;
+}
+.label-column {
+  writing-mode: vertical-rl; /* Écriture verticale */
+  text-align: center; /* Alignement horizontal */
+  font-weight: bold;
+  font-size: 1.2rem;
+  transform: rotate(180deg);
 }
 </style>
