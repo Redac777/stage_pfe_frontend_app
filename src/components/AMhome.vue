@@ -2,6 +2,7 @@
   <div class="main-parent">
     <div class="parent">
       <!-- List ams with associated switches -->
+      <div class="label-column">AMS</div>
       <div class="ams-container">
         <div
           v-for="(chunk, colIndex) in chunkedAMs"
@@ -19,6 +20,7 @@
         </div>
       </div>
       <!-- List stss with associated switches -->
+      <div class="label-column">STSs</div>
       <div class="stss-container">
         <div
           v-for="(chunk, colIndex) in chunkedSTSs"
@@ -111,6 +113,45 @@
           </div>
         </div>
       </div>
+      <!-- List ams roles with associated switches -->
+      <div class="label-column">Roles</div>
+      <div class="amsroles-container">
+        <div
+          v-for="(chunk, colIndex) in chunkedRoles"
+          :key="colIndex"
+          class="column"
+        >
+          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="role">
+            <div class="name">{{ item }}</div>
+            <v-switch
+              v-model="selectedRoles"
+              :value="item"
+              hide-details
+              @change="onChangeRole(item)"
+            ></v-switch>
+            <v-dialog v-model="roleDialog[item]" max-width="400">
+              <v-card>
+                <v-card-title
+                  >Enter Number of Workers for {{ item }}</v-card-title
+                >
+                <v-card-text>
+                  <v-text-field
+                    v-model="numWorkers[item]"
+                    label="Number of Workers"
+                    type="number"
+                  ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                  <v-btn color="primary" @click="saveRoleData(item)"
+                    >Save</v-btn
+                  >
+                  <v-btn @click="closeRoleDialog(item, false)">Close</v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- Start Button -->
     <div class="start-button">
@@ -157,7 +198,7 @@ export default {
       selectedAMs: [],
       selectedSTSs: [],
       intervals: {},
-      workers : [],
+      workers: [],
       dialog: {}, // Object to store dialog state for each STS
       startTime: "",
       endTime: "",
@@ -166,39 +207,45 @@ export default {
       selectedRole: "TA",
       selectedSTWorker: "",
       stWorkers: ["Worker1", "Worker2", "Worker3", "Worker4", "Worker5"],
+      roles: ["checker", "deckman", "assistant"],
+      selectedRoles: [],
+      roleDialog: {},
+      numWorkers: {},
     };
   },
   computed: {
     isSaveButtonDisabled() {
       return (item) => {
-        if(this.selectedRole === "TA"){
-            if (this.intervals[item]) {
-          const isValidIntervals = this.intervals[item].every((interval, i) => {
-            if (i === 0) {
-              // For the first interval, there's no previous interval to compare with
-              return true;
-            } else {
-              // For subsequent intervals, compare with the previous interval's end time
-              const previousInterval = this.intervals[item][i - 1];
-              return (
-                interval.startTime >= previousInterval.endTime &&
-                interval.startTime < interval.endTime
-              );
-            }
-          });
-          // Check if any interval is empty
-          return (
-            this.intervals[item].some(
-              (interval) => interval.startTime === "" || interval.endTime === ""
-            ) ||
-            !this.respectedStart ||
-            !this.respectedEnd ||
-            !isValidIntervals
-          );
-        }
-        }
-        else if(this.selectedRole === "ST"){
-          return this.selectedSTWorker === ""
+        if (this.selectedRole === "TA") {
+          if (this.intervals[item]) {
+            const isValidIntervals = this.intervals[item].every(
+              (interval, i) => {
+                if (i === 0) {
+                  // For the first interval, there's no previous interval to compare with
+                  return true;
+                } else {
+                  // For subsequent intervals, compare with the previous interval's end time
+                  const previousInterval = this.intervals[item][i - 1];
+                  return (
+                    interval.startTime >= previousInterval.endTime &&
+                    interval.startTime < interval.endTime
+                  );
+                }
+              }
+            );
+            // Check if any interval is empty
+            return (
+              this.intervals[item].some(
+                (interval) =>
+                  interval.startTime === "" || interval.endTime === ""
+              ) ||
+              !this.respectedStart ||
+              !this.respectedEnd ||
+              !isValidIntervals
+            );
+          }
+        } else if (this.selectedRole === "ST") {
+          return this.selectedSTWorker === "";
         }
       };
     },
@@ -241,6 +288,9 @@ export default {
     // returns array of 6 stss per chunk
     chunkedSTSs() {
       return this.chunkArray(this.stssList, 6);
+    },
+    chunkedRoles() {
+      return this.chunkArray(this.roles, 6);
     },
   },
   methods: {
@@ -340,8 +390,12 @@ export default {
     // returns selected ams and stss
     getData() {
       console.log("Selected ams : " + this.selectedAMs);
-      console.log("Selected STSs : " + JSON.stringify(this.intervals));
-      console.log("Selected STSs : " + JSON.stringify(this.workers));
+      console.log("Selected TA STSs : " + JSON.stringify(this.intervals));
+      console.log("Selected ST STSs : " + JSON.stringify(this.workers));
+      console.log("Selected roles : " + this.selectedRoles);
+      console.log(
+        "Selected roles W ass Num : " + JSON.stringify(this.numWorkers)
+      );
     },
     // switch on change state
     onChange(item) {
@@ -354,38 +408,39 @@ export default {
         this.selectedSTSs.pop();
       }
     },
+
     //open sts intervals dialog
     openDialog(item) {
       // Set dialog state for the specific STS item to true
-      
-      if (!this.dialog[item]) {
-    this.dialog[item] = true;
-  }
 
-  // Initialize intervals and workers arrays if not already initialized
-  if (!this.intervals[item]) {
-    this.intervals[item] = [{ startTime: "", endTime: "" }];
-  }
-  
-  if (!this.workers[item] && this.selectedRole === 'ST') {
-    this.workers[item] = [{ STS: item, worker: "" }];
-  }
+      if (!this.dialog[item]) {
+        this.dialog[item] = true;
+      }
+
+      // Initialize intervals and workers arrays if not already initialized
+      if (!this.intervals[item]) {
+        this.intervals[item] = [{ startTime: "", endTime: "" }];
+      }
+
+      if (!this.workers[item] && this.selectedRole === "ST") {
+        this.workers[item] = [{ STS: item, worker: "" }];
+      }
     },
     // save sts intervals
     saveTime(item) {
-        this.intervalsSaved = false;
-    if (this.selectedRole === 'TA') {
-    // Save intervals for TA role
-    if(this.intervals[item]) {
-        this.intervalsSaved = true;
-    }
-  } else if (this.selectedRole === 'ST') {
-    // Save ST worker for ST role
-    this.selectedSTSs.push(item);
-    delete this.intervals[item];
-    this.workers.push({ STS: item, worker: this.selectedSTWorker });
-  }
-  this.closeDialog(item);
+      this.intervalsSaved = false;
+      if (this.selectedRole === "TA") {
+        // Save intervals for TA role
+        if (this.intervals[item]) {
+          this.intervalsSaved = true;
+        }
+      } else if (this.selectedRole === "ST") {
+        // Save ST worker for ST role
+        this.selectedSTSs.push(item);
+        delete this.intervals[item];
+        this.workers.push({ STS: item, worker: this.selectedSTWorker });
+      }
+      this.closeDialog(item);
     },
 
     // close sts intervals dialog
@@ -393,11 +448,42 @@ export default {
       if (!this.intervalsSaved) {
         const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
         this.selectedSTSs[this.selectedSTSs.indexOf(item)] =
-        this.selectedSTSs[this.selectedSTSs.length - 1];
+          this.selectedSTSs[this.selectedSTSs.length - 1];
         this.selectedSTSs[this.selectedSTSs.length - 1] = tempitem;
         this.selectedSTSs.pop();
+        delete this.intervals[item];
       }
       this.dialog[item] = false;
+    },
+
+    // Method to change the selected role
+    onChangeRole(item) {
+      if (this.selectedRoles.includes(item) && item !== "assistant") {
+        this.openRoleDialog(item);
+      } else {
+        delete this.numWorkers[item];
+      }
+    },
+    // Method to open the role dialog for a specific role
+    openRoleDialog(item) {
+      this.roleDialog[item] = true;
+    },
+    // Method to close the role dialog for a specific role
+    closeRoleDialog(item, value) {
+      if (!value) {
+        const tempitem = this.selectedRoles[this.selectedRoles.indexOf(item)];
+        this.selectedRoles[this.selectedRoles.indexOf(item)] =
+          this.selectedRoles[this.selectedRoles.length - 1];
+        this.selectedRoles[this.selectedRoles.length - 1] = tempitem;
+        this.selectedRoles.pop();
+        delete this.numWorkers[item];
+      }
+      this.roleDialog[item] = false;
+    },
+    // Method to save role data for a specific role
+    saveRoleData(item) {
+      // Close the dialog for the specific role
+      this.closeRoleDialog(item, true);
     },
   },
 };
@@ -414,7 +500,7 @@ export default {
 .parent {
   display: flex;
   justify-content: center;
-  gap: 6rem;
+  gap: 2rem;
   width: 100%;
   height: fit-content;
 }
@@ -426,7 +512,8 @@ export default {
   height: fit-content;
 }
 .ams-container,
-.stss-container {
+.stss-container,
+.amsroles-container {
   display: flex;
   gap: 2rem;
 }
@@ -442,6 +529,13 @@ export default {
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem; /* Espacement entre les ams */
+}
+.role {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
 }
 .v-switch {
   display: flex;
@@ -482,5 +576,12 @@ export default {
 }
 .disabled-button {
   cursor: not-allowed;
+}
+.label-column {
+  writing-mode: vertical-rl; /* Écriture verticale */
+  text-align: center; /* Alignement horizontal */
+  font-weight: bold;
+  font-size: 1.2rem;
+  transform: rotate(180deg);
 }
 </style>
