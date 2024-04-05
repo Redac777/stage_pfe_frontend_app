@@ -399,13 +399,11 @@ export default {
     },
     // switch on change state
     onChange(item) {
-      this.intervalsSaved = false;
-      this.respected = false;
       if (this.selectedSTSs.includes(item)) {
         this.openDialog(item);
       } else {
+        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
-        this.selectedSTSs.pop();
       }
     },
 
@@ -428,30 +426,21 @@ export default {
     },
     // save sts intervals
     saveTime(item) {
-      this.intervalsSaved = false;
-      if (this.selectedRole === "TA") {
-        // Save intervals for TA role
-        if (this.intervals[item]) {
-          this.intervalsSaved = true;
-        }
-      } else if (this.selectedRole === "ST") {
+      if (this.selectedRole === "ST") {
         // Save ST worker for ST role
         this.selectedSTSs.push(item);
         delete this.intervals[item];
         this.workers.push({ STS: item, worker: this.selectedSTWorker });
       }
-      this.closeDialog(item);
+      this.closeDialog(item, true);
     },
 
     // close sts intervals dialog
-    closeDialog(item) {
-      if (!this.intervalsSaved) {
-        const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
-        this.selectedSTSs[this.selectedSTSs.indexOf(item)] =
-          this.selectedSTSs[this.selectedSTSs.length - 1];
-        this.selectedSTSs[this.selectedSTSs.length - 1] = tempitem;
-        this.selectedSTSs.pop();
+    closeDialog(item, value) {
+      if (!value) {
+        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
+        this.workers = this.workers.filter((worker) => worker.STS !== item);
       }
       this.dialog[item] = false;
     },
@@ -471,11 +460,7 @@ export default {
     // Method to close the role dialog for a specific role
     closeRoleDialog(item, value) {
       if (!value) {
-        const tempitem = this.selectedRoles[this.selectedRoles.indexOf(item)];
-        this.selectedRoles[this.selectedRoles.indexOf(item)] =
-          this.selectedRoles[this.selectedRoles.length - 1];
-        this.selectedRoles[this.selectedRoles.length - 1] = tempitem;
-        this.selectedRoles.pop();
+        this.selectedRoles = this.selectedRoles.filter((role) => role !== item);
         delete this.numWorkers[item];
       }
       this.roleDialog[item] = false;

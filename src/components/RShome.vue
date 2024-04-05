@@ -153,7 +153,8 @@ export default {
           }
         } else {
           alert("RS number exceeded");
-          this.selectedRSs.pop();
+          this.selectedRSs = this.selectedRSs.filter((rs) => rs !== item);
+          this.rssStates = this.rssStates.filter((c) => c.rs !== item);
         }
       } else {
         this.rssStates = this.rssStates.filter((c) => c.rs !== item);
@@ -173,9 +174,10 @@ export default {
         const index = this.selectedRSs.indexOf(item);
         if (index === -1) {
           this.selectedRSs.splice(index, 1);
+        } else {
+          this.selectedRSs = this.selectedRSs.filter((rs) => rs !== item);
+          this.rssStates = this.rssStates.filter((c) => c.rs !== item);
         }
-        this.selectedRSs.pop();
-        this.rssStates.pop();
       }
       this.dialog[item] = false;
     },

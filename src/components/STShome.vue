@@ -76,12 +76,12 @@
                 <v-card-actions>
                   <v-btn
                     color="primary"
-                    @click="saveTime(item)"
+                    @click="saveDialog(item)"
                     :disabled="isSaveButtonDisabled(item)"
                     :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
                     >Save</v-btn
                   >
-                  <v-btn @click="closeDialog(item)">Close</v-btn>
+                  <v-btn @click="closeDialog(item, false)">Close</v-btn>
                 </v-card-actions>
               </v-card>
             </v-dialog>
@@ -320,47 +320,37 @@ export default {
     },
     // switch on change state
     onChange(item) {
-      this.intervalsSaved = false;
-      this.respected = false;
       if (this.selectedSTSs.includes(item)) {
         this.openDialog(item);
       } else {
+        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
-        this.selectedSTSs.pop();
       }
     },
     //open sts intervals dialog
     openDialog(item) {
-      // Set dialog state for the specific STS item to true
-
       if (!this.intervals) {
         this.intervals = {};
       }
-      this.dialog[item] = true;
       if (!this.intervals[item]) {
         this.intervals[item] = [{ startTime: "", endTime: "" }];
       }
+      this.dialog[item] = true;
     },
-    // save sts intervals
-    saveTime(item) {
-      this.intervalsSaved = true;
 
-      // Close the dialog regardless of whether intervals were saved
-      console.log(this.intervals);
-      this.closeDialog(item);
+    // save sts intervals
+    saveDialog(item) {
+      this.intervalsSaved = true;
+      this.closeDialog(item, true);
     },
 
     // close sts intervals dialog
-    closeDialog(item) {
-      if (!this.intervalsSaved) {
-        const tempitem = this.selectedSTSs[this.selectedSTSs.indexOf(item)];
-        this.selectedSTSs[this.selectedSTSs.indexOf(item)] =
-          this.selectedSTSs[this.selectedSTSs.length - 1];
-        this.selectedSTSs[this.selectedSTSs.length - 1] = tempitem;
-        this.selectedSTSs.pop();
+    closeDialog(item, value) {
+      if (!value) {
+        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
+        delete this.intervals[item];
       }
       this.dialog[item] = false;
-      console.log(this.selectedSTSs);
     },
   },
 };
