@@ -1,11 +1,22 @@
 <template>
   <v-app>
     <v-main class="main">
-      <div >
+      <div>
         <Loading v-if="load"/>
     </div>
     <div v-if="isLogged">
-        <router-view></router-view>
+        <div>
+          <Sidebar/>
+        </div>
+        <div class="right">
+            <div>
+                <Topbar/>
+            </div>
+            <div class="content">
+              <router-view></router-view>
+            </div>
+        </div>
+        
     </div>
     <div v-else>
         <Login /> 
@@ -18,6 +29,7 @@
 import {mapGetters} from 'vuex'
 import Login from './components/Login';
 import Loading from './components/Loading';
+import Dashboard from './components/Dashboard.vue';
 export default {
     components: { Login, Loading},
     data(){
@@ -52,5 +64,10 @@ export default {
 <style scoped>
 .main{
   position: relative;
+}
+.right{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 </style>

@@ -10,7 +10,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="name">{{ item }}</div>
+            <div class="drivername">{{ item }}</div>
             <v-switch
               v-model="selectedDrivers"
               :value="item"
@@ -28,7 +28,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rs">
-            <div class="name">{{ item }}</div>
+            <div class="rsname">{{ item }}</div>
             <v-switch
               v-model="selectedRSs"
               :value="item"
@@ -65,16 +65,11 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from "vuex";
 export default {
   data() {
     return {
       driversList: [
-        "Driver1",
-        "Driver2",
-        "Driver3",
-        "Driver4",
-        "Driver5",
-        "Driver6",
       ],
       rssList: [
         "RS1",
@@ -109,6 +104,7 @@ export default {
     };
   },
   computed: {
+    ...mapGetters(["getDrivers"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       return this.chunkArray(this.driversList, 6);
@@ -119,7 +115,24 @@ export default {
       return this.chunkArray(this.rssList, 6);
     },
   },
+  mounted() {
+    this.setDrivers();
+  },
   methods: {
+    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
+    setDrivers() {
+      const inputs = {
+        profile_group: "rs",
+        role: "driver",
+      };
+      this.setLoadingValueAction(true);
+      this.setDriversAction(inputs).then(() => {
+        this.setLoadingValueAction(false);
+        this.driversList = this.getDrivers.map(
+          (driver) => driver.firstname + " " + driver.lastname
+        );
+      });
+    },
     // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce(
@@ -231,10 +244,14 @@ export default {
   align-items: center;
   font-size: x-small !important;
 }
-.name {
+.drivername {
   font-size: 0.9rem;
   font-weight: bold;
-  width: 30px;
+  width: 100px;
+}
+.rsname{
+  font-size: 0.9rem;
+  font-weight: bold;
 }
 .label-column {
   writing-mode: vertical-rl; /* Écriture verticale */
