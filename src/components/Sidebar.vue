@@ -50,6 +50,7 @@
 </template>
 
 <script>
+import { mapActions, mapGetters } from "vuex"
    export default {
         data () {
       return {
@@ -62,17 +63,42 @@
       ]
       }
     },
+    computed: {
+    ...mapGetters(["getMessages", "getUserActive"])
+  },
     methods: {
+        ...mapActions(["logoutAction"]),
+    logout() {
+      this.logoutAction()
+        .then(() => {
+          console.log(this.getMessages.logout)
+          this.redirectAfterLogout();
+        })
+        .catch(error => {
+          console.error("Logout error:", error);
+        });
+    },
+    redirectAfterLogout() {
+      this.$router.push('/');
+      localStorage.clear()
+    },
     selectItem(index) {
       this.items.forEach((item, i) => {
         item.selected = i === index;
       });
+      switch (index) {
+        case 0:
+          this.$router.push('/dashboard');
+          break;
+        case 1:
+          this.$router.push('/users');
+          break;
+        case 2:
+          this.$router.push('/equipments');
+          break;
+      }
     },
-    logout() {
-            // Perform logout logic here
-            // For example, redirect the user to the logout page or clear session data
-            // After logout, you can navigate to the login page or perform any other required action
-        }
+    
 
   }
     }

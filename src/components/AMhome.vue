@@ -10,7 +10,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="am">
-            <div class="name">{{ item }}</div>
+            <div class="amname">{{ item }}</div>
             <v-switch
               v-model="selectedAMs"
               :value="item"
@@ -28,7 +28,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div class="name">{{ item }}</div>
+            <div class="stsname">{{ item }}</div>
             <v-switch
               v-model="selectedSTSs"
               :value="item"
@@ -122,7 +122,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="role">
-            <div class="name">{{ item }}</div>
+            <div class="rolename">{{ item }}</div>
             <v-switch
               v-model="selectedRoles"
               :value="item"
@@ -166,11 +166,12 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from "vuex";
 export default {
   data() {
     return {
       minTimeIndex: -1,
-      amsList: ["AM1", "AM2", "AM3", "AM4", "AM5", "AM6"],
+      amsList: [],
       stssList: [
         "STS1",
         "STS2",
@@ -214,6 +215,7 @@ export default {
     };
   },
   computed: {
+    ...mapGetters(["getDrivers"]),
     isSaveButtonDisabled() {
       return (item) => {
         if (this.selectedRole === "TA") {
@@ -293,7 +295,23 @@ export default {
       return this.chunkArray(this.roles, 6);
     },
   },
+  mounted() {
+    this.setDrivers();
+  },
   methods: {
+    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
+    setDrivers() {
+      const inputs = {
+        profile_group: "am",
+        role: "driver",
+      };
+      this.setLoadingValueAction(true);
+      this.setDriversAction(inputs).then((response) => {
+        this.setLoadingValueAction(false);
+        this.amsList = this.getDrivers.map(
+          (driver) => driver.firstname + " " + driver.lastname
+        );
+      });},
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
 
@@ -528,10 +546,14 @@ export default {
   align-items: center;
   font-size: x-small !important;
 }
-.name {
+.amname {
   font-size: 0.9rem;
   font-weight: bold;
-  width: 30px;
+  width: 100px;
+}
+.stsname,.rolename { 
+  font-size: 0.9rem;
+  font-weight: bold;
 }
 .add-interval-button {
   margin: auto;

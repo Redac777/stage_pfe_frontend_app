@@ -10,7 +10,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="name">{{ item }}</div>
+            <div class="drivername">{{ item }}</div>
             <v-switch
               v-model="selectedDrivers"
               :value="item"
@@ -28,8 +28,8 @@
           :key="colIndex"
           class="column"
         >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="name">{{ item }}</div>
+          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rtg">
+            <div class="rtgname">{{ item }}</div>
             <v-switch
               v-model="selectedRTGs"
               :value="item"
@@ -53,17 +53,11 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from "vuex";
 export default {
   data() {
     return {
-      driversList: [
-        "Driver1",
-        "Driver2",
-        "Driver3",
-        "Driver4",
-        "Driver5",
-        "Driver6",
-      ],
+      driversList: [],
       rtgsList: [
         "RTG1",
         "RTG2",
@@ -93,9 +87,10 @@ export default {
     };
   },
   computed: {
+    ...mapGetters(["getDrivers"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
-      return this.chunkArray(this.driversList, 6);
+      if (this.driversList) return this.chunkArray(this.driversList, 6);
     },
 
     // returns array of 6 rtgs per chunk
@@ -103,7 +98,25 @@ export default {
       return this.chunkArray(this.rtgsList, 6);
     },
   },
+
+  mounted() {
+    this.setDrivers();
+  },
   methods: {
+    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
+    setDrivers() {
+      const inputs = {
+        profile_group: "rtg",
+        role: "driver",
+      };
+      this.setLoadingValueAction(true);
+      this.setDriversAction(inputs).then(() => {
+        this.setLoadingValueAction(false);
+        this.driversList = this.getDrivers.map(
+          (driver) => driver.firstname + " " + driver.lastname
+        );
+      });
+    },
     // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce(
@@ -154,7 +167,8 @@ export default {
   flex-direction: column;
   align-items: flex-start;
 }
-.driver {
+.driver,
+.rtg {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -168,10 +182,14 @@ export default {
   font-size: x-small !important;
 }
 
-.name {
+.drivername {
   font-size: 0.9rem;
   font-weight: bold;
-  width: 30px;
+  width: 100px;
+}
+.rtgname {
+  font-size: 0.9rem;
+  font-weight: bold;
 }
 .label-column {
   writing-mode: vertical-rl; /* Écriture verticale */

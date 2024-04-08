@@ -10,7 +10,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="ndrivere">{{ item }}</div>
+            <div class="drivername">{{ item }}</div>
             <v-switch
               v-model="selectedDrivers"
               :value="item"
@@ -28,7 +28,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div class="ndrivere">{{ item }}</div>
+            <div class="stsname">{{ item }}</div>
             <v-switch
               v-model="selectedSTSs"
               :value="item"
@@ -102,18 +102,12 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from "vuex";
 export default {
   data() {
     return {
       minTimeIndex: -1,
-      driversList: [
-        "Driver1",
-        "Driver2",
-        "Driver3",
-        "Driver4",
-        "Driver5",
-        "Driver6",
-      ],
+      driversList: [],
       stssList: [
         "STS1",
         "STS2",
@@ -149,6 +143,7 @@ export default {
     };
   },
   computed: {
+    ...mapGetters(["getDrivers"]),
     isSaveButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -219,7 +214,24 @@ export default {
       return this.chunkArray(this.stssList, 6);
     },
   },
+    mounted() {
+      this.setDrivers();
+    },
   methods: {
+    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
+    setDrivers() {
+      const inputs = {
+        profile_group: "sts",
+        role: "driver",
+      };
+      this.setLoadingValueAction(true);
+      this.setDriversAction(inputs).then((response) => {
+        this.setLoadingValueAction(false);
+        this.driversList = this.getDrivers.map(
+          (driver) => driver.firstname + " " + driver.lastname
+        );
+      });
+    },
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
 
@@ -402,10 +414,14 @@ export default {
   align-items: center;
   font-size: x-small !important;
 }
-.ndrivere {
+.drivername {
   font-size: 0.9rem;
   font-weight: bold;
-  width: 30px;
+  width: 100px;
+}
+.stsname {
+  font-size: 0.9rem;
+  font-weight: bold;
 }
 .add-interval-button {
   margin: auto;

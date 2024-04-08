@@ -1,10 +1,5 @@
 <template>
     <div class="main">
-        <Sidebar/>
-        <div class="right">
-            <div>
-                <Topbar/>
-            </div>
             <div class="content">
             <DashboardNavigation @updateActiveComponent="updateActiveComponent"/>
             <RTGhome v-if="activeComponent == 'RTGhome'" />
@@ -12,8 +7,6 @@
             <RShome v-if="activeComponent == 'RShome'"/>
             <AMhome v-if="activeComponent == 'AMhome'"/>
             </div>
-        </div>
-        
     </div>
     
   </template>

@@ -2,6 +2,7 @@ import CustomizedAxios from "../../plugins/axios";
 const usersModule = {
   state: {
     users: [],
+    drivers: [],
     error: null,
     token: null,
     activeUser: null,
@@ -15,9 +16,8 @@ const usersModule = {
       state.token = payload.token;
     },
     LOGOUT_USER(state, message) {
-      
       state.activeUser = null;
-      console.log(state.activeUser)
+      console.log(state.activeUser);
       state.token = null;
       state.messages.logout = message;
     },
@@ -29,6 +29,9 @@ const usersModule = {
     },
     SET_USERS(state, payload) {
       state.users = payload;
+    },
+    SET_DRIVERS(state, payload) {
+      state.drivers = payload;
     },
     REGISTER_USER(state, payload) {
       state.users.push(payload);
@@ -55,7 +58,9 @@ const usersModule = {
         CustomizedAxios.post("users/login", user)
           .then((response) => {
             commit("LOGIN_USER", response.data.payload);
-            CustomizedAxios.defaults.headers.common['Authorization'] = `Bearer ${response.data.payload.token}`;
+            CustomizedAxios.defaults.headers.common[
+              "Authorization"
+            ] = `Bearer ${response.data.payload.token}`;
             resolve(response.data.payload);
           })
           .catch((error) => {
@@ -106,7 +111,7 @@ const usersModule = {
         };
         CustomizedAxios.post("users/delete", data)
           .then((response) => {
-            console.log(response.data.payload)
+            console.log(response.data.payload);
             commit("DELETE_USER", user);
             resolve(response.data.payload);
           })
@@ -142,6 +147,18 @@ const usersModule = {
           });
       });
     },
+    setDriversAction({ commit, state }, inputs) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("users/drivers", inputs)
+          .then((response) => {
+            commit("SET_DRIVERS", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
   },
   getters: {
     getUserActive: (state) => {
@@ -155,6 +172,9 @@ const usersModule = {
     },
     getUsers: (state) => {
       return state.users;
+    },
+    getDrivers: (state) => {
+      return state.drivers;
     },
   },
 };
