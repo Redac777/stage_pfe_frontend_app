@@ -1,4 +1,5 @@
 <template>
+  <div class="sidebar">
     <v-card>
                 <v-navigation-drawer
                 v-model="drawer"
@@ -47,6 +48,7 @@
                 </div>
                 </v-navigation-drawer>
     </v-card>
+  </div>
 </template>
 
 <script>
@@ -94,7 +96,7 @@ import { mapActions, mapGetters } from "vuex"
           this.$router.push('/users');
           break;
         case 2:
-          this.$router.push('/equipments');
+          this.$router.push('/equipements');
           break;
       }
     },
@@ -105,6 +107,9 @@ import { mapActions, mapGetters } from "vuex"
 </script>
 
 <style scoped>
+.sidebar{
+  z-index: 30;
+}
 .v-navigation-drawer{
     height: 100vh;
     

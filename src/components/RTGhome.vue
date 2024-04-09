@@ -59,35 +59,13 @@ export default {
     return {
       driversList: [],
       rtgsList: [
-        "RTG1",
-        "RTG2",
-        "RTG3",
-        "RTG4",
-        "RTG5",
-        "RTG6",
-        "RTG7",
-        "RTG8",
-        "RTG9",
-        "RTG10",
-        "RTG11",
-        "RTG12",
-        "RTG13",
-        "RTG14",
-        "RTG15",
-        "RTG16",
-        "RTG17",
-        "RTG18",
-        "RTG19",
-        "RTG20",
-        "RTG21",
-        "RTG22",
       ],
       selectedDrivers: [],
       selectedRTGs: [],
     };
   },
   computed: {
-    ...mapGetters(["getDrivers"]),
+    ...mapGetters(["getDrivers","getEquipements"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       if (this.driversList) return this.chunkArray(this.driversList, 6);
@@ -100,23 +78,27 @@ export default {
   },
 
   mounted() {
-    this.setDrivers();
+    this.setData();
   },
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
-    setDrivers() {
+    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    setData() {
       const inputs = {
         profile_group: "rtg",
         role: "driver",
       };
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then(() => {
-        this.setLoadingValueAction(false);
         this.driversList = this.getDrivers.map(
           (driver) => driver.firstname + " " + driver.lastname
         );
       });
+      this.setEquipementsAction().then(() => {
+        this.setLoadingValueAction(false);
+        this.rtgsList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="rtg").map((equipement) => equipement.matricule);
+      })
     },
+
     // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce(

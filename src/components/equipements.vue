@@ -20,19 +20,19 @@
                     hide-details single-line class="search"></v-text-field>
             </div>
 
-            <v-data-table :headers="headers" :items="filteredUsers" :search="search" class="table">
-                <!-- Add new user part -->
+            <v-data-table :headers="headers" :items="filteredEquipements" :search="search" class="table">
+                <!-- Add new equipement part -->
                 <template v-slot:top>
-                    <v-toolbar flat v-bind:class="{ 'addUserButtonZone': true }">
+                    <v-toolbar flat v-bind:class="{ 'addEquipementButtonZone': true }">
 
-                        <!-- Dialog to add new user -->
+                        <!-- Dialog to add newequipement -->
                         <v-dialog v-model="dialog" max-width="500px">
-                            <!-- Button to display add user dialog -->
+                            <!-- Button to display addequipement dialog -->
                             <template v-slot:activator="{ props }">
                                 <div class="addActions">
                                     <div>
                                         <v-btn icon color="white" @click="openFileDialog"
-                                            v-bind:class="{ 'importUsersButton': true }">
+                                            v-bind:class="{ 'importEquipementsButton': true }">
                                             <v-icon size="small">
                                                 mdi-upload
                                             </v-icon>
@@ -40,11 +40,11 @@
                                                 @change="handleFileUpload">
                                         </v-btn>
                                     </div>
-                                    <div class="addUserButtonStyle">
+                                    <div class="addEquipementButtonStyle">
                                         <v-btn icon v-bind="props" color="white"
-                                            v-bind:class="{ 'addUserButton': true }">
+                                            v-bind:class="{ 'addEquipementButton': true }">
                                             <v-icon size="small">
-                                                mdi-account-plus-outline
+                                                mdi-crane
                                             </v-icon>
                                         </v-btn>
                                     </div>
@@ -55,8 +55,8 @@
                             <v-card class="dialog">
                                 <div class="dialogTop">
                                     <div>
-                                        <v-card-title class="dialogAddUserTitleContainer">
-                                            <span class="text-h5">{{ dialogType === 'edit' ? 'Edit user' : 'New user'
+                                        <v-card-title class="dialogAddEquipementTitleContainer">
+                                            <span class="text-h5">{{ dialogType === 'edit' ? 'Edit equipement' : 'New equipement'
                                                 }}</span>
                                         </v-card-title>
                                     </div>
@@ -67,57 +67,17 @@
                                         <v-container>
                                             <v-row cols="16">
                                                 <v-col cols="16">
-                                                    <v-text-field v-model="user.matricule" label="Matricule"
+                                                    <v-text-field v-model="equipement.matricule" label="Matricule"
                                                         class="custom-text-field"
-                                                        :rules="[submitClicked ? requiredRule(user.matricule, 'matricule') : () => true]"></v-text-field>
-                                                </v-col>
-                                            </v-row>
-
-                                            <v-row cols="16">
-                                                <v-col cols="16">
-                                                    <v-text-field v-model="user.firstname" label="Firstname"
-                                                        class="custom-text-field"
-                                                        :rules="[submitClicked ? requiredRule(user.firstname, 'firstname') : () => true]"></v-text-field>
-                                                </v-col>
-                                            </v-row>
-
-                                            <v-row cols="16">
-                                                <v-col cols="16">
-                                                    <v-text-field v-model="user.lastname" label="Lastname"
-                                                        class="custom-text-field"
-                                                        :rules="[submitClicked ? requiredRule(user.lastname, 'lastname') : () => true]"></v-text-field>
-                                                </v-col>
-                                            </v-row>
-
-                                            <v-row cols="16">
-                                                <v-col cols="16">
-                                                    <v-text-field v-model="user.email" label="Email"
-                                                        :rules="[submitClicked ? requiredRule(user.email, 'email') : () => true]"></v-text-field>
-                                                </v-col>
-                                            </v-row>
-
-                                            <v-row cols="16">
-                                                <v-col cols="16">
-                                                    <v-select :items="roles" density="default" item-title="name"
-                                                        item-value="id" label="Roles" v-model="user.role_id"
-                                                        :rules="[submitClicked ? requiredRule(user.role_id, 'role') : () => true]">
-                                                        ></v-select>
-                                                </v-col>
-                                            </v-row>
-                                            <v-row cols="16">
-                                                <v-col cols="16">
-                                                    <v-select :items="shifts" density="default" item-title="category"
-                                                        item-value="id" label="Shifts" v-model="user.shift_id"
-                                                        :rules="[submitClicked ? requiredRule(user.shift_id, 'shift') : () => true]">
-                                                        ></v-select>
+                                                        :rules="[submitClicked ? requiredRule(equipement.matricule, 'matricule') : () => true]"></v-text-field>
                                                 </v-col>
                                             </v-row>
                                             <v-row cols="16">
                                                 <v-col cols="16">
                                                     <v-select :items="profileGroups" density="default" item-title="type"
                                                         item-value="id" label="Profile Groups"
-                                                        v-model="user.profile_group_id"
-                                                        :rules="[submitClicked ? requiredRule(user.profile_group_id, 'profile_group') : () => true]">
+                                                        v-model="equipement.profile_group_id"
+                                                        :rules="[submitClicked ? requiredRule(equipement.profile_group_id, 'profile_group') : () => true]">
                                                         ></v-select>
                                                 </v-col>
                                             </v-row>
@@ -126,10 +86,10 @@
                                                 <v-col cols="16">
                                                     <div>
                                                         <label for="radio-group"
-                                                            style="font-weight: bold;">Account:</label>
-                                                        <v-radio-group v-model="user.isactive" id="radio-group" inline>
-                                                            <v-radio label="Enable" value=1></v-radio>
-                                                            <v-radio label="Disable" value=0></v-radio>
+                                                            style="font-weight: bold;">Status:</label>
+                                                        <v-radio-group v-model="equipement.status" id="radio-group" inline>
+                                                            <v-radio label="Works" value=1></v-radio>
+                                                            <v-radio label="Out of service" value=0></v-radio>
                                                         </v-radio-group>
                                                     </div>
                                                 </v-col>
@@ -154,7 +114,7 @@
                         <v-dialog v-model="dialogDelete" max-width="500px">
                             <v-card>
                                 <v-card-title class="dialogText">Are you sure you want to delete this
-                                    user?</v-card-title>
+                                   equipement ?</v-card-title>
                                 <v-card-actions>
                                     <v-spacer></v-spacer>
                                     <v-btn class="dialogCancel" variant="text" @click="closeDelete">Cancel</v-btn>
@@ -163,30 +123,12 @@
                                 </v-card-actions>
                             </v-card>
                         </v-dialog>
-                        <!-- Dialog for reseting passsword -->
-                        <v-dialog v-model="dialogReset" max-width="500px">
-                            <v-card>
-                                <v-card-title class="dialogText">Are you sure you want to reset password for this
-                                    user?</v-card-title>
-                                <v-card-actions>
-                                    <v-spacer></v-spacer>
-                                    <v-btn class="dialogCancel" variant="text" @click="closeReset">Cancel</v-btn>
-                                    <v-btn class="dialogOk" variant="text" @click="resetPasswordConfirm">OK</v-btn>
-                                    <v-spacer></v-spacer>
-                                </v-card-actions>
-                            </v-card>
-                        </v-dialog>
                     </v-toolbar>
                 </template>
                 <template v-slot:item="{ item }">
-                    <tr :class="{ 'inactive-user': item.isactive === 0 }">
-                        <td>{{ item.fullname }}</td>
+                    <tr :class="{ 'inactive-equipement': item.status === 0 }">
                         <td>{{ item.matricule }}</td>
-                        <td>{{ item.email }}</td>
-                        <td>{{ item.roleName }}</td>
                         <td>{{ item.profile_groupName }}</td>
-                        <td>{{ item.shiftName }}</td>
-                        <td>{{ item.workingHours }}</td>
                         <td>
                             <div class="actions">
                                 <v-btn icon class="icon" size="small" color="green-darken-4" @click="editItem(item)">
@@ -198,12 +140,6 @@
                                 <v-btn icon class="icon" size="small" color="red" @click="deleteItem(item)">
                                     <v-icon>
                                         mdi-delete
-                                    </v-icon>
-                                </v-btn icon>
-
-                                <v-btn icon class="icon" size="small" color="yellow-darken-4" @click="resetItem(item)">
-                                    <v-icon>
-                                        mdi-rotate-left
                                     </v-icon>
                                 </v-btn icon>
                             </div>
@@ -228,49 +164,27 @@ export default {
         dialogType: '',
         snackbar: false,
         text: '',
-        notAddedUsers: [],
+        notAddedEquipements: [],
         timeout: 2500,
         selectedValue: "",
-        roles: [],
-        shifts: [],
         profileGroups: [],
         file: {
             name: '',
         },
         reader: null,
         fileRead: false,
-        user: {
+       equipement: {
             id: -1,
             matricule: "",
-            firstname: "",
-            lastname: "",
-            email: "",
-            workingHours : "",
-            role_id: "",
-            roleName: "",
-            shift_id: "",
-            shiftName: "",
             profile_group_id: "",
             profile_groupName: "",
-            isactive: -1
+            status: -1
         },
         headers: [
-            {
-                title: 'Full Name',
-                align: 'start',
-                sortable: true,
-                key: 'fullname',
-            },
             {
                 title: 'Matricule',
                 sortable: true,
                 key: 'matricule',
-            },
-            { title: 'Email', key: 'email', sortable: false },
-            {
-                title: 'Role',
-                sortable: false,
-                key: 'role',
             },
             {
                 title: 'Profile Group',
@@ -278,22 +192,19 @@ export default {
                 key: 'profile_group',
             },
             {
-                title: 'Shift',
+                title: 'Actions',
                 sortable: false,
-                key: 'shift',
-            },
-            { title: 'Working Hours', key: 'workingHours', sortable: true },
-            
-            { title: 'Actions', key: 'actions', sortable: false },
+                key: 'actions',
+            }
         ],
-        users: [],
+        equipements: [],
         searchQuery: '',
-        filteredUsers: [],
+        filteredEquipements: [],
         submitClicked: false,
     }),
 
     computed: {
-        ...mapGetters(["getUsers", "getToken", "getRoles", "getShifts", "getProfileGroups"]),
+        ...mapGetters(["getEquipements", "getProfileGroups"]),
 
     },
 
@@ -304,28 +215,22 @@ export default {
         dialogDelete(val) {
             val || this.closeDelete()
         },
-        dialogReset(val) {
-            val || this.closeReset()
-        },
         selectedValue(newValue) {
             console.log(newValue);
         }
     },
     mounted() {
-        this.refreshUsersTable();
+        this.refreshEquipementsTable();
     },
 
     methods: {
 
         ...mapActions([
-            "setUsersAction",
+            "setEquipementsAction",
             "setLoadingValueAction",
-            "resetPasswordAction",
-            "deleteUserAction",
-            "registerUserAction",
-            "editUserAction",
-            "setRolesAction",
-            "setShiftsAction",
+            "deleteEquipementAction",
+            "addEquipementAction",
+            "editEquipementAction",
             "setProfileGroupsAction"
         ]),
        
@@ -334,36 +239,24 @@ export default {
             return field || field === 0 ? true : `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} field is required`;
         },
 
-        refreshUsersTable(val) {
+        refreshEquipementsTable(val) {
             this.setLoadingValueAction(true)
-            this.setUsersAction()
+            this.setEquipementsAction()
                 .then((response) => {
-                    
-                    this.users = this.getUsers.filter(user => user.role.name !== "admin");
-                    this.filteredUsers = this.users.map(item => ({
-                        fullname: item.firstname + " " + item.lastname,
+                    this.equipements = this.getEquipements;
+                    this.filteredEquipements = this.equipements.map(item => ({
                         matricule: item.matricule,
-                        email: item.email,
-                        workingHours : item.workingHours ? item.workingHours : 'undefined',
-                        roleName: item.role.name,
                         profile_groupName: item.profile_group ? item.profile_group.type : 'none',
-                        shiftName: item.shift ? item.shift.category : 'none',
-                        firstname: item.firstname,
-                        lastname: item.lastname,
-                        isactive: item.isactive,
+                        status: item.status,
                         id: item.id,
-                        role_id:item.role_id,
-                        shift_id:item.shift_id,
                         profile_group_id:item.profile_group_id
-
                     }))
-
                     if (val) {
                         this.text = val.text
-                        if (this.notAddedUsers.length > 0) {
+                        if (this.notAddedEquipements.length > 0) {
                             this.timeout = null
                             this.snackbar = true
-                            this.notAddedUsers = []
+                            this.notAddedEquipements = []
                         }
                         else {
                             this.timeout = 1500
@@ -373,25 +266,12 @@ export default {
                     }
                 })
                 .catch(error => {
-                    console.error("Set users error:", error);
+                    console.error("Setequipements error:", error);
                     this.setLoadingValueAction(false)
                 });
-                this.setRolesAction().then(() => {
-                this.roles = this.getRoles.map((role) => ({
-                    name: role.name,
-                    id: role.id
-                }));
-            });
-
-            this.setShiftsAction().then(() => {
-                this.setLoadingValueAction(false)
-                this.shifts = this.getShifts.map((shift) => ({
-                    category: shift.category,
-                    id: shift.id
-                })).sort((a, b) => a.category.localeCompare(b.category));
-            });
-
+               
             this.setProfileGroupsAction().then(() => {
+                this.setLoadingValueAction(false)
                 this.profileGroups = this.getProfileGroups.map((profileGroup) => ({
                     type: profileGroup.type,
                     id: profileGroup.id
@@ -405,21 +285,11 @@ export default {
             this.editedIndex = item.id;
             this.dialogType = 'edit';
             this.dialog = true;
-            // Populate other user details
-            this.user.id = this.editedIndex;
-            this.user.matricule = this.editedItem.matricule;
-            this.user.firstname = this.editedItem.firstname;
-            this.user.lastname = this.editedItem.lastname;
-            this.user.email = this.editedItem.email;
-            this.user.role_id = this.editedItem.role_id;
-            this.user.shift_id = this.editedItem.shift_id;
-            this.user.profile_group_id = this.editedItem.profile_group_id;
-            this.user.isactive = String(this.editedItem.isactive);
-        },
-        resetItem(item) {
-            this.editedItem = { ...item };
-            this.editedIndex = item.id;
-            this.dialogReset = true;
+            // Populate otherequipement details
+            this.equipement.id = this.editedIndex;
+            this.equipement.matricule = this.editedItem.matricule;
+            this.equipement.profile_group_id = this.editedItem.profile_group_id;
+            this.equipement.status = String(this.editedItem.status);
         },
 
         deleteItem(item) {
@@ -430,30 +300,16 @@ export default {
 
         deleteItemConfirm() {
             this.setLoadingValueAction(true)
-            this.deleteUserAction(this.editedIndex).then((response) => {
+            this.deleteEquipementAction(this.editedIndex).then((response) => {
                 this.setLoadingValueAction(false)
-                this.refreshUsersTable({ text: "user deleted successfully" })
+                this.refreshEquipementsTable({ text: "equipement deleted successfully" })
             }).catch(error => {
-                console.error("Delete user error:", error);
+                console.error("Deleteequipement error:", error);
                 this.setLoadingValueAction(false)
-                this.text = "error deleting user"
+                this.text = "error deletingequipement"
                 this.snackbar = true
             });
             this.closeDelete()
-        },
-        resetPasswordConfirm() {
-            this.setLoadingValueAction(true)
-            this.resetPasswordAction(this.editedIndex).then((response) => {
-                console.log(response)
-                this.setLoadingValueAction(false)
-                this.refreshUsersTable({ text: "user password reset successfully" })
-            }).catch(error => {
-                console.error("Reset password error:", error);
-                this.setLoadingValueAction(false)
-                this.text = "error reseting user password"
-                this.snackbar = true
-            });
-            this.closeReset()
         },
 
         close() {
@@ -463,14 +319,9 @@ export default {
                 this.editedIndex = -1
             })
             this.dialogType = ''
-            this.user.matricule = ''
-            this.user.firstname = ''
-            this.user.lastname = ''
-            this.user.email = ''
-            this.user.role_id = ''
-            this.user.shift_id = ''
-            this.user.profile_group_id = ''
-            this.user.isactive = ''
+            this.equipement.matricule = ''
+            this.equipement.profile_group_id = ''
+            this.equipement.status = ''
         },
         closeDelete() {
             this.dialogDelete = false
@@ -479,65 +330,57 @@ export default {
                 this.editedIndex = -1
             })
         },
-        closeReset() {
-            this.dialogReset = false
-            this.$nextTick(() => {
-                this.editedItem = Object.assign({}, this.defaultItem)
-                this.editedIndex = -1
-            })
-        },
+
         save() {
             this.submitClicked = true
-            if (!this.user) {
-                console.log("User Not Defined")
+            if (!this.equipement) {
+                console.log("Equipement Not Defined")
             }
-            const userToSend = { ...this.user };
-            delete userToSend.id;
-            delete userToSend.profile_groupName;
-            delete userToSend.shiftName;
-            delete userToSend.roleName;
-            if (!userToSend || Object.values(userToSend).some(value => !value)) {
-                console.log("Invalid user", userToSend)
+            const equipementToSend = { ...this.equipement };
+            delete equipementToSend.id;
+            delete equipementToSend.profile_groupName;
+            if (!equipementToSend || Object.values(equipementToSend).some(value => !value)) {
+                console.log("Invalidequipement",equipementToSend)
                 return;
             }
             else {
                 if (this.dialogType == "edit") {
                     this.setLoadingValueAction(true)
-                    this.editUserAction(this.user)
+                    this.editEquipementAction(this.equipement)
                         .then((response) => {
                             this.setLoadingValueAction(false)
                             if (response)
-                                this.refreshUsersTable({ text: "user edited successfully" })
+                                this.refreshEquipementsTable({ text: "equipement edited successfully" })
                             else {
-                                this.text = "error editing user"
+                                this.text = "error editing equipement"
                                 this.snackbar = true
                             }
                         }).catch(error => {
-                            console.error("Edit user error:", error);
+                            console.error("Edit equipement error:", error);
                             this.setLoadingValueAction(false)
-                            this.text = "error editing user"
+                            this.text = "error editing equipement"
                             this.snackbar = true
                         });
                     this.close()
                 }
                 else {
-                    delete userToSend.isactive;
+                    delete equipementToSend.status;
                     this.setLoadingValueAction(true)
-                    this.registerUserAction(userToSend).then((response) => {
+                    this.addEquipementAction(equipementToSend).then((response) => {
                         this.setLoadingValueAction(false)
                         if (response)
-                            this.refreshUsersTable({ text: "user added successfully" })
+                            this.refreshEquipementsTable({ text: "equipement added successfully" })
                         else {
-                            this.text = "error adding user"
+                            this.text = "error addingequipement"
                             this.snackbar = true
                         }
                     }).catch(error => {
-                        console.error("Register user error:", error);
+                        console.error("Registerequipement error:", error);
                         this.setLoadingValueAction(false)
-                        this.text = "error adding user"
+                        this.text = "error addingequipement"
                         this.snackbar = true
                     });
-                    // console.log(userToSend)
+                    // console.log(equipementToSend)
                     this.close()
                 }
 
@@ -546,7 +389,7 @@ export default {
         openFileDialog() {
             this.$refs.fileInput.click();
         },
-        importUsers(reader, file) {
+        importEquipements(reader, file) {
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result); // Convert file data to Uint8Array
                 const workbook = XLSX.read(data, { type: 'array' }); // Read the Excel file
@@ -557,30 +400,23 @@ export default {
                 const texts = [];
                 this.setLoadingValueAction(true);
                 const promises = [];
+                
                 for (const row in jsonData) {
-                    const role = this.roles.find((role) => role.name == jsonData[row][4]);
-                    const profileGroup = this.profileGroups.find((profileGroup) => profileGroup.type == jsonData[row][5]);
-                    const shift = this.shifts.find((shift) => shift.category == jsonData[row][6]);
+                    const profileGroup = this.profileGroups.find((profileGroup) => profileGroup.type == jsonData[row][1]);
                     if (row != 0) {
-                        const user = {
+                        const equipement = {
                             matricule: jsonData[row][0],
-                            firstname: jsonData[row][1],
-                            lastname: jsonData[row][2],
-                            email: jsonData[row][3],
-                            role_id: role.id,
-                            profile_group_id: profileGroup.id,
-                            shift_id: shift.id,
-                            workingHours: jsonData[row][7]
+                            profile_group_id: profileGroup? profileGroup.id : null,
                         };
-                        const promise = this.registerUserAction(user)
+                        const promise = this.addEquipementAction(equipement)
                             .then((response) => {
                                 if (!response) {
-                                    this.notAddedUsers.push(user.matricule);
+                                    this.notAddedEquipements.push(equipement.matricule);
                                 }
                             })
                             .catch(error => {
-                                console.log("error adding user:", error);
-                                this.notAddedUsers.push(user.matricule);
+                                console.log("error adding equipement:", error);
+                                this.notAddedEquipements.push(equipement.matricule);
                             });
                         promises.push(promise);
                     }
@@ -588,7 +424,7 @@ export default {
                 Promise.all(promises)
                     .then(() => {
                         this.setLoadingValueAction(false);
-                        this.refreshUsersTable({ text: " Importing users done" + '<br>' + "Error adding users : " + (this.notAddedUsers.length > 0 ? this.notAddedUsers.join(", ") : "none") });
+                        this.refreshEquipementsTable({ text: " Importing equipements done" + '<br>' + "Error adding equipements : " + (this.notAddedEquipements.length > 0 ? this.notAddedEquipements.join(", ") : "none") });
                         this.reader = null
                         this.file = {
                             name: ""
@@ -601,7 +437,7 @@ export default {
             // Handle file upload logic here
             this.file = event.target.files[0]; // Get the selected file
             this.reader = new FileReader();
-            this.importUsers(this.reader, this.file)
+            this.importEquipements(this.reader, this.file)
             event.target.value = null;
         }
     },
@@ -615,18 +451,18 @@ export default {
     grid-template-rows: 10vh 10vh 70vh;
 }
 
-.addUserButtonZone {
+.addEquipementButtonZone {
     background-color: white;
     height: 30px;
     margin-bottom: 2rem;
 }
 
-.addUserButton {
+.addEquipementButton {
     border: 1px solid gray;
     background-color: darkblue;
 }
 
-.addUserButtonStyle {
+.addEquipementButtonStyle {
     width: fit-content;
     display: flex;
     justify-content: end;
@@ -667,7 +503,7 @@ export default {
     background-color: darkblue;
 }
 
-.dialogAddUserTitleContainer {
+.dialogAddEquipementTitleContainer {
     display: flex;
     width: 100%;
     justify-content: start;
@@ -685,7 +521,7 @@ export default {
     margin: 6px;
 }
 
-.inactive-user {
+.inactive-equipement {
     color: lightsalmon;
 }
 
@@ -721,7 +557,7 @@ export default {
     gap: 2%;
 }
 
-.importUsersButton {
+.importEquipementsButton {
     border: 1px solid gray;
     background-color: black;
 }
