@@ -43,18 +43,23 @@
     <!-- Start Button  -->
     <div class="start-button">
       <v-btn
-        @click="getData"
+        @click="openSelectionDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
         >Start</v-btn
       >
     </div>
+    <SelectionDialog equipementType="RTG" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedDrivers" :selectedEqus="selectedRTGs" @closeDialog="showValidateDialog = false" />
   </div>
 </template>
 
 <script>
+import SelectionDialog from './ValidateDialog.vue';
 import { mapGetters, mapActions } from "vuex";
 export default {
+  components: {
+    SelectionDialog
+  },
   data() {
     return {
       driversList: [],
@@ -62,6 +67,7 @@ export default {
       ],
       selectedDrivers: [],
       selectedRTGs: [],
+      showValidateDialog: false
     };
   },
   computed: {
@@ -87,6 +93,7 @@ export default {
         profile_group: "rtg",
         role: "driver",
       };
+      
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then(() => {
         this.driversList = this.getDrivers.map(
@@ -96,9 +103,12 @@ export default {
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
         this.rtgsList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="rtg").map((equipement) => equipement.matricule);
-      })
+      });
     },
-
+    //open validation Dialog
+    openSelectionDialog() {
+      this.showValidateDialog = true;
+    },
     // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce(
@@ -110,9 +120,17 @@ export default {
 
     // returns selected drivers and rtgs
     getData() {
+      this.showValidateDialog = false;
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected RTGs : " + this.selectedRTGs);
     },
+
+    removeDriver(driver) {
+      this.selectedDrivers = this.selectedDrivers.filter((item) => item !== driver);
+    },
+    removeEquipement(equ) {
+      this.selectedRTGs = this.selectedRTGs.filter((item) => item !== equ);
+    }
   },
 };
 </script>

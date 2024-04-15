@@ -55,45 +55,29 @@
     <!-- Start Button -->
     <div class="start-button">
       <v-btn
-        @click="getData"
+        @click="openSelectionDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
         >Start</v-btn
       >
     </div>
+    <SelectionDialog equipementType="RS" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedDrivers"  :rssStates="rssStates" :selectedEqus="selectedRSs" @closeDialog="showValidateDialog = false" />
+
   </div>
 </template>
 
 <script>
+import SelectionDialog from './ValidateDialog.vue';
 import { mapGetters, mapActions } from "vuex";
 export default {
+  components: {
+    SelectionDialog
+  },
   data() {
     return {
       driversList: [
       ],
       rssList: [
-        "RS1",
-        "RS2",
-        "RS3",
-        "RS4",
-        "RS5",
-        "RS6",
-        "RS7",
-        "RS8",
-        "RS9",
-        "RS10",
-        "RS11",
-        "RS12",
-        "RS13",
-        "RS14",
-        "RS15",
-        "RS16",
-        "RS17",
-        "RS18",
-        "RS19",
-        "RS20",
-        "RS21",
-        "RS22",
       ],
       selectedDrivers: [],
       selectedRSs: [],
@@ -101,10 +85,11 @@ export default {
       dialog: {}, // Object to store dialog state for each RS
       startTime: "",
       endTime: "",
+      showValidateDialog: false
     };
   },
   computed: {
-    ...mapGetters(["getDrivers"]),
+    ...mapGetters(["getDrivers","getEquipements"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       return this.chunkArray(this.driversList, 6);
@@ -116,11 +101,11 @@ export default {
     },
   },
   mounted() {
-    this.setDrivers();
+    this.setData();
   },
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
-    setDrivers() {
+    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    setData() {
       const inputs = {
         profile_group: "rs",
         role: "driver",
@@ -131,6 +116,10 @@ export default {
         this.driversList = this.getDrivers.map(
           (driver) => driver.firstname + " " + driver.lastname
         );
+      });
+      this.setEquipementsAction().then(() => {
+        this.setLoadingValueAction(false);
+        this.rssList= this.getEquipements.filter((equipement) => equipement.profile_group.type==="rs").map((equipement) => equipement.matricule);
       });
     },
     // splits array into chunks of size
@@ -146,6 +135,8 @@ export default {
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected RSs : " + this.selectedRSs);
       console.log("Selected RSs : " + JSON.stringify(this.rssStates));
+      this.showValidateDialog = false
+      
     },
     // switch on change state
     onChange(item) {
@@ -193,6 +184,16 @@ export default {
         }
       }
       this.dialog[item] = false;
+    },
+    removeDriver(driver) {
+      this.selectedDrivers = this.selectedDrivers.filter((item) => item !== driver);
+    },
+    removeEquipement(equ){
+      this.selectedRSs = this.selectedRSs.filter((rs) => rs !== equ);
+      this.rssStates = this.rssStates.filter((c) => c.rs !== equ);
+    },
+    openSelectionDialog() {
+      this.showValidateDialog = true;
     },
   },
 };

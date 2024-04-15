@@ -10,8 +10,7 @@
                 <div class="topitems">
                     <v-list-item
                     prepend-avatar="https://randomuser.me/api/portraits/men/85.jpg"
-                    title="John Leider"
-                    nav
+                    :title="authUser ? authUser.firstname + ' ' + authUser.lastname : ''"
                     style="color:#F9FBFC "
                 >
                     <template v-slot:append>
@@ -58,6 +57,7 @@ import { mapActions, mapGetters } from "vuex"
       return {
         drawer: true,
         rail: true,
+        authUser : null,
         items: [
         { icon: "mdi-view-dashboard", title: "Planning", value: "planning", selected: true },
         { icon: "mdi-account-group-outline", title: "Users", value: "users", selected: false },
@@ -65,11 +65,18 @@ import { mapActions, mapGetters } from "vuex"
       ]
       }
     },
+    mounted() {
+     this.getAuthUser()
+    },
     computed: {
     ...mapGetters(["getMessages", "getUserActive"])
   },
     methods: {
+      
         ...mapActions(["logoutAction"]),
+        getAuthUser(){
+        this.authUser = this.getUserActive
+        },
     logout() {
       this.logoutAction()
         .then(() => {

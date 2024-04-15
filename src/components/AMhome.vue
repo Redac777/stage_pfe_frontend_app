@@ -95,8 +95,8 @@
               <v-card v-else-if="selectedRole === 'ST'">
                 <v-select
                   v-model="selectedSTWorker"
-                  :items="stWorkers"
-                  label="Select ST Worker"
+                  :items="stComps"
+                  label="Select ST Company"
                 ></v-select>
                 <v-card-actions>
                   <v-btn
@@ -156,45 +156,29 @@
     <!-- Start Button -->
     <div class="start-button">
       <v-btn
-        @click="getData"
+        @click="openSelectionDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
         >Start</v-btn
       >
     </div>
+    <SelectionDialog equipementType="AM" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedAMs" :workers="workers"  :intervals="intervals" :selectedEqus="selectedSTSs" @closeDialog="showValidateDialog = false" />
+
   </div>
 </template>
 
 <script>
+import SelectionDialog from "./ValidateDialog.vue";
 import { mapGetters, mapActions } from "vuex";
 export default {
+  components: {
+    SelectionDialog
+  },
   data() {
     return {
       minTimeIndex: -1,
       amsList: [],
       stssList: [
-        "STS1",
-        "STS2",
-        "STS3",
-        "STS4",
-        "STS5",
-        "STS6",
-        "STS7",
-        "STS8",
-        "STS9",
-        "STS10",
-        "STS11",
-        "STS12",
-        "STS13",
-        "STS14",
-        "STS15",
-        "STS16",
-        "STS17",
-        "STS18",
-        "STS19",
-        "STS20",
-        "STS21",
-        "STS22",
       ],
       selectedAMs: [],
       selectedSTSs: [],
@@ -207,15 +191,16 @@ export default {
       respectedEnd: false,
       selectedRole: "TA",
       selectedSTWorker: "",
-      stWorkers: ["Worker1", "Worker2", "Worker3", "Worker4", "Worker5"],
+      stComps: ["St1", "St2", "St3", "St4", "St5"],
       roles: ["checker", "deckman", "assistant"],
       selectedRoles: [],
       roleDialog: {},
       numWorkers: {},
+      showValidateDialog:false
     };
   },
   computed: {
-    ...mapGetters(["getDrivers"]),
+    ...mapGetters(["getDrivers","getEquipements"]),
     isSaveButtonDisabled() {
       return (item) => {
         if (this.selectedRole === "TA") {
@@ -299,11 +284,11 @@ export default {
     this.setDrivers();
   },
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
+    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
     setDrivers() {
       const inputs = {
         profile_group: "am",
-        role: "driver",
+        role: "am",
       };
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then((response) => {
@@ -311,7 +296,12 @@ export default {
         this.amsList = this.getDrivers.map(
           (driver) => driver.firstname + " " + driver.lastname
         );
-      });},
+      });
+      this.setEquipementsAction().then(() => {
+        this.setLoadingValueAction(false);
+        this.stssList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="sts").map((equipement) => equipement.matricule);
+      });
+    },
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
 
@@ -487,6 +477,17 @@ export default {
     saveRoleData(item) {
       // Close the dialog for the specific role
       this.closeRoleDialog(item, true);
+    },
+    removeDriver(driver) {
+      this.selectedAMs = this.selectedAMs.filter((item) => item !== driver);
+    },
+    removeEquipement(equ){
+      this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
+        delete this.intervals[equ];
+        this.workers = this.workers.filter((worker) => worker.STS !== equ);
+    },
+    openSelectionDialog() {
+      this.showValidateDialog = true;
     },
   },
 };
