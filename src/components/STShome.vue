@@ -92,45 +92,28 @@
     <!-- Start Button -->
     <div class="start-button">
       <v-btn
-        @click="getData"
+        @click="openSelectionDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
         >Start</v-btn
       >
     </div>
+    <SelectionDialog equipementType="STS" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedDrivers"  :intervals="intervals" :selectedEqus="selectedSTSs" @closeDialog="showValidateDialog = false" />
   </div>
 </template>
 
 <script>
+import SelectionDialog from "./ValidateDialog.vue";
 import { mapGetters, mapActions } from "vuex";
 export default {
+  components: {
+    SelectionDialog
+  },
   data() {
     return {
       minTimeIndex: -1,
       driversList: [],
       stssList: [
-        "STS1",
-        "STS2",
-        "STS3",
-        "STS4",
-        "STS5",
-        "STS6",
-        "STS7",
-        "STS8",
-        "STS9",
-        "STS10",
-        "STS11",
-        "STS12",
-        "STS13",
-        "STS14",
-        "STS15",
-        "STS16",
-        "STS17",
-        "STS18",
-        "STS19",
-        "STS20",
-        "STS21",
-        "STS22",
       ],
       selectedDrivers: [],
       selectedSTSs: [],
@@ -140,10 +123,11 @@ export default {
       endTime: "",
       respectedStart: false,
       respectedEnd: false,
+      showValidateDialog: false
     };
   },
   computed: {
-    ...mapGetters(["getDrivers"]),
+    ...mapGetters(["getDrivers","getEquipements"]),
     isSaveButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -215,22 +199,25 @@ export default {
     },
   },
     mounted() {
-      this.setDrivers();
+      this.setData();
     },
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction"]),
-    setDrivers() {
+    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    setData() {
       const inputs = {
         profile_group: "sts",
         role: "driver",
       };
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then((response) => {
-        this.setLoadingValueAction(false);
         this.driversList = this.getDrivers.map(
           (driver) => driver.firstname + " " + driver.lastname
         );
       });
+      this.setEquipementsAction().then(() => {
+        this.setLoadingValueAction(false);
+        this.stssList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="sts").map((equipement) => equipement.matricule);
+      })
     },
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
@@ -329,6 +316,7 @@ export default {
     getData() {
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected STSs : " + JSON.stringify(this.intervals));
+      this.showValidateDialog = false;
     },
     // switch on change state
     onChange(item) {
@@ -363,6 +351,16 @@ export default {
         delete this.intervals[item];
       }
       this.dialog[item] = false;
+    },
+    removeDriver(driver) {
+      this.selectedDrivers = this.selectedDrivers.filter((item) => item !== driver);
+    },
+    removeEquipement(equ){
+      this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
+      delete this.intervals[equ];
+    },
+    openSelectionDialog() {
+      this.showValidateDialog = true;
     },
   },
 };

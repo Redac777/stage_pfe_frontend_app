@@ -245,7 +245,7 @@ export default {
             firstname: "",
             lastname: "",
             email: "",
-            workingHours : "",
+            workingHours: "",
             role_id: "",
             roleName: "",
             shift_id: "",
@@ -283,7 +283,7 @@ export default {
                 key: 'shift',
             },
             { title: 'Working Hours', key: 'workingHours', sortable: true },
-            
+
             { title: 'Actions', key: 'actions', sortable: false },
         ],
         users: [],
@@ -328,7 +328,7 @@ export default {
             "setShiftsAction",
             "setProfileGroupsAction"
         ]),
-       
+
 
         requiredRule(field, fieldName) {
             return field || field === 0 ? true : `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} field is required`;
@@ -338,13 +338,13 @@ export default {
             this.setLoadingValueAction(true)
             this.setUsersAction()
                 .then((response) => {
-                    
+
                     this.users = this.getUsers.filter(user => user.role.name !== "admin");
                     this.filteredUsers = this.users.map(item => ({
                         fullname: item.firstname + " " + item.lastname,
                         matricule: item.matricule,
                         email: item.email,
-                        workingHours : item.workingHours ? item.workingHours : 'undefined',
+                        workingHours: item.workingHours ? item.workingHours : 'undefined',
                         roleName: item.role.name,
                         profile_groupName: item.profile_group ? item.profile_group.type : 'none',
                         shiftName: item.shift ? item.shift.category : 'none',
@@ -352,9 +352,9 @@ export default {
                         lastname: item.lastname,
                         isactive: item.isactive,
                         id: item.id,
-                        role_id:item.role_id,
-                        shift_id:item.shift_id,
-                        profile_group_id:item.profile_group_id
+                        role_id: item.role_id,
+                        shift_id: item.shift_id,
+                        profile_group_id: item.profile_group_id
 
                     }))
 
@@ -376,7 +376,7 @@ export default {
                     console.error("Set users error:", error);
                     this.setLoadingValueAction(false)
                 });
-                this.setRolesAction().then(() => {
+            this.setRolesAction().then(() => {
                 this.roles = this.getRoles.map((role) => ({
                     name: role.name,
                     id: role.id
@@ -553,57 +553,60 @@ export default {
                 const sheetName = workbook.SheetNames[0]; // Get the name of the first sheet
                 const worksheet = workbook.Sheets[sheetName]; // Get the worksheet
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // Convert worksheet to JSON
-                // Now you can work with the jsonData array containing your Excel data
-                const texts = [];
+
                 this.setLoadingValueAction(true);
                 const promises = [];
-                for (const row in jsonData) {
-                    const role = this.roles.find((role) => role.name == jsonData[row][4]);
-                    const profileGroup = this.profileGroups.find((profileGroup) => profileGroup.type == jsonData[row][5]);
-                    const shift = this.shifts.find((shift) => shift.category == jsonData[row][6]);
-                    if (row != 0) {
+                for (const rowData of jsonData.slice(1)) { // Start from index 1 to skip header row
+                    const [matricule, firstname, lastname, email, roleName, profileGroupName, shiftCategory, workingHours] = rowData;
+                    // console.log(roleName + " " + profileGroupName + " " + shiftCategory);
+                    const role = this.roles.find(role => role.name === roleName);
+                    const profileGroup = this.profileGroups.find(profileGroup => profileGroup.type === profileGroupName);
+                    const shift = this.shifts.find(shift => shift.category === shiftCategory);
+                    if (role && profileGroup && shift) {
                         const user = {
-                            matricule: jsonData[row][0],
-                            firstname: jsonData[row][1],
-                            lastname: jsonData[row][2],
-                            email: jsonData[row][3],
+                            matricule,
+                            firstname,
+                            lastname,
+                            email,
                             role_id: role.id,
                             profile_group_id: profileGroup.id,
                             shift_id: shift.id,
-                            workingHours: jsonData[row][7]
+                            workingHours
                         };
                         const promise = this.registerUserAction(user)
-                            .then((response) => {
+                            .then(response => {
                                 if (!response) {
                                     this.notAddedUsers.push(user.matricule);
                                 }
                             })
                             .catch(error => {
-                                console.log("error adding user:", error);
+                                console.log("Error adding user:", error);
                                 this.notAddedUsers.push(user.matricule);
                             });
+
                         promises.push(promise);
+                    } else {
+                        console.warn("Role, profile group, or shift not found for row:", rowData);
                     }
                 }
+
                 Promise.all(promises)
                     .then(() => {
                         this.setLoadingValueAction(false);
-                        this.refreshUsersTable({ text: " Importing users done" + '<br>' + "Error adding users : " + (this.notAddedUsers.length > 0 ? this.notAddedUsers.join(", ") : "none") });
-                        this.reader = null
-                        this.file = {
-                            name: ""
-                        }
+                        this.refreshUsersTable({ text: "Importing users done" + '<br>' + "Error adding users: " + (this.notAddedUsers.length > 0 ? this.notAddedUsers.join(", ") : "none") });
+                        this.reader = null;
+                        this.file = { name: "" };
                     });
             };
             reader.readAsArrayBuffer(file);
         },
         handleFileUpload(event) {
-            // Handle file upload logic here
             this.file = event.target.files[0]; // Get the selected file
             this.reader = new FileReader();
-            this.importUsers(this.reader, this.file)
-            event.target.value = null;
+            this.importUsers(this.reader, this.file);
+            event.target.value = null; // Reset the file input
         }
+
     },
 
 
