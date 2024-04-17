@@ -28,13 +28,31 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div class="stsname">{{ item }}</div>
+            <div
+              class="stsname"
+              @click="openDialog(item)"
+              @mouseover="showIcons[item] = true"
+              @mouseleave="showIcons[item] = false"
+            >
+              <span
+                :class="{
+                  'blue-text': hasIntervalsOrWorkers(item),
+                }"
+                >{{ item }}</span
+              >
+            </div>
             <v-switch
               v-model="selectedSTSs"
               :value="item"
               hide-details
               @change="onChange(item)"
             ></v-switch>
+            <v-icon
+              v-if="showIcons[item] === true"
+              class="timer-icon"
+              @click="openDialog(item)"
+              >mdi-cog</v-icon
+            >
 
             <!-- Dialog for adding sts time intervals -->
             <v-dialog
@@ -122,13 +140,30 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="role">
-            <div class="rolename">{{ item }}</div>
+            <div
+              class="rolename"
+              @click="openRoleDialog(item)"
+              @mouseover="showRoleIcons[item] = true"
+              @mouseleave="showRoleIcons[item] = false"
+            >
+              <span
+                :class="{
+                  'blue-text': hasIntervalsOrWorkers(item),
+                }"
+                >{{ item }}</span
+              >
+            </div>
             <v-switch
               v-model="selectedRoles"
               :value="item"
               hide-details
-              @change="onChangeRole(item)"
             ></v-switch>
+            <v-icon
+                v-if="showRoleIcons[item] == true"
+                class="timer-icon"
+                @click="openRoleDialog(item)"
+                >mdi-cog</v-icon>
+
             <v-dialog v-model="roleDialog[item]" max-width="400">
               <v-card>
                 <v-card-title
@@ -136,7 +171,7 @@
                 >
                 <v-card-text>
                   <v-text-field
-                    v-model="numWorkers[item]"
+                    v-model="roleCount"
                     label="Number of Workers"
                     type="number"
                   ></v-text-field>
@@ -162,8 +197,22 @@
         >Start</v-btn
       >
     </div>
-    <SelectionDialog equipementType="AM" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedAMs" :workers="workers"  :intervals="intervals" :selectedEqus="selectedSTSs" @closeDialog="showValidateDialog = false" />
-
+    <SelectionDialog
+      equipementType="AM"
+      v-model="showValidateDialog"
+      @validateSelections="getData"
+      @removeDriver="removeDriver"
+      @removeEquipement="removeEquipement"
+      @removeSTSTS="removeSTSTS"
+      :selectedDrivers="selectedAMs"
+      :workers="workers"
+      :intervals="intervals"
+      :selectedEqus="keysArray"
+      :selectedRoles="selectedRoles"
+      :numWorkers="numWorkers"
+      @removeAMRole="removeAMRole"
+      @closeDialog="showValidateDialog = false"
+    />
   </div>
 </template>
 
@@ -172,14 +221,13 @@ import SelectionDialog from "./ValidateDialog.vue";
 import { mapGetters, mapActions } from "vuex";
 export default {
   components: {
-    SelectionDialog
+    SelectionDialog,
   },
   data() {
     return {
       minTimeIndex: -1,
       amsList: [],
-      stssList: [
-      ],
+      stssList: [],
       selectedAMs: [],
       selectedSTSs: [],
       intervals: {},
@@ -196,11 +244,23 @@ export default {
       selectedRoles: [],
       roleDialog: {},
       numWorkers: {},
-      showValidateDialog:false
+      showValidateDialog: false,
+      keysArray: [],
+      showIcons: {},
+      showRoleIcons:{},
+      roleCount: 0,
     };
   },
   computed: {
-    ...mapGetters(["getDrivers","getEquipements"]),
+    ...mapGetters(["getDrivers", "getEquipements"]),
+    hasIntervalsOrWorkers() {
+      return (item) => {
+        return (
+          !!this.intervals[item] ||
+          !!this.workers.find((worker) => worker.STS === item)
+        );
+      };
+    },
     isSaveButtonDisabled() {
       return (item) => {
         if (this.selectedRole === "TA") {
@@ -284,7 +344,11 @@ export default {
     this.setDrivers();
   },
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    ...mapActions([
+      "setDriversAction",
+      "setLoadingValueAction",
+      "setEquipementsAction",
+    ]),
     setDrivers() {
       const inputs = {
         profile_group: "am",
@@ -299,7 +363,9 @@ export default {
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
-        this.stssList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="sts").map((equipement) => equipement.matricule);
+        this.stssList = this.getEquipements
+          .filter((equipement) => equipement.profile_group.type === "sts")
+          .map((equipement) => equipement.matricule);
       });
     },
     addIntervalBelow(item, index) {
@@ -404,21 +470,21 @@ export default {
       console.log(
         "Selected roles W ass Num : " + JSON.stringify(this.numWorkers)
       );
+      this.showValidateDialog = false;
     },
     // switch on change state
     onChange(item) {
-      if (this.selectedSTSs.includes(item)) {
-        this.openDialog(item);
-      } else {
+      if (!this.selectedSTSs.includes(item)) {
         this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
+        this.workers = this.workers.filter((worker) => worker.STS !== item);
+        this.keysArray = Object.keys(this.intervals);
       }
     },
 
     //open sts intervals dialog
     openDialog(item) {
       // Set dialog state for the specific STS item to true
-
       if (!this.dialog[item]) {
         this.dialog[item] = true;
       }
@@ -436,58 +502,103 @@ export default {
     saveTime(item) {
       if (this.selectedRole === "ST") {
         // Save ST worker for ST role
-        this.selectedSTSs.push(item);
         delete this.intervals[item];
         this.workers.push({ STS: item, worker: this.selectedSTWorker });
+      } else {
+        this.workers = this.workers.filter((worker) => worker.STS !== item);
       }
+      this.selectedSTSs.push(item);
       this.closeDialog(item, true);
     },
 
     // close sts intervals dialog
     closeDialog(item, value) {
       if (!value) {
-        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
-        delete this.intervals[item];
-        this.workers = this.workers.filter((worker) => worker.STS !== item);
+        if (!this.selectedSTSs.includes(item)) {
+          this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
+          this.workers = this.workers.filter((worker) => worker.STS !== item);
+          delete this.intervals[item];
+        } else {
+          if (this.selectedRole === "ST") {
+            const itemToGet = this.workers.filter(
+              (worker) => worker.STS === item
+            );
+            if (itemToGet.length === 0 && !this.intervals[item]) {
+              this.selectedSTSs = this.selectedSTSs.filter(
+                (sts) => sts !== item
+              );
+              this.workers = this.workers.filter(
+                (worker) => worker.STS !== item
+              );
+            }
+          } else {
+            if (this.intervals.length > 1)
+              if (
+                this.intervals[item][this.intervals[item].length - 1]
+                  .startTime === "" ||
+                this.intervals[this.intervals[item].length - 1].endTime === ""
+              ) {
+                this.intervals[item].pop();
+              } else {
+                this.selectedSTSs = this.selectedSTSs.filter(
+                  (sts) => sts !== item
+                );
+                this.intervals[item].pop();
+              }
+          }
+        }
       }
       this.dialog[item] = false;
+      this.keysArray = Object.keys(this.intervals);
     },
 
     // Method to change the selected role
-    onChangeRole(item) {
-      if (this.selectedRoles.includes(item) && item !== "assistant") {
-        this.openRoleDialog(item);
-      } else {
-        delete this.numWorkers[item];
-      }
-    },
+
     // Method to open the role dialog for a specific role
     openRoleDialog(item) {
+      this.roleCount = this.numWorkers[item] || 1;
       this.roleDialog[item] = true;
     },
     // Method to close the role dialog for a specific role
     closeRoleDialog(item, value) {
       if (!value) {
-        this.selectedRoles = this.selectedRoles.filter((role) => role !== item);
-        delete this.numWorkers[item];
+        if (!this.selectedRoles.includes(item)) {
+          this.selectedRoles = this.selectedRoles.filter(
+            (role) => role !== item
+          );
+          delete this.numWorkers[item];
+        }
       }
       this.roleDialog[item] = false;
     },
     // Method to save role data for a specific role
     saveRoleData(item) {
       // Close the dialog for the specific role
+      if (!this.selectedRoles.includes(item)) {
+        this.selectedRoles.push(item);
+      }
+      this.numWorkers[item] = this.roleCount;
       this.closeRoleDialog(item, true);
     },
     removeDriver(driver) {
       this.selectedAMs = this.selectedAMs.filter((item) => item !== driver);
     },
-    removeEquipement(equ){
+    removeEquipement(equ) {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
-        delete this.intervals[equ];
-        this.workers = this.workers.filter((worker) => worker.STS !== equ);
+      delete this.intervals[equ];
+      this.keysArray = Object.keys(this.intervals);
+    },
+    removeSTSTS(sts) {
+      this.selectedSTSs = this.selectedSTSs.filter((item) => item !== sts);
+      this.workers = this.workers.filter((worker) => worker.STS !== sts);
     },
     openSelectionDialog() {
+      this.keysArray = Object.keys(this.intervals);
       this.showValidateDialog = true;
+    },
+    removeAMRole(role) {
+      this.selectedRoles = this.selectedRoles.filter((item) => item !== role);
+      delete this.numWorkers[role];
     },
   },
 };
@@ -538,7 +649,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 2rem;
+  gap: 1rem;
   margin-bottom: 1rem;
 }
 .v-switch {
@@ -552,9 +663,15 @@ export default {
   font-weight: bold;
   width: 100px;
 }
-.stsname,.rolename { 
+.stsname,
+.rolename {
   font-size: 0.9rem;
   font-weight: bold;
+  cursor: pointer;
+}
+.stsname:hover,
+.rolename:hover {
+  color: #1867c0;
 }
 .add-interval-button {
   margin: auto;
@@ -591,5 +708,18 @@ export default {
   font-weight: bold;
   font-size: 1.2rem;
   transform: rotate(180deg);
+}
+.sts,.role {
+  position: relative;
+}
+.timer-icon {
+  position: absolute;
+  top: 12px; /* Ajustez la position verticale selon vos besoins */
+  left: -12px; /* Ajustez la position horizontale selon vos besoins */
+  font-size: small;
+  color: #1867c0;
+}
+.blue-text {
+  color: #1867c0;
 }
 </style>

@@ -17,6 +17,7 @@
               hide-details
             ></v-switch>
           </div>
+          
         </div>
       </div>
       <!-- List stss with associated switches -->
@@ -28,14 +29,17 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div class="stsname">{{ item }}</div>
+            <div class="stsname" @click="openDialog(item)" @mouseover="showIcons[item] = true" @mouseleave="showIcons[item] = false">
+              <span :class="{ 'blue-text': this.intervals[item] && this.intervals[item].length!=0 }">{{ item }}</span>
+            </div>
             <v-switch
               v-model="selectedSTSs"
               :value="item"
               hide-details
               @change="onChange(item)"
             ></v-switch>
-
+            <v-icon v-if="showIcons[item] == true" class="timer-icon" @click="openDialog(item)">mdi-timer</v-icon>
+            
             <!-- Dialog for adding sts time intervals -->
             <v-dialog
               v-model="dialog[item]"
@@ -98,7 +102,17 @@
         >Start</v-btn
       >
     </div>
-    <SelectionDialog equipementType="STS" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedDrivers"  :intervals="intervals" :selectedEqus="selectedSTSs" @closeDialog="showValidateDialog = false" />
+    <SelectionDialog
+      equipementType="STS"
+      v-model="showValidateDialog"
+      @validateSelections="getData"
+      @removeDriver="removeDriver"
+      @removeEquipement="removeEquipement"
+      :selectedDrivers="selectedDrivers"
+      :intervals="intervals"
+      :selectedEqus="selectedSTSs"
+      @closeDialog="showValidateDialog = false"
+    />
   </div>
 </template>
 
@@ -107,14 +121,13 @@ import SelectionDialog from "./ValidateDialog.vue";
 import { mapGetters, mapActions } from "vuex";
 export default {
   components: {
-    SelectionDialog
+    SelectionDialog,
   },
   data() {
     return {
       minTimeIndex: -1,
       driversList: [],
-      stssList: [
-      ],
+      stssList: [],
       selectedDrivers: [],
       selectedSTSs: [],
       intervals: {},
@@ -123,11 +136,12 @@ export default {
       endTime: "",
       respectedStart: false,
       respectedEnd: false,
-      showValidateDialog: false
+      showValidateDialog: false,
+      showIcons : {}
     };
   },
   computed: {
-    ...mapGetters(["getDrivers","getEquipements"]),
+    ...mapGetters(["getDrivers", "getEquipements"]),
     isSaveButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -198,11 +212,15 @@ export default {
       return this.chunkArray(this.stssList, 6);
     },
   },
-    mounted() {
-      this.setData();
-    },
+  mounted() {
+    this.setData();
+  },
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    ...mapActions([
+      "setDriversAction",
+      "setLoadingValueAction",
+      "setEquipementsAction",
+    ]),
     setData() {
       const inputs = {
         profile_group: "sts",
@@ -216,8 +234,10 @@ export default {
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
-        this.stssList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="sts").map((equipement) => equipement.matricule);
-      })
+        this.stssList = this.getEquipements
+          .filter((equipement) => equipement.profile_group.type === "sts")
+          .map((equipement) => equipement.matricule);
+      });
     },
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
@@ -320,15 +340,17 @@ export default {
     },
     // switch on change state
     onChange(item) {
-      if (this.selectedSTSs.includes(item)) {
-        this.openDialog(item);
-      } else {
+      if (!this.selectedSTSs.includes(item)) {
         this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
       }
     },
     //open sts intervals dialog
     openDialog(item) {
+        
+      if(!this.selectedSTSs.includes(item)){
+        this.selectedSTSs.push(item);
+      }
       if (!this.intervals) {
         this.intervals = {};
       }
@@ -347,15 +369,19 @@ export default {
     // close sts intervals dialog
     closeDialog(item, value) {
       if (!value) {
-        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
-        delete this.intervals[item];
+        if(this.intervals[item][0].startTime==='' && this.intervals[item][0].endTime===''){
+          this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
+          delete this.intervals[item];
+        }
       }
       this.dialog[item] = false;
     },
     removeDriver(driver) {
-      this.selectedDrivers = this.selectedDrivers.filter((item) => item !== driver);
+      this.selectedDrivers = this.selectedDrivers.filter(
+        (item) => item !== driver
+      );
     },
-    removeEquipement(equ){
+    removeEquipement(equ) {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
       delete this.intervals[equ];
     },
@@ -391,7 +417,7 @@ export default {
 .drivers-container,
 .stss-container {
   display: flex;
-  gap: 2rem;
+  gap: 1rem;
 }
 .column {
   display: flex;
@@ -403,8 +429,11 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 0.8rem;
   margin-bottom: 1rem; /* Espacement entre les drivers */
+}
+.sts{
+  position: relative;
 }
 .v-switch {
   display: flex;
@@ -412,14 +441,26 @@ export default {
   align-items: center;
   font-size: x-small !important;
 }
+.timer-icon {
+  position: absolute;
+  top: 12px; /* Ajustez la position verticale selon vos besoins */
+  left: -12px; /* Ajustez la position horizontale selon vos besoins */
+  font-size: small;
+  color: #1867c0;
+}
 .drivername {
   font-size: 0.9rem;
   font-weight: bold;
-  width: 100px;
 }
 .stsname {
+  display: flex;
+  justify-content: space-between;
   font-size: 0.9rem;
   font-weight: bold;
+  cursor: pointer;
+}
+.stsname:hover{
+  color: #1867c0;
 }
 .add-interval-button {
   margin: auto;
@@ -457,4 +498,8 @@ export default {
   font-size: 1.2rem;
   transform: rotate(180deg);
 }
+.blue-text{
+  color: #1867c0;
+}
+
 </style>

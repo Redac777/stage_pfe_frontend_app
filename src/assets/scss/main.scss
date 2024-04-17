@@ -1,2 +1,13 @@
 .v-selection-control .v-switch__track {background-color: red !important;}
 .v-selection-control--dirty .v-switch__track {background-color: green !important;}
+.v-btn--icon.v-btn--density-default {
+    width: 1rem;
+    height: 1rem;
+    box-shadow: none;
+}
+.v-btn--icon.v-btn--size-default{
+    --v-btn-size:0.8rem !important;
+}
+.v-btn--elevated:hover{
+    box-shadow: none !important;
+}

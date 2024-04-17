@@ -47,7 +47,7 @@
 
         <!-- STS -->
         <div v-if="equipementType == 'STS' || equipementType == 'AM'">
-          <h4>Selected STSs</h4>
+          <h4>Selected TA STSs</h4>
           <div class="stss">
             <div v-for="(item, index) in selectedEqus" :key="index" class="sts">
               <div class="stsname">{{ item }}</div>
@@ -84,16 +84,30 @@
 
         <!-- AMS -->
         <div v-if="equipementType == 'AM'">
-          <h4>Selected AMs</h4>
+          <h4>Selected ST STS</h4>
           <div class="rss">
-            <div v-for="(item) in workers" :key="index" class="rs">
+            <div v-for="(item) in workers" :key="item" class="rs">
               <div class="rsname">{{ item.STS }}</div>
               <div class="equ">
                 {{ item.worker }}
               </div>
-              <v-btn class="remove" @click="removeEquipement(item)">
+              <v-btn class="remove" @click="removeSTSTS(item.STS)">
                   <span style="color: red; font-size: 36px">-</span>
-                </v-btn>
+              </v-btn>
+            </div>
+          </div>
+        </div>
+        <div v-if="equipementType == 'AM'">
+          <h4>Selected AM Roles</h4>
+          <div class="rss">
+            <div v-for="(item) in selectedRoles" :key="item" class="rs">
+              <div class="rsname">{{ item }}</div>
+              <div class="equ">
+                {{ numWorkers[item] }}
+              </div>
+              <v-btn class="remove" @click="removeAMRole(item)">
+                  <span style="color: red; font-size: 36px">-</span>
+              </v-btn>
             </div>
           </div>
         </div>
@@ -114,7 +128,7 @@
 
 <script>
 export default {
-  props: ["selectedEqus", "selectedDrivers", "equipementType","intervals","rssStates","workers"],
+  props: ["selectedEqus", "selectedDrivers", "equipementType","intervals","rssStates","workers","selectedRoles","numWorkers"],
   computed: {
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
@@ -138,6 +152,12 @@ export default {
     },
     removeEquipement(equ) {
       this.$emit("removeEquipement", equ);
+    },
+    removeSTSTS(sts){
+      this.$emit("removeSTSTS", sts);
+    },
+    removeAMRole(role){
+      this.$emit("removeAMRole", role);
     },
     chunkArray(arr, size) {
       return arr.reduce(
