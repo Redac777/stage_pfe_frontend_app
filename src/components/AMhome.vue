@@ -37,6 +37,7 @@
               <span
                 :class="{
                   'blue-text': hasIntervalsOrWorkers(item),
+                  'green-text': includedWoutIntOrWork(item),
                 }"
                 >{{ item }}</span
               >
@@ -49,7 +50,10 @@
             ></v-switch>
             <v-icon
               v-if="showIcons[item] === true"
-              class="timer-icon"
+              :class="{
+                'timer-icon-blue': !includedWoutIntOrWork(item),
+                'timer-icon-green': includedWoutIntOrWork(item),
+              }"
               @click="openDialog(item)"
               >mdi-cog</v-icon
             >
@@ -141,15 +145,20 @@
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="role">
             <div
-              class="rolename"
+              :class="item !== 'assistant' ? 'rolename' : 'assistantrolename'"
               @click="openRoleDialog(item)"
-              @mouseover="showRoleIcons[item] = true"
+              @mouseover="
+                item !== 'assistant'
+                  ? (showRoleIcons[item] = true)
+                  : (showRoleIcons[item] = false)
+              "
               @mouseleave="showRoleIcons[item] = false"
             >
               <span
-                :class="{
-                  'blue-text': hasIntervalsOrWorkers(item),
-                }"
+              :class="{
+                'blue-text': hasNumber(item),
+                'green-text': includedWoutNum(item),
+              }"
                 >{{ item }}</span
               >
             </div>
@@ -157,12 +166,17 @@
               v-model="selectedRoles"
               :value="item"
               hide-details
+              @change="onChangeRole(item)"
             ></v-switch>
             <v-icon
-                v-if="showRoleIcons[item] == true"
-                class="timer-icon"
-                @click="openRoleDialog(item)"
-                >mdi-cog</v-icon>
+              v-if="showRoleIcons[item] == true"
+              :class="{
+                'timer-icon-blue': !includedWoutNum(item),
+                'timer-icon-green': includedWoutNum(item),
+              }"
+              @click="openRoleDialog(item)"
+              >mdi-cog</v-icon
+            >
 
             <v-dialog v-model="roleDialog[item]" max-width="400">
               <v-card>
@@ -247,8 +261,10 @@ export default {
       showValidateDialog: false,
       keysArray: [],
       showIcons: {},
-      showRoleIcons:{},
+      showRoleIcons: {},
       roleCount: 0,
+      isSaved: {},
+      isRoleSaved:{}
     };
   },
   computed: {
@@ -261,6 +277,27 @@ export default {
         );
       };
     },
+    hasNumber(){
+      return (item) => {
+        return !!this.numWorkers[item];
+      }
+    },
+    includedWoutIntOrWork() {
+      return (item) => {
+        return (
+          this.selectedSTSs.includes(item) && !this.isSaved[item]
+        );
+      };
+    },
+
+    includedWoutNum() {
+      return (item) => {
+        return (
+          this.selectedRoles.includes(item) && !this.isRoleSaved[item]
+        );
+      };
+    },
+
     isSaveButtonDisabled() {
       return (item) => {
         if (this.selectedRole === "TA") {
@@ -342,6 +379,7 @@ export default {
   },
   mounted() {
     this.setDrivers();
+    this.setIsRoleSaved();
   },
   methods: {
     ...mapActions([
@@ -367,6 +405,11 @@ export default {
           .filter((equipement) => equipement.profile_group.type === "sts")
           .map((equipement) => equipement.matricule);
       });
+    },
+    setIsRoleSaved(){
+      for(let role in this.roles){
+        this.isRoleSaved[role] = false
+      }
     },
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
@@ -478,7 +521,7 @@ export default {
         this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
         this.workers = this.workers.filter((worker) => worker.STS !== item);
-        this.keysArray = Object.keys(this.intervals);
+        this.isSaved[item]=false
       }
     },
 
@@ -490,7 +533,7 @@ export default {
       }
 
       // Initialize intervals and workers arrays if not already initialized
-      if (!this.intervals[item]) {
+      if (!this.intervals[item] || this.intervals[item].length === 0) {
         this.intervals[item] = [{ startTime: "", endTime: "" }];
       }
 
@@ -500,12 +543,18 @@ export default {
     },
     // save sts intervals
     saveTime(item) {
+      this.isSaved[item] = true;
       if (this.selectedRole === "ST") {
         // Save ST worker for ST role
         delete this.intervals[item];
-        this.workers.push({ STS: item, worker: this.selectedSTWorker });
-      } else {
-        this.workers = this.workers.filter((worker) => worker.STS !== item);
+        const itemToGet = this.workers.find((worker) => worker.STS === item);
+        if (!itemToGet)
+          this.workers.push({ STS: item, worker: this.selectedSTWorker });
+        else {
+          itemToGet.worker = this.selectedSTWorker;
+          this.workers = this.workers.filter((worker) => worker.STS !== item);
+          this.workers.push(itemToGet);
+        }
       }
       this.selectedSTSs.push(item);
       this.closeDialog(item, true);
@@ -519,45 +568,41 @@ export default {
           this.workers = this.workers.filter((worker) => worker.STS !== item);
           delete this.intervals[item];
         } else {
-          if (this.selectedRole === "ST") {
-            const itemToGet = this.workers.filter(
+          if (this.selectedRole === "TA") {
+            const itemToGet = this.workers.find(
               (worker) => worker.STS === item
             );
-            if (itemToGet.length === 0 && !this.intervals[item]) {
-              this.selectedSTSs = this.selectedSTSs.filter(
-                (sts) => sts !== item
-              );
-              this.workers = this.workers.filter(
-                (worker) => worker.STS !== item
-              );
+            if (itemToGet) {
+              delete this.intervals[item];
+            } else if (
+              this.intervals[item][this.intervals[item].length - 1]
+                .startTime === "" &&
+              this.intervals[item][this.intervals[item].length - 1].endTime ===
+                ""
+            ) {
+              this.intervals[item].pop();
             }
-          } else {
-            if (this.intervals.length > 1)
-              if (
-                this.intervals[item][this.intervals[item].length - 1]
-                  .startTime === "" ||
-                this.intervals[this.intervals[item].length - 1].endTime === ""
-              ) {
-                this.intervals[item].pop();
-              } else {
-                this.selectedSTSs = this.selectedSTSs.filter(
-                  (sts) => sts !== item
-                );
-                this.intervals[item].pop();
-              }
           }
         }
+      } else {
+        if (this.selectedRole === "TA") {
+          this.workers = this.workers.filter((worker) => worker.STS !== item);
+        } else {
+          delete this.intervals[item];
+        }
       }
+
       this.dialog[item] = false;
-      this.keysArray = Object.keys(this.intervals);
     },
 
     // Method to change the selected role
 
     // Method to open the role dialog for a specific role
     openRoleDialog(item) {
-      this.roleCount = this.numWorkers[item] || 1;
-      this.roleDialog[item] = true;
+      if (item !== "assistant") {
+        this.roleCount = this.numWorkers[item] || 1;
+        this.roleDialog[item] = true;
+      }
     },
     // Method to close the role dialog for a specific role
     closeRoleDialog(item, value) {
@@ -573,6 +618,7 @@ export default {
     },
     // Method to save role data for a specific role
     saveRoleData(item) {
+      this.isRoleSaved[item]=true
       // Close the dialog for the specific role
       if (!this.selectedRoles.includes(item)) {
         this.selectedRoles.push(item);
@@ -591,15 +637,38 @@ export default {
     removeSTSTS(sts) {
       this.selectedSTSs = this.selectedSTSs.filter((item) => item !== sts);
       this.workers = this.workers.filter((worker) => worker.STS !== sts);
+      this.isSaved[sts]=false
     },
     openSelectionDialog() {
-      this.keysArray = Object.keys(this.intervals);
+      this.selectedSTSs = this.selectedSTSs.filter((sts) => {
+        return (
+          (this.intervals[sts] &&
+          this.intervals[sts].length > 0 &&
+          (this.intervals[sts][this.intervals[sts].length - 1].startTime !==
+            "" ||
+            this.intervals[sts][this.intervals[sts].length - 1].endTime !== "")
+        ) || this.workers.find((worker) => worker.STS === sts)
+      );
+      });
+      this.keysArray = Object.keys(this.intervals).filter(
+        (key) =>
+          this.intervals[key].length !== 0 &&
+          this.intervals[key][0].startTime !== "" &&
+          this.intervals[key][0].endTime !== ""
+      );
       this.showValidateDialog = true;
     },
     removeAMRole(role) {
       this.selectedRoles = this.selectedRoles.filter((item) => item !== role);
       delete this.numWorkers[role];
+      this.isRoleSaved[role] = false;
     },
+    onChangeRole(item){
+      if(!this.selectedRoles.includes(item)){
+        this.isRoleSaved[item] = false
+        delete this.numWorkers[item]
+      }
+    }
   },
 };
 </script>
@@ -669,6 +738,11 @@ export default {
   font-weight: bold;
   cursor: pointer;
 }
+.assistantrolename {
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: auto;
+}
 .stsname:hover,
 .rolename:hover {
   color: #1867c0;
@@ -709,17 +783,28 @@ export default {
   font-size: 1.2rem;
   transform: rotate(180deg);
 }
-.sts,.role {
+.sts,
+.role {
   position: relative;
 }
-.timer-icon {
+.timer-icon-blue {
   position: absolute;
   top: 12px; /* Ajustez la position verticale selon vos besoins */
   left: -12px; /* Ajustez la position horizontale selon vos besoins */
   font-size: small;
   color: #1867c0;
 }
+.timer-icon-green {
+  position: absolute;
+  top: 12px; /* Ajustez la position verticale selon vos besoins */
+  left: -12px; /* Ajustez la position horizontale selon vos besoins */
+  font-size: small;
+  color: #2e7d32;
+}
 .blue-text {
   color: #1867c0;
+}
+.green-text {
+  color: #2e7d32;
 }
 </style>
