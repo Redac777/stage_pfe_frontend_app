@@ -17,7 +17,6 @@
               hide-details
             ></v-switch>
           </div>
-          
         </div>
       </div>
       <!-- List stss with associated switches -->
@@ -29,8 +28,19 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div class="stsname" @click="openDialog(item)" @mouseover="showIcons[item] = true" @mouseleave="showIcons[item] = false">
-              <span :class="{ 'blue-text': this.intervals[item] && this.intervals[item].length!=0 }">{{ item }}</span>
+            <div
+              class="stsname"
+              @click="openDialog(item)"
+              @mouseover="showIcons[item] = true"
+              @mouseleave="showIcons[item] = false"
+            >
+              <span
+                :class="{
+                  'blue-text':hasIntervals(item),
+                  'green-text': includedWoutIntOrWork(item),
+                }"
+                >{{ item }}</span
+              >
             </div>
             <v-switch
               v-model="selectedSTSs"
@@ -38,8 +48,16 @@
               hide-details
               @change="onChange(item)"
             ></v-switch>
-            <v-icon v-if="showIcons[item] == true" class="timer-icon" @click="openDialog(item)">mdi-timer</v-icon>
-            
+            <v-icon
+              v-if="showIcons[item] == true"
+              :class="{
+                'timer-icon-blue': !includedWoutIntOrWork(item),
+                'timer-icon-green': includedWoutIntOrWork(item),
+              }"
+              @click="openDialog(item)"
+              >mdi-timer</v-icon
+            >
+
             <!-- Dialog for adding sts time intervals -->
             <v-dialog
               v-model="dialog[item]"
@@ -137,11 +155,26 @@ export default {
       respectedStart: false,
       respectedEnd: false,
       showValidateDialog: false,
-      showIcons : {}
+      showIcons: {},
+      isSaved: {},
     };
   },
   computed: {
     ...mapGetters(["getDrivers", "getEquipements"]),
+   
+    includedWoutIntOrWork() {
+      return (item) => {
+        return this.selectedSTSs.includes(item) && !this.isSaved[item];
+      };
+    },
+    hasIntervals() {
+      return (item) => {
+        return (
+          !!this.intervals[item]
+        );
+      };
+    },
+
     isSaveButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -214,6 +247,7 @@ export default {
   },
   mounted() {
     this.setData();
+    this.setIsSaved();
   },
   methods: {
     ...mapActions([
@@ -238,6 +272,11 @@ export default {
           .filter((equipement) => equipement.profile_group.type === "sts")
           .map((equipement) => equipement.matricule);
       });
+    },
+    setIsSaved(){
+      for(let sts in this.stssList){
+        this.isSaved[sts] = false
+      }
     },
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
@@ -343,14 +382,11 @@ export default {
       if (!this.selectedSTSs.includes(item)) {
         this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
+        this.isSaved[item]=false
       }
     },
     //open sts intervals dialog
     openDialog(item) {
-        
-      if(!this.selectedSTSs.includes(item)){
-        this.selectedSTSs.push(item);
-      }
       if (!this.intervals) {
         this.intervals = {};
       }
@@ -362,16 +398,26 @@ export default {
 
     // save sts intervals
     saveDialog(item) {
-      this.intervalsSaved = true;
+      this.isSaved[item] = true;
+      this.selectedSTSs.push(item);
       this.closeDialog(item, true);
     },
 
     // close sts intervals dialog
     closeDialog(item, value) {
       if (!value) {
-        if(this.intervals[item][0].startTime==='' && this.intervals[item][0].endTime===''){
+        if (
+          this.intervals[item][0].startTime === "" &&
+          this.intervals[item][0].endTime === ""
+        ) {
           this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
           delete this.intervals[item];
+        } else if (
+          this.intervals[item][this.intervals[item].length - 1].startTime ===
+            "" ||
+          this.intervals[item][this.intervals[item].length - 1].endTime === ""
+        ) {
+          this.intervals[item].pop();
         }
       }
       this.dialog[item] = false;
@@ -386,6 +432,15 @@ export default {
       delete this.intervals[equ];
     },
     openSelectionDialog() {
+      this.selectedSTSs = this.selectedSTSs.filter((sts) => {
+        return (
+          this.intervals[sts] &&
+          this.intervals[sts].length > 0 &&
+          (this.intervals[sts][this.intervals[sts].length - 1].startTime !==
+            "" ||
+            this.intervals[sts][this.intervals[sts].length - 1].endTime !== "")
+        );
+      });
       this.showValidateDialog = true;
     },
   },
@@ -432,7 +487,7 @@ export default {
   gap: 0.8rem;
   margin-bottom: 1rem; /* Espacement entre les drivers */
 }
-.sts{
+.sts {
   position: relative;
 }
 .v-switch {
@@ -441,13 +496,7 @@ export default {
   align-items: center;
   font-size: x-small !important;
 }
-.timer-icon {
-  position: absolute;
-  top: 12px; /* Ajustez la position verticale selon vos besoins */
-  left: -12px; /* Ajustez la position horizontale selon vos besoins */
-  font-size: small;
-  color: #1867c0;
-}
+
 .drivername {
   font-size: 0.9rem;
   font-weight: bold;
@@ -459,7 +508,7 @@ export default {
   font-weight: bold;
   cursor: pointer;
 }
-.stsname:hover{
+.stsname:hover {
   color: #1867c0;
 }
 .add-interval-button {
@@ -498,8 +547,25 @@ export default {
   font-size: 1.2rem;
   transform: rotate(180deg);
 }
-.blue-text{
+
+.timer-icon-blue {
+  position: absolute;
+  top: 12px; /* Ajustez la position verticale selon vos besoins */
+  left: -12px; /* Ajustez la position horizontale selon vos besoins */
+  font-size: small;
   color: #1867c0;
 }
-
+.timer-icon-green {
+  position: absolute;
+  top: 12px; /* Ajustez la position verticale selon vos besoins */
+  left: -12px; /* Ajustez la position horizontale selon vos besoins */
+  font-size: small;
+  color: #2e7d32;
+}
+.blue-text {
+  color: #1867c0;
+}
+.green-text {
+  color: #2e7d32;
+}
 </style>
