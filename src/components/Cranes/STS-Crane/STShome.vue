@@ -10,7 +10,9 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="drivername">{{ item }}</div>
+            <div class="drivername">
+              {{ item.firstname + " " + item.lastname }}
+            </div>
             <v-switch
               v-model="selectedDrivers"
               :value="item"
@@ -32,15 +34,15 @@
             <div
               class="stsname"
               @click="openDialog(item)"
-              @mouseover="showIcons[item] = true"
-              @mouseleave="showIcons[item] = false"
+              @mouseover="showIcons[item.matricule] = true"
+              @mouseleave="showIcons[item.matricule] = false"
             >
               <span
                 :class="{
                   'blue-text': hasIntervals(item),
                   'green-text': includedWoutIntOrWork(item),
                 }"
-                >{{ item }}</span
+                >{{ item.matricule }}</span
               >
             </div>
             <v-switch
@@ -50,7 +52,7 @@
               @change="onChange(item)"
             ></v-switch>
             <v-icon
-              v-if="showIcons[item] == true"
+              v-if="showIcons[item.matricule] == true"
               :class="{
                 'timer-icon-blue': !includedWoutIntOrWork(item),
                 'timer-icon-green': includedWoutIntOrWork(item),
@@ -61,13 +63,13 @@
 
             <!-- Dialog for adding sts time intervals -->
             <v-dialog
-              v-model="dialog[item]"
+              v-model="dialog[item.matricule]"
               max-width="400"
               @click:outside="closeDialog(item)"
             >
               <v-card>
                 <v-card-text
-                  v-for="(interval, index) in intervals[item]"
+                  v-for="(interval, index) in intervals[item.matricule]"
                   :key="index"
                 >
                   <v-text-field
@@ -91,7 +93,7 @@
                         : 'add-interval-button'
                     "
                     @click="addIntervalBelow(item, index)"
-                    v-if="index === intervals[item].length - 1"
+                    v-if="index === intervals[item.matricule].length - 1"
                   >
                     <v-icon color="white">mdi-plus</v-icon>
                   </div>
@@ -127,12 +129,12 @@
     <ConfirmDialog
       equipementType="STS"
       v-model="showConfirmDialog"
-      @validateSelections="getData"
+      @validateSelections="createPlanning"
       @removeDriver="removeDriver"
       @removeEquipement="removeEquipement"
       :selectedDrivers="selectedDrivers"
       :intervals="intervals"
-      :selectedEqus="selectedSTSs"
+      :selectedEqus="keysArray"
       @closeDialog="showConfirmDialog = false"
     />
   </div>
@@ -165,6 +167,9 @@ export default {
       showConfirmDialog: false,
       showIcons: {},
       isSaved: {},
+      keysArray: [],
+      shiftId: null,
+      profileGroupId: null,
     };
   },
 
@@ -177,36 +182,40 @@ export default {
 
     includedWoutIntOrWork() {
       return (item) => {
-        return this.selectedSTSs.includes(item) && !this.isSaved[item];
+        return (
+          this.selectedSTSs.includes(item) && !this.isSaved[item.matricule]
+        );
       };
     },
     //sts icon color based on intervals
     hasIntervals() {
       return (item) => {
-        return !!this.intervals[item];
+        return !!this.intervals[item.matricule];
       };
     },
 
     //save Button state
     isSaveButtonDisabled() {
       return (item) => {
-        if (this.intervals[item]) {
-          const isValidIntervals = this.intervals[item].every((interval, i) => {
-            if (i === 0) {
-              // For the first interval, there's no previous interval to compare with
-              return true;
-            } else {
-              // For subsequent intervals, compare with the previous interval's end time
-              const previousInterval = this.intervals[item][i - 1];
-              return (
-                interval.startTime >= previousInterval.endTime &&
-                interval.startTime < interval.endTime
-              );
+        if (this.intervals[item.matricule]) {
+          const isValidIntervals = this.intervals[item.matricule].every(
+            (interval, i) => {
+              if (i === 0) {
+                // For the first interval, there's no previous interval to compare with
+                return true;
+              } else {
+                // For subsequent intervals, compare with the previous interval's end time
+                const previousInterval = this.intervals[item.matricule][i - 1];
+                return (
+                  interval.startTime >= previousInterval.endTime &&
+                  interval.startTime < interval.endTime
+                );
+              }
             }
-          });
+          );
           // Check if any interval is empty
           return (
-            this.intervals[item].some(
+            this.intervals[item.matricule].some(
               (interval) => interval.startTime === "" || interval.endTime === ""
             ) ||
             !this.respectedStart ||
@@ -220,30 +229,33 @@ export default {
     // add interval button state
     isAddIntervalButtonDisabled() {
       return (item) => {
-        if (this.intervals[item]) {
+        if (this.intervals[item.matricule]) {
           // Check if any interval is empty
-          const isValidIntervals = this.intervals[item].every((interval, i) => {
-            if (i === 0) {
-              // For the first interval, there's no previous interval to compare with
-              return true;
-            } else {
-              // For subsequent intervals, compare with the previous interval's end time
-              const previousInterval = this.intervals[item][i - 1];
-              return (
-                interval.startTime >= previousInterval.endTime &&
-                interval.startTime < interval.endTime
-              );
+          const isValidIntervals = this.intervals[item.matricule].every(
+            (interval, i) => {
+              if (i === 0) {
+                // For the first interval, there's no previous interval to compare with
+                return true;
+              } else {
+                // For subsequent intervals, compare with the previous interval's end time
+                const previousInterval = this.intervals[item.matricule][i - 1];
+                return (
+                  interval.startTime >= previousInterval.endTime &&
+                  interval.startTime < interval.endTime
+                );
+              }
             }
-          });
+          );
           return (
-            this.intervals[item].some(
+            this.intervals[item.matricule].some(
               (interval) => interval.startTime === "" || interval.endTime === ""
             ) ||
             !this.respectedStart ||
             !this.respectedEnd ||
             !isValidIntervals ||
-            this.intervals[item][this.intervals[item].length - 1].endTime ==
-              "15:00"
+            this.intervals[item.matricule][
+              this.intervals[item.matricule].length - 1
+            ].endTime == "15:00"
           );
         }
         return true; // Disable if intervals are not defined
@@ -273,6 +285,10 @@ export default {
       "setDriversAction",
       "setLoadingValueAction",
       "setEquipementsAction",
+      "createPlanningAction",
+      "addUserToPlanning",
+      "addEquipementToPlanning",
+      "addEquipementWorkingHoursToPlanning"
     ]),
 
     //set drivers and equipements data
@@ -283,28 +299,32 @@ export default {
       };
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then((response) => {
-        this.driversList = this.getDrivers.map(
-          (driver) => driver.firstname + " " + driver.lastname
-        );
+        this.driversList = this.getDrivers;
+        if (this.driversList.length > 0) {
+          this.shiftId = this.driversList[0].shift_id;
+        }
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
-        this.stssList = this.getEquipements
-          .filter((equipement) => equipement.profile_group.type === "sts")
-          .map((equipement) => equipement.matricule);
+        this.stssList = this.getEquipements.filter(
+          (equipement) => equipement.profile_group.type === "sts"
+        );
+        if (this.stssList.length > 0) {
+          this.profileGroupId = this.stssList[0].profile_group.id;
+        }
       });
     },
 
     //if sts intervals are saved
     setIsSaved() {
       for (let sts in this.stssList) {
-        this.isSaved[sts] = false;
+        this.isSaved[sts.matricule] = false;
       }
     },
 
     // add interval below
     addIntervalBelow(item, index) {
-      const currentIntervals = this.intervals[item];
+      const currentIntervals = this.intervals[item.matricule];
 
       // Check if there are any existing intervals
       const hasIntervals = currentIntervals.some(
@@ -342,7 +362,7 @@ export default {
         isEndTimeBefore15
       ) {
         // Add a new interval
-        this.intervals[item].splice(index + 1, 0, {
+        this.intervals[item.matricule].splice(index + 1, 0, {
           startTime: "",
           endTime: "",
         });
@@ -353,9 +373,9 @@ export default {
     startTimeRule(value, item, index) {
       // Reset respected to true at the beginning
       this.respectedStart = true;
-      if (value < "07:00") {
+      if (value < "07:00" || value > "15:00") {
         this.respectedStart = false;
-        return "07:00 <= interval";
+        return "07:00 <= interval <= 15:00";
       }
 
       if (index === 0) {
@@ -363,7 +383,7 @@ export default {
       }
 
       const keys = Object.keys(this.intervals);
-      const indexX = keys.indexOf(item);
+      const indexX = keys.indexOf(item.matricule);
       const previousItem = this.intervals[keys[indexX]][index - 1];
       if (value < previousItem.endTime) {
         this.respectedStart = false;
@@ -382,7 +402,7 @@ export default {
         return "interval <= 15:00";
       }
 
-      if (value < this.intervals[item][index].startTime) {
+      if (value < this.intervals[item.matricule][index].startTime) {
         this.respectedEnd = false;
         return "Ends Time > Start Time !!";
       }
@@ -400,18 +420,63 @@ export default {
     },
 
     // returns selected drivers and stss
-    getData() {
-      console.log("Selected drivers : " + this.selectedDrivers);
-      console.log("Selected STSs : " + JSON.stringify(this.intervals));
+    createPlanning() {
+      let usersAddedSuccessfully = [];
+      let equAddedSuccessfully = [];
+      this.showConfirmDialog = false;
+      this.setLoadingValueAction(true);
+      const planning = {
+        shift_id: this.shiftId,
+        profile_group_id: this.profileGroupId,
+      };
+      this.createPlanningAction(planning).then((response) => {
+        for (let driver in this.selectedDrivers) {
+          let userWPlanning = {
+            user_id: this.selectedDrivers[driver].id,
+            planning_id: response.id,
+          };
+          this.addUserToPlanning(userWPlanning).then(() => {
+            usersAddedSuccessfully.push(this.selectedDrivers[driver]);
+          });
+        }
+
+        for (let equ in this.keysArray) {
+          let equWPlanning = {
+            equipement_id: this.selectedSTSs[equ].id,
+            planning_id: response.id,
+          };
+          this.addEquipementToPlanning(equWPlanning).then((response) => {
+            console.log("STS : " + this.selectedSTSs[equ].matricule)
+           for(let interval in this.intervals[this.selectedSTSs[equ].matricule]){
+             let intervalWPlanning = {
+              equipement_planning_id: response.id,
+              start_time: this.intervals[this.selectedSTSs[equ].matricule][interval].startTime,
+              end_time: this.intervals[this.selectedSTSs[equ].matricule][interval].endTime
+             }
+             this.addEquipementWorkingHoursToPlanning(intervalWPlanning).then((response) => {
+               console.log(response)
+             })
+           }
+           
+            equAddedSuccessfully.push(this.selectedSTSs[equ]);
+          });
+        }
+
+        this.setLoadingValueAction(false);
+        console.log(usersAddedSuccessfully);
+        console.log(equAddedSuccessfully);
+      });
       this.showConfirmDialog = false;
     },
 
     // switch on change state
     onChange(item) {
       if (!this.selectedSTSs.includes(item)) {
-        this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
-        delete this.intervals[item];
-        this.isSaved[item] = false;
+        this.selectedSTSs = this.selectedSTSs.filter(
+          (sts) => sts.matricule !== item.matricule
+        );
+        delete this.intervals[item.matricule];
+        this.isSaved[item.matricule] = false;
       }
     },
 
@@ -420,15 +485,15 @@ export default {
       if (!this.intervals) {
         this.intervals = {};
       }
-      if (!this.intervals[item]) {
-        this.intervals[item] = [{ startTime: "", endTime: "" }];
+      if (!this.intervals[item.matricule]) {
+        this.intervals[item.matricule] = [{ startTime: "", endTime: "" }];
       }
-      this.dialog[item] = true;
+      this.dialog[item.matricule] = true;
     },
 
     // save sts intervals
     saveDialog(item) {
-      this.isSaved[item] = true;
+      this.isSaved[item.matricule] = true;
       this.selectedSTSs.push(item);
       this.closeDialog(item, true);
     },
@@ -437,20 +502,35 @@ export default {
     closeDialog(item, value) {
       if (!value) {
         if (
-          this.intervals[item][0].startTime === "" &&
-          this.intervals[item][0].endTime === ""
+          !this.selectedSTSs.includes(item) ||
+          !this.isSaved[item.matricule]
         ) {
-          this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
-          delete this.intervals[item];
-        } else if (
-          this.intervals[item][this.intervals[item].length - 1].startTime ===
-            "" ||
-          this.intervals[item][this.intervals[item].length - 1].endTime === ""
-        ) {
-          this.intervals[item].pop();
+          this.selectedSTSs = this.selectedSTSs.filter(
+            (sts) => sts.matricule !== item.matricule
+          );
+          delete this.intervals[item.matricule];
+        } else {
+          if (
+            this.intervals[item.matricule][0].startTime === "" &&
+            this.intervals[item.matricule][0].endTime === ""
+          ) {
+            this.selectedSTSs = this.selectedSTSs.filter(
+              (sts) => sts.matricule !== item.matricule
+            );
+            delete this.intervals[item.matricule];
+          } else if (
+            this.intervals[item.matricule][
+              this.intervals[item.matricule].length - 1
+            ].startTime === "" ||
+            this.intervals[item.matricule][
+              this.intervals[item.matricule].length - 1
+            ].endTime === ""
+          ) {
+            this.intervals[item.matricule].pop();
+          }
         }
       }
-      this.dialog[item] = false;
+      this.dialog[item.matricule] = false;
     },
 
     // remove driver from confirm dialog
@@ -462,21 +542,33 @@ export default {
 
     // remove equipment from confirm dialog
     removeEquipement(equ) {
-      this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
-      delete this.intervals[equ];
+      this.selectedSTSs = this.selectedSTSs.filter(
+        (sts) => sts.matricule !== equ.matricule
+      );
+      delete this.intervals[equ.matricule];
+      this.keysArray = Object.keys(this.intervals);
     },
 
     // open confirm dialog
     openConfirmDialog() {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => {
         return (
-          this.intervals[sts] &&
-          this.intervals[sts].length > 0 &&
-          (this.intervals[sts][this.intervals[sts].length - 1].startTime !==
-            "" ||
-            this.intervals[sts][this.intervals[sts].length - 1].endTime !== "")
+          this.intervals[sts.matricule] &&
+          this.intervals[sts.matricule].length > 0 &&
+          (this.intervals[sts.matricule][
+            this.intervals[sts.matricule].length - 1
+          ].startTime !== "" ||
+            this.intervals[sts.matricule][
+              this.intervals[sts.matricule].length - 1
+            ].endTime !== "")
         );
       });
+      this.keysArray = Object.keys(this.intervals).filter(
+        (key) =>
+          this.intervals[key].length !== 0 &&
+          this.intervals[key][0].startTime !== "" &&
+          this.intervals[key][0].endTime !== ""
+      );
       this.showConfirmDialog = true;
     },
   },

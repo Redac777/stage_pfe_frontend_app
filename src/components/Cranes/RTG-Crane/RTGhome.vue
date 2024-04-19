@@ -10,7 +10,9 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="drivername">{{ item }}</div>
+            <div class="drivername">
+              {{ item.firstname + " " + item.lastname }}
+            </div>
             <v-switch
               v-model="selectedDrivers"
               :value="item"
@@ -29,7 +31,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rtg">
-            <div class="rtgname">{{ item }}</div>
+            <div class="rtgname">{{ item.matricule }}</div>
             <v-switch
               v-model="selectedRTGs"
               :value="item"
@@ -54,7 +56,7 @@
     <ConfirmDialog
       equipementType="RTG"
       v-model="showConfirmDialog"
-      @validateSelections="getData"
+      @validateSelections="createPlanning"
       @removeDriver="removeDriver"
       @removeEquipement="removeEquipement"
       :selectedDrivers="selectedDrivers"
@@ -81,13 +83,16 @@ export default {
       selectedDrivers: [],
       selectedRTGs: [],
       showConfirmDialog: false,
+      shiftId: null,
+      profileGroupId: null,
+      plannings: [],
     };
   },
 
   // computed
   computed: {
     //include getters
-    ...mapGetters(["getDrivers", "getEquipements"]),
+    ...mapGetters(["getDrivers", "getEquipements", "getPlannings"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       if (this.driversList) return this.chunkArray(this.driversList, 6);
@@ -110,6 +115,9 @@ export default {
       "setDriversAction",
       "setLoadingValueAction",
       "setEquipementsAction",
+      "createPlanningAction",
+      "addUserToPlanning",
+      "addEquipementToPlanning",
     ]),
 
     // set drivers and equipements data
@@ -121,15 +129,19 @@ export default {
 
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then(() => {
-        this.driversList = this.getDrivers.map(
-          (driver) => driver.firstname + " " + driver.lastname
-        );
+        this.driversList = this.getDrivers;
+        if (this.driversList.length > 0) {
+          this.shiftId = this.driversList[0].shift_id;
+        }
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
-        this.rtgsList = this.getEquipements
-          .filter((equipement) => equipement.profile_group.type === "rtg")
-          .map((equipement) => equipement.matricule);
+        this.rtgsList = this.getEquipements.filter(
+          (equipement) => equipement.profile_group.type === "rtg"
+        );
+        if (this.rtgsList.length > 0) {
+          this.profileGroupId = this.rtgsList[0].profile_group.id;
+        }
       });
     },
 
@@ -148,10 +160,40 @@ export default {
     },
 
     // returns selected drivers and rtgs
-    getData() {
+    createPlanning() {
+      let usersAddedSuccessfully = []
+      let equAddedSuccessfully = []
       this.showConfirmDialog = false;
-      console.log("Selected drivers : " + this.selectedDrivers);
-      console.log("Selected RTGs : " + this.selectedRTGs);
+      this.setLoadingValueAction(true);
+      const planning = {
+        shift_id: this.shiftId,
+        profile_group_id: this.profileGroupId,
+      };
+      this.createPlanningAction(planning).then((response) => {
+        for (let driver in this.selectedDrivers) {
+          let userWPlanning = {
+            user_id: this.selectedDrivers[driver].id,
+            planning_id: response.id,
+          };
+          this.addUserToPlanning(userWPlanning).then(() => {
+            usersAddedSuccessfully.push(this.selectedDrivers[driver])
+          });
+        }
+
+        for (let equ in this.selectedRTGs) {
+          let equWPlanning = {
+            equipement_id: this.selectedRTGs[equ].id,
+            planning_id: response.id,
+          };
+          this.addEquipementToPlanning(equWPlanning).then(() => {
+            equAddedSuccessfully.push(this.selectedRTGs[equ])
+          })
+        }
+
+        this.setLoadingValueAction(false);
+        console.log(usersAddedSuccessfully)
+        console.log(equAddedSuccessfully)
+      });
     },
 
     //remove driver from confirm dialog

@@ -19,7 +19,7 @@
                 :key="rowIndex"
                 class="driver"
               >
-                {{ driver }}
+                {{ driver.firstname + " " + driver.lastname }}
                 <v-btn class="remove" @click="removeDriver(driver)">
                   <span style="color: red; font-size: 36px">-</span>
                 </v-btn>
@@ -38,7 +38,7 @@
               class="column"
             >
               <li v-for="(equ, rowIndex) in chunk" :key="rowIndex" class="equ">
-                {{ equ }}
+                {{ equ.matricule }}
                 <v-btn class="remove" @click="removeEquipement(equ)">
                   <span style="color: red; font-size: 36px">-</span>
                 </v-btn>
