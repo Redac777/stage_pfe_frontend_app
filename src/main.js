@@ -8,7 +8,7 @@
 import { registerPlugins } from '@/plugins'
 
 // Components
-import App from './App.vue'
+import App from '@/components/App.vue'
 import Store from './stores/index'
 import Router from "./router/router"
 // Composables

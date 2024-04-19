@@ -1,6 +1,7 @@
 <template>
     <div class="parentContainer">
         <div class="container">
+
             <div class="text-center">
                 <v-snackbar v-model="snackbar" :timeout="timeout !== null ? timeout : undefined">
                     <span v-html="text">
@@ -15,6 +16,7 @@
 
                 </v-snackbar>
             </div>
+
             <div class="searchContainer">
                 <v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" variant="outlined"
                     hide-details single-line class="search"></v-text-field>
@@ -218,6 +220,7 @@
 <script>
 import { mapGetters, mapActions } from "vuex";
 import * as XLSX from 'xlsx';
+
 export default {
     data: () => ({
         dialog: false,
@@ -416,6 +419,7 @@ export default {
             this.user.profile_group_id = this.editedItem.profile_group_id;
             this.user.isactive = String(this.editedItem.isactive);
         },
+
         resetItem(item) {
             this.editedItem = { ...item };
             this.editedIndex = item.id;
@@ -441,6 +445,7 @@ export default {
             });
             this.closeDelete()
         },
+
         resetPasswordConfirm() {
             this.setLoadingValueAction(true)
             this.resetPasswordAction(this.editedIndex).then((response) => {
@@ -472,6 +477,7 @@ export default {
             this.user.profile_group_id = ''
             this.user.isactive = ''
         },
+
         closeDelete() {
             this.dialogDelete = false
             this.$nextTick(() => {
@@ -479,6 +485,7 @@ export default {
                 this.editedIndex = -1
             })
         },
+
         closeReset() {
             this.dialogReset = false
             this.$nextTick(() => {
@@ -486,6 +493,7 @@ export default {
                 this.editedIndex = -1
             })
         },
+
         save() {
             this.submitClicked = true
             if (!this.user) {
@@ -543,9 +551,11 @@ export default {
 
             }
         },
+
         openFileDialog() {
             this.$refs.fileInput.click();
         },
+
         importUsers(reader, file) {
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result); // Convert file data to Uint8Array
@@ -600,6 +610,7 @@ export default {
             };
             reader.readAsArrayBuffer(file);
         },
+        
         handleFileUpload(event) {
             this.file = event.target.files[0]; // Get the selected file
             this.reader = new FileReader();

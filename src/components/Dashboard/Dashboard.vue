@@ -18,6 +18,7 @@ export default {
             activeComponent: 'RTGhome',
         }
     },
+
     methods:{
         updateActiveComponent(value){
             this.activeComponent = value
@@ -39,6 +40,7 @@ export default {
     flex-direction: column;
     justify-content: space-between;
 }
+
 .content{
     display: flex;
     flex-direction: column;

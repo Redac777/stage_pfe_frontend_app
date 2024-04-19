@@ -1,9 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import App from '@/App.vue' 
-import Login from "@/components/Login.vue"
-import Dashboard from "@/components/Dashboard.vue"
-import Users from "@/components/Users.vue"
-import Equipements from '@/components/Equipements.vue'
+import Login from "@/components/Authentification/Login.vue"
+import Dashboard from "@/components/Dashboard/Dashboard.vue"
+import Users from "@/components/Users/Users.vue"
+import Equipements from '@/components/Equipements/Equipements.vue'
 
 const Router = createRouter({
     history:createWebHistory(),

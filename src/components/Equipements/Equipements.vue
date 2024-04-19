@@ -1,6 +1,7 @@
 <template>
     <div class="parentContainer">
         <div class="container">
+
             <div class="text-center">
                 <v-snackbar v-model="snackbar" :timeout="timeout !== null ? timeout : undefined">
                     <span v-html="text">
@@ -15,12 +16,14 @@
 
                 </v-snackbar>
             </div>
+
             <div class="searchContainer">
                 <v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" variant="outlined"
                     hide-details single-line class="search"></v-text-field>
             </div>
 
             <v-data-table :headers="headers" :items="filteredEquipements" :search="search" class="table">
+
                 <!-- Add new equipement part -->
                 <template v-slot:top>
                     <v-toolbar flat v-bind:class="{ 'addEquipementButtonZone': true }">
@@ -129,6 +132,8 @@
                     <tr :class="{ 'inactive-equipement': item.status === 0 }">
                         <td>{{ item.matricule }}</td>
                         <td>{{ item.profile_groupName }}</td>
+
+                        <!-- Edit and delete actions -->
                         <td>
                             <div class="actions">
                                 <v-btn icon class="icon" size="small" color="green-darken-4" @click="editItem(item)">
@@ -144,6 +149,7 @@
                                 </v-btn icon>
                             </div>
                         </td>
+
                     </tr>
                 </template>
             </v-data-table>
@@ -154,6 +160,7 @@
 <script>
 import { mapGetters, mapActions } from "vuex";
 import * as XLSX from 'xlsx';
+
 export default {
     data: () => ({
         dialog: false,
@@ -219,6 +226,7 @@ export default {
             console.log(newValue);
         }
     },
+
     mounted() {
         this.refreshEquipementsTable();
     },
@@ -323,6 +331,7 @@ export default {
             this.equipement.profile_group_id = ''
             this.equipement.status = ''
         },
+
         closeDelete() {
             this.dialogDelete = false
             this.$nextTick(() => {
@@ -386,9 +395,11 @@ export default {
 
             }
         },
+
         openFileDialog() {
             this.$refs.fileInput.click();
         },
+
         importEquipements(reader, file) {
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result); // Convert file data to Uint8Array
@@ -433,6 +444,7 @@ export default {
             };
             reader.readAsArrayBuffer(file);
         },
+        
         handleFileUpload(event) {
             // Handle file upload logic here
             this.file = event.target.files[0]; // Get the selected file
