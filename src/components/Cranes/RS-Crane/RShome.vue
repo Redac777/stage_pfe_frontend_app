@@ -19,6 +19,7 @@
           </div>
         </div>
       </div>
+
       <!-- List rss with associated switches -->
       <div class="label-column">RSs</div>
       <div class="rss-container">
@@ -52,44 +53,61 @@
         </div>
       </div>
     </div>
-    <!-- Start Button -->
-    <div class="start-button">
+
+    <!-- Create Button -->
+    <div class="create-button">
       <v-btn
-        @click="openSelectionDialog"
+        @click="openConfirmDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
-        >Start</v-btn
+        >Create</v-btn
       >
     </div>
-    <SelectionDialog equipementType="RS" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedDrivers"  :rssStates="rssStates" :selectedEqus="selectedRSs" @closeDialog="showValidateDialog = false" />
 
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      equipementType="RS"
+      v-model="showConfirmDialog"
+      @validateSelections="getData"
+      @removeDriver="removeDriver"
+      @removeEquipement="removeEquipement"
+      :selectedDrivers="selectedDrivers"
+      :rssStates="rssStates"
+      :selectedEqus="selectedRSs"
+      @closeDialog="showConfirmDialog = false"
+    />
   </div>
 </template>
 
 <script>
-import SelectionDialog from './ValidateDialog.vue';
+import ConfirmDialog from "../ConfirmDialog.vue";
 import { mapGetters, mapActions } from "vuex";
+
 export default {
+  //components
   components: {
-    SelectionDialog
+    ConfirmDialog,
   },
+
+  //data
   data() {
     return {
-      driversList: [
-      ],
-      rssList: [
-      ],
+      driversList: [],
+      rssList: [],
       selectedDrivers: [],
       selectedRSs: [],
       rssStates: [],
       dialog: {}, // Object to store dialog state for each RS
       startTime: "",
       endTime: "",
-      showValidateDialog: false
+      showConfirmDialog: false,
     };
   },
+
+  //computed
   computed: {
-    ...mapGetters(["getDrivers","getEquipements"]),
+    //include getters
+    ...mapGetters(["getDrivers", "getEquipements"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       return this.chunkArray(this.driversList, 6);
@@ -100,11 +118,21 @@ export default {
       return this.chunkArray(this.rssList, 6);
     },
   },
+
+  // mounted
   mounted() {
     this.setData();
   },
+
+  // methods
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    ...mapActions([
+      "setDriversAction",
+      "setLoadingValueAction",
+      "setEquipementsAction",
+    ]),
+
+    // set drivers and equipements
     setData() {
       const inputs = {
         profile_group: "rs",
@@ -119,9 +147,12 @@ export default {
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
-        this.rssList= this.getEquipements.filter((equipement) => equipement.profile_group.type==="rs").map((equipement) => equipement.matricule);
+        this.rssList = this.getEquipements
+          .filter((equipement) => equipement.profile_group.type === "rs")
+          .map((equipement) => equipement.matricule);
       });
     },
+
     // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce(
@@ -130,15 +161,16 @@ export default {
         []
       );
     },
+
     // returns selected drivers and rss
     getData() {
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected RSs : " + this.selectedRSs);
       console.log("Selected RSs : " + JSON.stringify(this.rssStates));
-      this.showValidateDialog = false
-      
+      this.showConfirmDialog = false;
     },
-    // switch on change state
+
+    // rs switch on change state
     onChange(item) {
       const index = this.selectedRSs.indexOf(item);
       if (index !== -1) {
@@ -185,15 +217,23 @@ export default {
       }
       this.dialog[item] = false;
     },
+
+    //remove driver from confirm dialog
     removeDriver(driver) {
-      this.selectedDrivers = this.selectedDrivers.filter((item) => item !== driver);
+      this.selectedDrivers = this.selectedDrivers.filter(
+        (item) => item !== driver
+      );
     },
-    removeEquipement(equ){
+
+    //remove rs from confirm dialog
+    removeEquipement(equ) {
       this.selectedRSs = this.selectedRSs.filter((rs) => rs !== equ);
       this.rssStates = this.rssStates.filter((c) => c.rs !== equ);
     },
-    openSelectionDialog() {
-      this.showValidateDialog = true;
+
+    // open confirm dialog
+    openConfirmDialog() {
+      this.showConfirmDialog = true;
     },
   },
 };
@@ -207,6 +247,7 @@ export default {
   height: 88%;
   gap: 0.3rem;
 }
+
 .parent {
   display: flex;
   justify-content: center;
@@ -214,23 +255,27 @@ export default {
   width: 100%;
   height: fit-content;
 }
-.start-button {
+
+.create-button {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   height: fit-content;
 }
+
 .drivers-container,
 .rss-container {
   display: flex;
   gap: 2rem;
 }
+
 .column {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .driver,
 .rs {
   display: flex;
@@ -239,21 +284,25 @@ export default {
   gap: 1rem;
   margin-bottom: 1rem; /* Espacement entre les drivers */
 }
+
 .v-switch {
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: x-small !important;
 }
+
 .drivername {
   font-size: 0.9rem;
   font-weight: bold;
   width: 100px;
 }
-.rsname{
+
+.rsname {
   font-size: 0.9rem;
   font-weight: bold;
 }
+
 .label-column {
   writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */

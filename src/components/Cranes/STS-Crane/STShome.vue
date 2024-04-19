@@ -19,6 +19,7 @@
           </div>
         </div>
       </div>
+
       <!-- List stss with associated switches -->
       <div class="label-column">STSs</div>
       <div class="stss-container">
@@ -36,7 +37,7 @@
             >
               <span
                 :class="{
-                  'blue-text':hasIntervals(item),
+                  'blue-text': hasIntervals(item),
                   'green-text': includedWoutIntOrWork(item),
                 }"
                 >{{ item }}</span
@@ -111,36 +112,43 @@
         </div>
       </div>
     </div>
-    <!-- Start Button -->
-    <div class="start-button">
+
+    <!-- Create Button -->
+    <div class="create-button">
       <v-btn
-        @click="openSelectionDialog"
+        @click="openConfirmDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
-        >Start</v-btn
+        >Create</v-btn
       >
     </div>
-    <SelectionDialog
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
       equipementType="STS"
-      v-model="showValidateDialog"
+      v-model="showConfirmDialog"
       @validateSelections="getData"
       @removeDriver="removeDriver"
       @removeEquipement="removeEquipement"
       :selectedDrivers="selectedDrivers"
       :intervals="intervals"
       :selectedEqus="selectedSTSs"
-      @closeDialog="showValidateDialog = false"
+      @closeDialog="showConfirmDialog = false"
     />
   </div>
 </template>
 
 <script>
-import SelectionDialog from "./ValidateDialog.vue";
+import ConfirmDialog from "../ConfirmDialog.vue";
+
 import { mapGetters, mapActions } from "vuex";
+
 export default {
   components: {
-    SelectionDialog,
+    ConfirmDialog,
   },
+
+  //data
   data() {
     return {
       minTimeIndex: -1,
@@ -154,27 +162,32 @@ export default {
       endTime: "",
       respectedStart: false,
       respectedEnd: false,
-      showValidateDialog: false,
+      showConfirmDialog: false,
       showIcons: {},
       isSaved: {},
     };
   },
+
+  //computed
   computed: {
+    //include getters
     ...mapGetters(["getDrivers", "getEquipements"]),
-   
+
+    //sts item color based on intervals
+
     includedWoutIntOrWork() {
       return (item) => {
         return this.selectedSTSs.includes(item) && !this.isSaved[item];
       };
     },
+    //sts icon color based on intervals
     hasIntervals() {
       return (item) => {
-        return (
-          !!this.intervals[item]
-        );
+        return !!this.intervals[item];
       };
     },
 
+    //save Button state
     isSaveButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -204,6 +217,7 @@ export default {
         return true; // Disable if intervals are not defined
       };
     },
+    // add interval button state
     isAddIntervalButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -235,6 +249,7 @@ export default {
         return true; // Disable if intervals are not defined
       };
     },
+
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       return this.chunkArray(this.driversList, 6);
@@ -245,16 +260,22 @@ export default {
       return this.chunkArray(this.stssList, 6);
     },
   },
+
+  //mounted
   mounted() {
     this.setData();
     this.setIsSaved();
   },
+
+  //methods
   methods: {
     ...mapActions([
       "setDriversAction",
       "setLoadingValueAction",
       "setEquipementsAction",
     ]),
+
+    //set drivers and equipements data
     setData() {
       const inputs = {
         profile_group: "sts",
@@ -273,11 +294,15 @@ export default {
           .map((equipement) => equipement.matricule);
       });
     },
-    setIsSaved(){
-      for(let sts in this.stssList){
-        this.isSaved[sts] = false
+
+    //if sts intervals are saved
+    setIsSaved() {
+      for (let sts in this.stssList) {
+        this.isSaved[sts] = false;
       }
     },
+
+    // add interval below
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
 
@@ -346,6 +371,8 @@ export default {
       }
       return true;
     },
+
+    // define time validation for end time
     endsTimeRule(value, item, index) {
       // Reset respected to true at the beginning
       this.respectedEnd = true;
@@ -371,20 +398,23 @@ export default {
         []
       );
     },
+
     // returns selected drivers and stss
     getData() {
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected STSs : " + JSON.stringify(this.intervals));
-      this.showValidateDialog = false;
+      this.showConfirmDialog = false;
     },
+
     // switch on change state
     onChange(item) {
       if (!this.selectedSTSs.includes(item)) {
         this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
-        this.isSaved[item]=false
+        this.isSaved[item] = false;
       }
     },
+
     //open sts intervals dialog
     openDialog(item) {
       if (!this.intervals) {
@@ -422,16 +452,22 @@ export default {
       }
       this.dialog[item] = false;
     },
+
+    // remove driver from confirm dialog
     removeDriver(driver) {
       this.selectedDrivers = this.selectedDrivers.filter(
         (item) => item !== driver
       );
     },
+
+    // remove equipment from confirm dialog
     removeEquipement(equ) {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
       delete this.intervals[equ];
     },
-    openSelectionDialog() {
+
+    // open confirm dialog
+    openConfirmDialog() {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => {
         return (
           this.intervals[sts] &&
@@ -441,7 +477,7 @@ export default {
             this.intervals[sts][this.intervals[sts].length - 1].endTime !== "")
         );
       });
-      this.showValidateDialog = true;
+      this.showConfirmDialog = true;
     },
   },
 };
@@ -455,6 +491,7 @@ export default {
   height: 88%;
   gap: 0.3rem;
 }
+
 .parent {
   display: flex;
   justify-content: center;
@@ -462,23 +499,27 @@ export default {
   width: 100%;
   height: fit-content;
 }
-.start-button {
+
+.create-button {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   height: fit-content;
 }
+
 .drivers-container,
 .stss-container {
   display: flex;
   gap: 1rem;
 }
+
 .column {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .driver,
 .sts {
   display: flex;
@@ -487,9 +528,11 @@ export default {
   gap: 0.8rem;
   margin-bottom: 1rem; /* Espacement entre les drivers */
 }
+
 .sts {
   position: relative;
 }
+
 .v-switch {
   display: flex;
   justify-content: center;
@@ -501,6 +544,7 @@ export default {
   font-size: 0.9rem;
   font-weight: bold;
 }
+
 .stsname {
   display: flex;
   justify-content: space-between;
@@ -508,9 +552,11 @@ export default {
   font-weight: bold;
   cursor: pointer;
 }
+
 .stsname:hover {
   color: #1867c0;
 }
+
 .add-interval-button {
   margin: auto;
   display: flex;
@@ -521,6 +567,7 @@ export default {
   background-color: #1867c0;
   cursor: pointer;
 }
+
 .add-interval-button-disabled {
   margin: auto;
   display: flex;
@@ -537,9 +584,11 @@ export default {
   justify-content: end;
   align-items: center;
 }
+
 .disabled-button {
   cursor: not-allowed;
 }
+
 .label-column {
   writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */
@@ -555,6 +604,7 @@ export default {
   font-size: small;
   color: #1867c0;
 }
+
 .timer-icon-green {
   position: absolute;
   top: 12px; /* Ajustez la position verticale selon vos besoins */
@@ -562,9 +612,11 @@ export default {
   font-size: small;
   color: #2e7d32;
 }
+
 .blue-text {
   color: #1867c0;
 }
+
 .green-text {
   color: #2e7d32;
 }

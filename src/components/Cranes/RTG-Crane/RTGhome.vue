@@ -40,38 +40,54 @@
       </div>
     </div>
 
-    <!-- Start Button  -->
-    <div class="start-button">
+    <!-- Create Button  -->
+    <div class="create-button">
       <v-btn
-        @click="openSelectionDialog"
+        @click="openConfirmDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
-        >Start</v-btn
+        >Create</v-btn
       >
     </div>
-    <SelectionDialog equipementType="RTG" v-model="showValidateDialog" @validateSelections="getData" @removeDriver="removeDriver" @removeEquipement="removeEquipement" :selectedDrivers="selectedDrivers" :selectedEqus="selectedRTGs" @closeDialog="showValidateDialog = false" />
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      equipementType="RTG"
+      v-model="showConfirmDialog"
+      @validateSelections="getData"
+      @removeDriver="removeDriver"
+      @removeEquipement="removeEquipement"
+      :selectedDrivers="selectedDrivers"
+      :selectedEqus="selectedRTGs"
+      @closeDialog="showConfirmDialog = false"
+    />
   </div>
 </template>
 
 <script>
-import SelectionDialog from './ValidateDialog.vue';
+import ConfirmDialog from "../ConfirmDialog.vue";
 import { mapGetters, mapActions } from "vuex";
+
 export default {
   components: {
-    SelectionDialog
+    ConfirmDialog,
   },
+
+  //data
   data() {
     return {
       driversList: [],
-      rtgsList: [
-      ],
+      rtgsList: [],
       selectedDrivers: [],
       selectedRTGs: [],
-      showValidateDialog: false
+      showConfirmDialog: false,
     };
   },
+
+  // computed
   computed: {
-    ...mapGetters(["getDrivers","getEquipements"]),
+    //include getters
+    ...mapGetters(["getDrivers", "getEquipements"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       if (this.driversList) return this.chunkArray(this.driversList, 6);
@@ -83,17 +99,26 @@ export default {
     },
   },
 
+  //mounted
   mounted() {
     this.setData();
   },
+
+  // methods
   methods: {
-    ...mapActions(["setDriversAction", "setLoadingValueAction","setEquipementsAction"]),
+    ...mapActions([
+      "setDriversAction",
+      "setLoadingValueAction",
+      "setEquipementsAction",
+    ]),
+
+    // set drivers and equipements data
     setData() {
       const inputs = {
         profile_group: "rtg",
         role: "driver",
       };
-      
+
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then(() => {
         this.driversList = this.getDrivers.map(
@@ -102,13 +127,17 @@ export default {
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
-        this.rtgsList = this.getEquipements.filter((equipement) => equipement.profile_group.type==="rtg").map((equipement) => equipement.matricule);
+        this.rtgsList = this.getEquipements
+          .filter((equipement) => equipement.profile_group.type === "rtg")
+          .map((equipement) => equipement.matricule);
       });
     },
-    //open validation Dialog
-    openSelectionDialog() {
-      this.showValidateDialog = true;
+
+    //open confirm Dialog
+    openConfirmDialog() {
+      this.showConfirmDialog = true;
     },
+
     // splits array into chunks of size
     chunkArray(arr, size) {
       return arr.reduce(
@@ -120,17 +149,22 @@ export default {
 
     // returns selected drivers and rtgs
     getData() {
-      this.showValidateDialog = false;
+      this.showConfirmDialog = false;
       console.log("Selected drivers : " + this.selectedDrivers);
       console.log("Selected RTGs : " + this.selectedRTGs);
     },
 
+    //remove driver from confirm dialog
     removeDriver(driver) {
-      this.selectedDrivers = this.selectedDrivers.filter((item) => item !== driver);
+      this.selectedDrivers = this.selectedDrivers.filter(
+        (item) => item !== driver
+      );
     },
+
+    //remove rtg from confirm dialog
     removeEquipement(equ) {
       this.selectedRTGs = this.selectedRTGs.filter((item) => item !== equ);
-    }
+    },
   },
 };
 </script>
@@ -143,6 +177,7 @@ export default {
   height: 88%;
   gap: 0.3rem;
 }
+
 .parent {
   display: flex;
   justify-content: center;
@@ -150,23 +185,27 @@ export default {
   width: 100%;
   height: fit-content;
 }
-.start-button {
+
+.create-button {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   height: fit-content;
 }
+
 .drivers-container,
 .rtgs-container {
   display: flex;
   gap: 2rem;
 }
+
 .column {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .driver,
 .rtg {
   display: flex;
@@ -175,6 +214,7 @@ export default {
   gap: 1rem;
   margin-bottom: 1rem; /* Espacement entre les drivers */
 }
+
 .v-switch {
   display: flex;
   justify-content: center;
@@ -187,10 +227,12 @@ export default {
   font-weight: bold;
   width: 100px;
 }
+
 .rtgname {
   font-size: 0.9rem;
   font-weight: bold;
 }
+
 .label-column {
   writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */

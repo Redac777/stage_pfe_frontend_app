@@ -19,6 +19,7 @@
           </div>
         </div>
       </div>
+      
       <!-- List stss with associated switches -->
       <div class="label-column">STSs</div>
       <div class="stss-container">
@@ -135,6 +136,7 @@
           </div>
         </div>
       </div>
+
       <!-- List ams roles with associated switches -->
       <div class="label-column">Roles</div>
       <div class="amsroles-container">
@@ -155,10 +157,10 @@
               @mouseleave="showRoleIcons[item] = false"
             >
               <span
-              :class="{
-                'blue-text': hasNumber(item),
-                'green-text': includedWoutNum(item),
-              }"
+                :class="{
+                  'blue-text': hasNumber(item),
+                  'green-text': includedWoutNum(item),
+                }"
                 >{{ item }}</span
               >
             </div>
@@ -177,7 +179,6 @@
               @click="openRoleDialog(item)"
               >mdi-cog</v-icon
             >
-
             <v-dialog v-model="roleDialog[item]" max-width="400">
               <v-card>
                 <v-card-title
@@ -202,18 +203,21 @@
         </div>
       </div>
     </div>
+
     <!-- Start Button -->
     <div class="start-button">
       <v-btn
-        @click="openSelectionDialog"
+        @click="openConfirmDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
         >Start</v-btn
       >
     </div>
-    <SelectionDialog
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
       equipementType="AM"
-      v-model="showValidateDialog"
+      v-model="showConfirmDialog"
       @validateSelections="getData"
       @removeDriver="removeDriver"
       @removeEquipement="removeEquipement"
@@ -225,18 +229,21 @@
       :selectedRoles="selectedRoles"
       :numWorkers="numWorkers"
       @removeAMRole="removeAMRole"
-      @closeDialog="showValidateDialog = false"
+      @closeDialog="showConfirmDialog = false"
     />
   </div>
 </template>
 
 <script>
-import SelectionDialog from "./ValidateDialog.vue";
+import ConfirmDialog from "../ConfirmDialog.vue";
 import { mapGetters, mapActions } from "vuex";
+
 export default {
   components: {
-    SelectionDialog,
+    ConfirmDialog,
   },
+
+  //data
   data() {
     return {
       minTimeIndex: -1,
@@ -258,17 +265,22 @@ export default {
       selectedRoles: [],
       roleDialog: {},
       numWorkers: {},
-      showValidateDialog: false,
+      showConfirmDialog: false,
       keysArray: [],
       showIcons: {},
       showRoleIcons: {},
       roleCount: 0,
       isSaved: {},
-      isRoleSaved:{}
+      isRoleSaved: {},
     };
   },
+
+  //computed
   computed: {
+    // include getters
     ...mapGetters(["getDrivers", "getEquipements"]),
+
+    // change sts item color based on intervals or workers
     hasIntervalsOrWorkers() {
       return (item) => {
         return (
@@ -277,27 +289,29 @@ export default {
         );
       };
     },
-    hasNumber(){
+
+    // change role item color based on number of workers
+    hasNumber() {
       return (item) => {
         return !!this.numWorkers[item];
-      }
+      };
     },
+
+    // change icon color based on number of workers
     includedWoutIntOrWork() {
       return (item) => {
-        return (
-          this.selectedSTSs.includes(item) && !this.isSaved[item]
-        );
+        return this.selectedSTSs.includes(item) && !this.isSaved[item];
       };
     },
 
+    // change icon color based on number of workers
     includedWoutNum() {
       return (item) => {
-        return (
-          this.selectedRoles.includes(item) && !this.isRoleSaved[item]
-        );
+        return this.selectedRoles.includes(item) && !this.isRoleSaved[item];
       };
     },
 
+    // save button state
     isSaveButtonDisabled() {
       return (item) => {
         if (this.selectedRole === "TA") {
@@ -333,6 +347,8 @@ export default {
         }
       };
     },
+
+    // add interval button state
     isAddIntervalButtonDisabled() {
       return (item) => {
         if (this.intervals[item]) {
@@ -364,6 +380,7 @@ export default {
         return true; // Disable if intervals are not defined
       };
     },
+
     // returns array of 6 ams per chunk
     chunkedAMs() {
       return this.chunkArray(this.amsList, 6);
@@ -373,20 +390,28 @@ export default {
     chunkedSTSs() {
       return this.chunkArray(this.stssList, 6);
     },
+
     chunkedRoles() {
       return this.chunkArray(this.roles, 6);
     },
   },
+
+  //mounted
   mounted() {
     this.setDrivers();
     this.setIsRoleSaved();
   },
+
+  //methods
   methods: {
+    // include actions
     ...mapActions([
       "setDriversAction",
       "setLoadingValueAction",
       "setEquipementsAction",
     ]),
+
+    // set AMs
     setDrivers() {
       const inputs = {
         profile_group: "am",
@@ -406,11 +431,15 @@ export default {
           .map((equipement) => equipement.matricule);
       });
     },
-    setIsRoleSaved(){
-      for(let role in this.roles){
-        this.isRoleSaved[role] = false
+
+    // initialize roles with false value in isRoleSaved array
+    setIsRoleSaved() {
+      for (let role in this.roles) {
+        this.isRoleSaved[role] = false;
       }
     },
+
+    // add interval below
     addIntervalBelow(item, index) {
       const currentIntervals = this.intervals[item];
 
@@ -479,6 +508,8 @@ export default {
       }
       return true;
     },
+
+    // define time validation for end time
     endsTimeRule(value, item, index) {
       // Reset respected to true at the beginning
       this.respectedEnd = true;
@@ -504,6 +535,7 @@ export default {
         []
       );
     },
+
     // returns selected ams and stss
     getData() {
       console.log("Selected ams : " + this.selectedAMs);
@@ -513,15 +545,16 @@ export default {
       console.log(
         "Selected roles W ass Num : " + JSON.stringify(this.numWorkers)
       );
-      this.showValidateDialog = false;
+      this.showConfirmDialog = false;
     },
+
     // switch on change state
     onChange(item) {
       if (!this.selectedSTSs.includes(item)) {
         this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
         delete this.intervals[item];
         this.workers = this.workers.filter((worker) => worker.STS !== item);
-        this.isSaved[item]=false
+        this.isSaved[item] = false;
       }
     },
 
@@ -541,6 +574,7 @@ export default {
         this.workers[item] = [{ STS: item, worker: "" }];
       }
     },
+
     // save sts intervals
     saveTime(item) {
       this.isSaved[item] = true;
@@ -595,8 +629,6 @@ export default {
       this.dialog[item] = false;
     },
 
-    // Method to change the selected role
-
     // Method to open the role dialog for a specific role
     openRoleDialog(item) {
       if (item !== "assistant") {
@@ -604,6 +636,7 @@ export default {
         this.roleDialog[item] = true;
       }
     },
+
     // Method to close the role dialog for a specific role
     closeRoleDialog(item, value) {
       if (!value) {
@@ -616,9 +649,10 @@ export default {
       }
       this.roleDialog[item] = false;
     },
+
     // Method to save role data for a specific role
     saveRoleData(item) {
-      this.isRoleSaved[item]=true
+      this.isRoleSaved[item] = true;
       // Close the dialog for the specific role
       if (!this.selectedRoles.includes(item)) {
         this.selectedRoles.push(item);
@@ -626,29 +660,38 @@ export default {
       this.numWorkers[item] = this.roleCount;
       this.closeRoleDialog(item, true);
     },
+
+    //remove am from confirm dialog
     removeDriver(driver) {
       this.selectedAMs = this.selectedAMs.filter((item) => item !== driver);
     },
+
+    // remove TA sts from confirm dialog
     removeEquipement(equ) {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== equ);
       delete this.intervals[equ];
       this.keysArray = Object.keys(this.intervals);
     },
+
+    // remove ST sts from confirm dialog
     removeSTSTS(sts) {
       this.selectedSTSs = this.selectedSTSs.filter((item) => item !== sts);
       this.workers = this.workers.filter((worker) => worker.STS !== sts);
-      this.isSaved[sts]=false
+      this.isSaved[sts] = false;
     },
-    openSelectionDialog() {
+
+    // open confirm dialog
+    openConfirmDialog() {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => {
         return (
           (this.intervals[sts] &&
-          this.intervals[sts].length > 0 &&
-          (this.intervals[sts][this.intervals[sts].length - 1].startTime !==
-            "" ||
-            this.intervals[sts][this.intervals[sts].length - 1].endTime !== "")
-        ) || this.workers.find((worker) => worker.STS === sts)
-      );
+            this.intervals[sts].length > 0 &&
+            (this.intervals[sts][this.intervals[sts].length - 1].startTime !==
+              "" ||
+              this.intervals[sts][this.intervals[sts].length - 1].endTime !==
+                "")) ||
+          this.workers.find((worker) => worker.STS === sts)
+        );
       });
       this.keysArray = Object.keys(this.intervals).filter(
         (key) =>
@@ -656,19 +699,22 @@ export default {
           this.intervals[key][0].startTime !== "" &&
           this.intervals[key][0].endTime !== ""
       );
-      this.showValidateDialog = true;
+      this.showConfirmDialog = true;
     },
+    // remove AM role from confirm dialog
     removeAMRole(role) {
       this.selectedRoles = this.selectedRoles.filter((item) => item !== role);
       delete this.numWorkers[role];
       this.isRoleSaved[role] = false;
     },
-    onChangeRole(item){
-      if(!this.selectedRoles.includes(item)){
-        this.isRoleSaved[item] = false
-        delete this.numWorkers[item]
+
+    // on role switch changes
+    onChangeRole(item) {
+      if (!this.selectedRoles.includes(item)) {
+        this.isRoleSaved[item] = false;
+        delete this.numWorkers[item];
       }
-    }
+    },
   },
 };
 </script>
@@ -681,6 +727,7 @@ export default {
   height: 88%;
   gap: 0.3rem;
 }
+
 .parent {
   display: flex;
   justify-content: center;
@@ -688,6 +735,7 @@ export default {
   width: 100%;
   height: fit-content;
 }
+
 .start-button {
   width: 100%;
   display: flex;
@@ -695,17 +743,20 @@ export default {
   align-items: center;
   height: fit-content;
 }
+
 .ams-container,
 .stss-container,
 .amsroles-container {
   display: flex;
   gap: 2rem;
 }
+
 .column {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .am,
 .sts {
   display: flex;
@@ -714,6 +765,7 @@ export default {
   gap: 1rem;
   margin-bottom: 1rem; /* Espacement entre les ams */
 }
+
 .role {
   display: flex;
   justify-content: center;
@@ -721,32 +773,38 @@ export default {
   gap: 1rem;
   margin-bottom: 1rem;
 }
+
 .v-switch {
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: x-small !important;
 }
+
 .amname {
   font-size: 0.9rem;
   font-weight: bold;
   width: 100px;
 }
+
 .stsname,
 .rolename {
   font-size: 0.9rem;
   font-weight: bold;
   cursor: pointer;
 }
+
 .assistantrolename {
   font-size: 0.9rem;
   font-weight: bold;
   cursor: auto;
 }
+
 .stsname:hover,
 .rolename:hover {
   color: #1867c0;
 }
+
 .add-interval-button {
   margin: auto;
   display: flex;
@@ -757,6 +815,7 @@ export default {
   background-color: #1867c0;
   cursor: pointer;
 }
+
 .add-interval-button-disabled {
   margin: auto;
   display: flex;
@@ -773,9 +832,11 @@ export default {
   justify-content: end;
   align-items: center;
 }
+
 .disabled-button {
   cursor: not-allowed;
 }
+
 .label-column {
   writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */
@@ -783,10 +844,12 @@ export default {
   font-size: 1.2rem;
   transform: rotate(180deg);
 }
+
 .sts,
 .role {
   position: relative;
 }
+
 .timer-icon-blue {
   position: absolute;
   top: 12px; /* Ajustez la position verticale selon vos besoins */
@@ -794,6 +857,7 @@ export default {
   font-size: small;
   color: #1867c0;
 }
+
 .timer-icon-green {
   position: absolute;
   top: 12px; /* Ajustez la position verticale selon vos besoins */
@@ -801,9 +865,11 @@ export default {
   font-size: small;
   color: #2e7d32;
 }
+
 .blue-text {
   color: #1867c0;
 }
+
 .green-text {
   color: #2e7d32;
 }

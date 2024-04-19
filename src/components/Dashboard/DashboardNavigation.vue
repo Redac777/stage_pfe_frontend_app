@@ -14,6 +14,7 @@
                 selected:1,
             }
         },
+        
         methods:{
             select(x){
                 this.selected = x
