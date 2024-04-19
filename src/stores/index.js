@@ -1,10 +1,11 @@
 import VuexPersist from 'vuex-persist'
-import user from './modules/user'
-import loading from './modules/loading'
-import role from './modules/role'
-import shift from './modules/shift'
-import profilegroup from './modules/profilegroup'
-import equipement from './modules/equipement'
+import user from './modules/User/user'
+import loading from './modules/Loading/loading'
+import role from './modules/Role/role'
+import shift from './modules/Shift/shift'
+import profilegroup from './modules/ProfileGroup/profilegroup'
+import equipement from './modules/Equipement/equipement'
+import planning from './modules/Planning/planning'
 import { createStore } from 'vuex'
 const vuexLocalStorage = new VuexPersist({
     key: "ResourcesPlanningApp",
@@ -15,7 +16,8 @@ const vuexLocalStorage = new VuexPersist({
       role : state.role,
       shift : state.shift,
       profilegroup : state.profilegroup,
-      equipement : state.equipement
+      equipement : state.equipement,
+      planning : state.planning
     }),
     filter: (mutation) => true,
   });
@@ -27,7 +29,8 @@ const Store = createStore({
       role: role,
       shift: shift,
       profilegroup: profilegroup,
-      equipement: equipement
+      equipement: equipement,
+      planning: planning
     },
     plugins: [vuexLocalStorage.plugin],
   })

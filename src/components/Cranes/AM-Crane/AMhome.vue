@@ -204,13 +204,13 @@
       </div>
     </div>
 
-    <!-- Start Button -->
-    <div class="start-button">
+    <!-- Create Button -->
+    <div class="create-button">
       <v-btn
         @click="openConfirmDialog"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
-        >Start</v-btn
+        >Create</v-btn
       >
     </div>
 
@@ -597,7 +597,7 @@ export default {
     // close sts intervals dialog
     closeDialog(item, value) {
       if (!value) {
-        if (!this.selectedSTSs.includes(item)) {
+        if (!this.selectedSTSs.includes(item) || !this.isSaved[item]) {
           this.selectedSTSs = this.selectedSTSs.filter((sts) => sts !== item);
           this.workers = this.workers.filter((worker) => worker.STS !== item);
           delete this.intervals[item];
@@ -736,7 +736,7 @@ export default {
   height: fit-content;
 }
 
-.start-button {
+.create-button {
   width: 100%;
   display: flex;
   justify-content: center;

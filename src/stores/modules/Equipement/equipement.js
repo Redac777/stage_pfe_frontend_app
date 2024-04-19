@@ -1,4 +1,4 @@
-import CustomizedAxios from "../../plugins/axios";
+import CustomizedAxios from "../../../plugins/axios";
 const equipementsModule = {
   state: {
     equipements: [],
