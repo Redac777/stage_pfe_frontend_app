@@ -10,7 +10,7 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="drivername">{{ item }}</div>
+            <div class="drivername">{{ item.firstname + " " + item.lastname }}</div>
             <v-switch
               v-model="selectedDrivers"
               :value="item"
@@ -29,26 +29,12 @@
           class="column"
         >
           <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rs">
-            <div class="rsname">{{ item }}</div>
+            <div class="rsname">{{ item.matricule }}</div>
             <v-switch
               v-model="selectedRSs"
               :value="item"
               hide-details
-              @change="onChange(item)"
             ></v-switch>
-
-            <!-- Dialog for adding rs time intervals -->
-            <v-dialog v-model="dialog[item]" max-width="400">
-              <v-card text="Define STS as SBY ?">
-                <template v-slot:actions>
-                  <v-spacer></v-spacer>
-
-                  <v-btn @click="confirm(false, item)"> Disagree </v-btn>
-
-                  <v-btn @click="confirm(true, item)"> Agree </v-btn>
-                </template>
-              </v-card>
-            </v-dialog>
           </div>
         </div>
       </div>
@@ -68,11 +54,10 @@
     <ConfirmDialog
       equipementType="RS"
       v-model="showConfirmDialog"
-      @validateSelections="getData"
+      @validateSelections="createPlanning"
       @removeDriver="removeDriver"
       @removeEquipement="removeEquipement"
       :selectedDrivers="selectedDrivers"
-      :rssStates="rssStates"
       :selectedEqus="selectedRSs"
       @closeDialog="showConfirmDialog = false"
     />
@@ -96,11 +81,12 @@ export default {
       rssList: [],
       selectedDrivers: [],
       selectedRSs: [],
-      rssStates: [],
       dialog: {}, // Object to store dialog state for each RS
       startTime: "",
       endTime: "",
       showConfirmDialog: false,
+      shiftId: null,
+      profileGroupId: null,
     };
   },
 
@@ -130,6 +116,9 @@ export default {
       "setDriversAction",
       "setLoadingValueAction",
       "setEquipementsAction",
+      "createPlanningAction",
+      "addUserToPlanning",
+      "addEquipementToPlanning",
     ]),
 
     // set drivers and equipements
@@ -141,15 +130,54 @@ export default {
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then(() => {
         this.setLoadingValueAction(false);
-        this.driversList = this.getDrivers.map(
-          (driver) => driver.firstname + " " + driver.lastname
-        );
+        this.driversList = this.getDrivers;
+        if (this.driversList.length > 0) {
+          this.shiftId = this.driversList[0].shift_id;
+        }
       });
       this.setEquipementsAction().then(() => {
         this.setLoadingValueAction(false);
         this.rssList = this.getEquipements
-          .filter((equipement) => equipement.profile_group.type === "rs")
-          .map((equipement) => equipement.matricule);
+          .filter((equipement) => equipement.profile_group.type === "rs");
+          if (this.rssList.length > 0) {
+          this.profileGroupId = this.rssList[0].profile_group.id;
+        }
+      });
+    },
+
+    createPlanning() {
+      let usersAddedSuccessfully = []
+      let equAddedSuccessfully = []
+      this.showConfirmDialog = false;
+      this.setLoadingValueAction(true);
+      const planning = {
+        shift_id: this.shiftId,
+        profile_group_id: this.profileGroupId,
+      };
+      this.createPlanningAction(planning).then((response) => {
+        for (let driver in this.selectedDrivers) {
+          let userWPlanning = {
+            user_id: this.selectedDrivers[driver].id,
+            planning_id: response.id,
+          };
+          this.addUserToPlanning(userWPlanning).then(() => {
+            usersAddedSuccessfully.push(this.selectedDrivers[driver])
+          });
+        }
+
+        for (let equ in this.selectedRSs) {
+          let equWPlanning = {
+            equipement_id: this.selectedRSs[equ].id,
+            planning_id: response.id
+          };
+          this.addEquipementToPlanning(equWPlanning).then(() => {
+            equAddedSuccessfully.push(this.selectedRSs[equ])
+          })
+        }
+
+        this.setLoadingValueAction(false);
+        console.log(usersAddedSuccessfully)
+        console.log(equAddedSuccessfully)
       });
     },
 
@@ -162,62 +190,6 @@ export default {
       );
     },
 
-    // returns selected drivers and rss
-    getData() {
-      console.log("Selected drivers : " + this.selectedDrivers);
-      console.log("Selected RSs : " + this.selectedRSs);
-      console.log("Selected RSs : " + JSON.stringify(this.rssStates));
-      this.showConfirmDialog = false;
-    },
-
-    // rs switch on change state
-    onChange(item) {
-      const index = this.selectedRSs.indexOf(item);
-      if (index !== -1) {
-        if (this.selectedRSs.length <= 3) {
-          this.rssStates.push({
-            rs: item,
-            state: "works",
-          });
-          const index = this.rssStates.findIndex((c) => c.state === "sby");
-          if (
-            this.selectedRSs.length == 3 &&
-            this.selectedRSs.includes(item) &&
-            index === -1
-          ) {
-            this.dialog[item] = true;
-          }
-        } else {
-          alert("RS number exceeded");
-          this.selectedRSs = this.selectedRSs.filter((rs) => rs !== item);
-          this.rssStates = this.rssStates.filter((c) => c.rs !== item);
-        }
-      } else {
-        this.rssStates = this.rssStates.filter((c) => c.rs !== item);
-      }
-    },
-
-    // confirm rs as sby
-    confirm(value, item) {
-      if (value) {
-        const index = this.rssStates.findIndex((c) => c.rs === item);
-        if (index === -1) {
-          this.rssStates.splice(index, 1);
-        } else {
-          this.rssStates[index].state = "sby";
-        }
-      } else {
-        const index = this.selectedRSs.indexOf(item);
-        if (index === -1) {
-          this.selectedRSs.splice(index, 1);
-        } else {
-          this.selectedRSs = this.selectedRSs.filter((rs) => rs !== item);
-          this.rssStates = this.rssStates.filter((c) => c.rs !== item);
-        }
-      }
-      this.dialog[item] = false;
-    },
-
     //remove driver from confirm dialog
     removeDriver(driver) {
       this.selectedDrivers = this.selectedDrivers.filter(
@@ -227,12 +199,12 @@ export default {
 
     //remove rs from confirm dialog
     removeEquipement(equ) {
-      this.selectedRSs = this.selectedRSs.filter((rs) => rs !== equ);
-      this.rssStates = this.rssStates.filter((c) => c.rs !== equ);
+      this.selectedRSs = this.selectedRSs.filter((rs) => rs.matricule !== equ.matricule);
     },
 
     // open confirm dialog
     openConfirmDialog() {
+      console.log(this.selectedRSs);
       this.showConfirmDialog = true;
     },
   },

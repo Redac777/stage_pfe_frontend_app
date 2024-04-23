@@ -85,14 +85,13 @@ export default {
       showConfirmDialog: false,
       shiftId: null,
       profileGroupId: null,
-      plannings: [],
     };
   },
 
   // computed
   computed: {
     //include getters
-    ...mapGetters(["getDrivers", "getEquipements", "getPlannings"]),
+    ...mapGetters(["getDrivers", "getEquipements"]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
       if (this.driversList) return this.chunkArray(this.driversList, 6);

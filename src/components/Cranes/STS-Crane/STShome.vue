@@ -543,9 +543,9 @@ export default {
     // remove equipment from confirm dialog
     removeEquipement(equ) {
       this.selectedSTSs = this.selectedSTSs.filter(
-        (sts) => sts.matricule !== equ.matricule
+        (sts) => sts.matricule !== equ
       );
-      delete this.intervals[equ.matricule];
+      delete this.intervals[equ];
       this.keysArray = Object.keys(this.intervals);
     },
 
