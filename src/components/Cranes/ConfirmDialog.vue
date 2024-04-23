@@ -74,10 +74,7 @@
           <h4>Selected RSs</h4>
           <div class="rss">
             <div v-for="(item, index) in selectedEqus" :key="index" class="rs">
-              <div class="rsname">{{ item }}</div>
-              <div class="equ">
-                {{ rssStates[index].state }}
-              </div>
+              <div class="rsname">{{ item.matricule }}</div>
               <v-btn class="remove" @click="removeEquipement(item)">
                 <span style="color: red; font-size: 36px">-</span>
               </v-btn>
