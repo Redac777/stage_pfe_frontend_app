@@ -159,6 +159,17 @@ const usersModule = {
           });
       });
     },
+    setUserById({ commit, state }, user) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("users/getById",user)
+          .then((response) => {
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    }
   },
   getters: {
     getUserActive: (state) => {

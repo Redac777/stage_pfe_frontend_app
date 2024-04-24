@@ -1,7 +1,7 @@
 <template>
     <div class="topbar">
             <div>
-                <v-img style="width: 90px;" src="../assets/images/TA-logo.png"></v-img>
+                <v-img style="width: 90px;" src="../../assets/images/TA-logo.png"></v-img>
             </div>
         </div>  
 </template>

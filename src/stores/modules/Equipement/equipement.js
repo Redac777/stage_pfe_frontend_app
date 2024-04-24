@@ -76,6 +76,17 @@ const equipementsModule = {
             });
         });
       },    
+      setEquipementById({ commit, state }, equipement) {
+        return new Promise((resolve, reject) => {
+          CustomizedAxios.post("equipements/getById",equipement)
+            .then((response) => {
+              resolve(response.data.payload);
+            })
+            .catch((error) => {
+              reject(error);
+            });
+        });
+      }
   },
   getters: {
 

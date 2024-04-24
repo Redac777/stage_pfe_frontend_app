@@ -180,6 +180,7 @@
                         </v-dialog>
                     </v-toolbar>
                 </template>
+                
                 <template v-slot:item="{ item }">
                     <tr :class="{ 'inactive-user': item.isactive === 0 }">
                         <td>{{ item.fullname }}</td>
