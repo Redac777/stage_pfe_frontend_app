@@ -11,12 +11,22 @@
       </template>
     </v-data-table>
   </div>
+  <div class="confirm-button">
+    <v-btn
+      @click="confirmPlanning"
+      density="default"
+      style="background-color: #15263f; color: white; width: 120px"
+      >Confirm</v-btn
+    >
+  </div>
 </template>
 
 <script>
 import { mapActions, mapGetters } from "vuex";
 
 export default {
+
+  
   data() {
     return {
       drivers: [],
@@ -24,6 +34,7 @@ export default {
       tableHeaders: [],
       planning: [],
       tableItems: [],
+      arrayToSave:[]
     };
   },
 
@@ -48,10 +59,11 @@ export default {
       "setUserById",
       "setPlanningEquipements",
       "setEquipementById",
+      "setBoxAction",
     ]),
 
     async setData() {
-      
+      this.setLoadingValueAction(true);
       let currentDate = new Date();
 
       // Get year, month, and day
@@ -62,9 +74,8 @@ export default {
       const dateObject = {
         date: formattedDate,
       };
-      this.setLoadingValueAction(true);
+
       try {
-        
         await this.setCurrentPlanning(dateObject);
         this.planning = this.getCurrentPlanning;
         if (this.planning) {
@@ -115,26 +126,54 @@ export default {
       let nbrSubs = nbrDrivers - nbrRtgs;
       let nbrCols = Math.ceil(nbrDrivers / nbrSubs);
       let colDuration = 480 / nbrCols;
-      let nbrDoubleBreak = nbrSubs - (nbrDrivers % nbrSubs);
+      let divNbrDriverPerNbrSubs = nbrDrivers % nbrSubs;
+      let nbrDoubleBreak =
+        divNbrDriverPerNbrSubs != 0 ? nbrSubs - divNbrDriverPerNbrSubs : 0;
       this.drivers = this.drivers.sort(function (a, b) {
         return b.workingHours - a.workingHours;
       });
-      let endTime = 7;
-      this.tableHeaders.push({
-        title: "Driver | Time",
-        align: "start",
-        sortable: true,
-        key: "driver",
-      });
+      let startTime = 7;
       for (let i = 0; i < nbrCols; i++) {
+        let hours = Math.floor(startTime); // Extract whole hours
+        let minutes = Math.round((startTime - hours) * 60); // Extract remaining minutes and round
+
+        // Adjust minutes if they exceed 60
+        if (minutes >= 60) {
+          hours += 1; // Increment hours
+          minutes -= 60; // Subtract 60 from minutes
+        }
+
+        // Format startTime as "hh:mm"
+        let startTimeFormatted =
+          hours + ":" + (minutes < 10 ? "0" : "") + minutes;
+
+        // Calculate endTime
+        let endTime = startTime + colDuration / 60;
+
+        let endTimeHours = Math.floor(endTime); // Extract whole hours for end time
+        let endTimeMinutes = Math.round((endTime - endTimeHours) * 60); // Extract remaining minutes and round
+
+        // Adjust endTime if minutes exceed 60
+        if (endTimeMinutes >= 60) {
+          endTimeHours += 1; // Increment hours
+          endTimeMinutes -= 60; // Subtract 60 from minutes
+        }
+
+        // Format endTime as "hh:mm"
+        let endTimeFormatted =
+          endTimeHours +
+          ":" +
+          (endTimeMinutes < 10 ? "0" : "") +
+          endTimeMinutes;
+
+        // Push start and end times to the tableHeaders array
         this.tableHeaders.push({
-          title:
-            endTime.toFixed(2) +
-            " - " +
-            (endTime + colDuration / 60).toFixed(2),
+          title: startTimeFormatted + " - " + endTimeFormatted,
           sortable: false,
-        }); // Convert endsTime to fixed decimal places
-        endTime += colDuration / 60;
+        });
+
+        // Update startTime for the next iteration
+        startTime = endTimeHours + endTimeMinutes / 60;
       }
       const itemsPlanning = [];
       itemsPlanning.push(["Drivers | Time", ...this.tableHeaders]);
@@ -171,48 +210,45 @@ export default {
           }
         }
       }
+      if (nbrDoubleBreak != 0) {
+        for (
+          let i = startDoubleBreak;
+          i < startDoubleBreak + nbrDoubleBreak;
+          i++
+        ) {
+          itemsPlanning[i][k] = "DP";
+        }
+        const doubleBreakDrivers = [];
 
-      for (
-        let i = startDoubleBreak;
-        i < startDoubleBreak + nbrDoubleBreak;
-        i++
-      ) {
-        itemsPlanning[i][k] = "DP";
-      }
-      const doubleBreakDrivers = [];
-
-      for (let i = 1; i < nbrDrivers + 1; i++) {
-        if (itemsPlanning[i][nbrCols] == "DP") {
-          doubleBreakDrivers.push({
-            index: i,
-            driver: itemsPlanning[i][0],
-          });
+        for (let i = 1; i < nbrDrivers + 1; i++) {
+          if (itemsPlanning[i][nbrCols] == "DP") {
+            doubleBreakDrivers.push({
+              index: i,
+              driver: itemsPlanning[i][0],
+            });
+          }
+        }
+        let tempDriver = null;
+        for (let i = 1; i < nbrDoubleBreak + 1; i++) {
+          tempDriver = itemsPlanning[i][0];
+          itemsPlanning[i][0] = doubleBreakDrivers[i - 1].driver;
+          itemsPlanning[doubleBreakDrivers[i - 1].index][0] = tempDriver;
         }
       }
-      let tempDriver = null;
-      for (let i = 1; i < nbrDoubleBreak + 1; i++) {
-        tempDriver = itemsPlanning[i][0];
-        itemsPlanning[i][0] = doubleBreakDrivers[i - 1].driver;
-        itemsPlanning[doubleBreakDrivers[i - 1].index][0] = tempDriver;
-      }
-
-
-
 
       const id = 1;
-      const arrayToSave = [];
-      let parts=[]
+      let parts = [];
       for (let i = 1; i < nbrDrivers + 1; i++) {
         for (let j = 1; j < nbrCols + 1; j++) {
           const equipementId =
             itemsPlanning[i][j] == "P" || itemsPlanning[i][j] == "DP"
               ? null
-              : this.rtgs.find((rtg) => rtg.matricule === itemsPlanning[i][j].matricule)
-                  ?.id;
-              parts = itemsPlanning[0][j+1].title.split('+')[0].split('-');
-         
+              : this.rtgs.find(
+                  (rtg) => rtg.matricule === itemsPlanning[i][j].matricule
+                )?.id;
+          parts = itemsPlanning[0][j].title.split("+")[0].split("-");
 
-          arrayToSave.push({
+          this.arrayToSave.push({
             planning_id: this.planning[0].id,
             user_id: itemsPlanning[i][0].id,
             equipement_id: equipementId,
@@ -220,20 +256,28 @@ export default {
               itemsPlanning[i][j] == "P" || itemsPlanning[i][j] == "DP"
                 ? true
                 : false,
-            start_time: parseFloat(parts[0]),
-            ends_time: parseFloat(parts[1]),
+            start_time: parts[0],
+            ends_time: parts[1],
           });
-          
         }
       }
-      console.log(arrayToSave)
+      console.log(itemsPlanning)
+
       // console.log(
       //   this.drivers.map((driver) => ({
       //     driverName: driver.firstname + " " + driver.lastname,
       //     driverWorkingHours: driver.workingHours,
       //   }))
       // );
-      
+    },
+    confirmPlanning() {
+      this.setLoadingValueAction(true)
+      for (let item in this.arrayToSave) {
+       this.setBoxAction(this.arrayToSave[item]).then((response) => {
+         console.log(response)
+         this.setLoadingValueAction(false)
+       })
+      }
     },
   },
 };

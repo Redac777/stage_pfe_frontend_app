@@ -6,6 +6,7 @@ import shift from './modules/Shift/shift'
 import profilegroup from './modules/ProfileGroup/profilegroup'
 import equipement from './modules/Equipement/equipement'
 import planning from './modules/Planning/planning'
+import box from './modules/Box/box'
 import { createStore } from 'vuex'
 const vuexLocalStorage = new VuexPersist({
     key: "ResourcesPlanningApp",
@@ -17,7 +18,8 @@ const vuexLocalStorage = new VuexPersist({
       shift : state.shift,
       profilegroup : state.profilegroup,
       equipement : state.equipement,
-      planning : state.planning
+      planning : state.planning,
+      box : state.box
     }),
     filter: (mutation) => true,
   });
@@ -30,7 +32,8 @@ const Store = createStore({
       shift: shift,
       profilegroup: profilegroup,
       equipement: equipement,
-      planning: planning
+      planning: planning,
+      box: box
     },
     plugins: [vuexLocalStorage.plugin],
   })
