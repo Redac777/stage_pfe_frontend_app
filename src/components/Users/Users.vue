@@ -249,14 +249,14 @@ export default {
             firstname: "",
             lastname: "",
             email: "",
-            workingHours: "",
+            workingHours: 0,
             role_id: "",
             roleName: "",
             shift_id: "",
             shiftName: "",
             profile_group_id: "",
             profile_groupName: "",
-            isactive: -1
+            isactive: 1
         },
         headers: [
             {
@@ -283,7 +283,7 @@ export default {
             },
             {
                 title: 'Shift',
-                sortable: false,
+                sortable: true,
                 key: 'shift',
             },
             { title: 'Working Hours', key: 'workingHours', sortable: true },
@@ -342,13 +342,12 @@ export default {
             this.setLoadingValueAction(true)
             this.setUsersAction()
                 .then((response) => {
-
                     this.users = this.getUsers.filter(user => user.role.name !== "admin");
                     this.filteredUsers = this.users.map(item => ({
                         fullname: item.firstname + " " + item.lastname,
                         matricule: item.matricule,
                         email: item.email,
-                        workingHours: item.workingHours ? item.workingHours : 'undefined',
+                        workingHours: item.workingHours || item.workingHours === 0 ? item.workingHours : 'undefined',
                         roleName: item.role.name,
                         profile_groupName: item.profile_group ? item.profile_group.type : 'none',
                         shiftName: item.shift ? item.shift.category : 'none',
@@ -505,7 +504,9 @@ export default {
             delete userToSend.profile_groupName;
             delete userToSend.shiftName;
             delete userToSend.roleName;
-            if (!userToSend || Object.values(userToSend).some(value => !value)) {
+           
+            console.log(userToSend);
+            if (!userToSend) {
                 console.log("Invalid user", userToSend)
                 return;
             }

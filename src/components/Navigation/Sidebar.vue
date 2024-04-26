@@ -144,6 +144,7 @@ export default {
 <style scoped>
 .sidebar {
   z-index: 30;
+  opacity: 1;
 }
 
 .v-navigation-drawer {

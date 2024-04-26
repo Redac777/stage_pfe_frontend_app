@@ -89,7 +89,7 @@ export default {
       profileGroupId: null,
       drivers: [],
       rtgs: [],
-      tableHeaders:[]
+      tableHeaders: [],
     };
   },
 
@@ -145,7 +145,6 @@ export default {
         profile_group: "rtg",
         role: "driver",
       };
-
       this.setLoadingValueAction(true);
       this.setDriversAction(inputs).then(() => {
         this.driversList = this.getDrivers;
@@ -154,10 +153,10 @@ export default {
         }
       });
       this.setEquipementsAction().then(() => {
-        this.setLoadingValueAction(false);
         this.rtgsList = this.getEquipements.filter(
           (equipement) => equipement.profile_group.type === "rtg"
         );
+        this.setLoadingValueAction(false);
         if (this.rtgsList.length > 0) {
           this.profileGroupId = this.rtgsList[0].profile_group.id;
         }
@@ -180,8 +179,10 @@ export default {
 
     // returns selected drivers and rtgs
     createPlanning() {
-      let usersAddedSuccessfully = [];
-      let equAddedSuccessfully = [];
+      this.drivers = [];
+      this.rtgs = [];
+      this.tableHeaders = [];
+      this.itemsPlanning = [];
       this.showConfirmDialog = false;
       this.setLoadingValueAction(true);
       const planning = {
@@ -189,14 +190,14 @@ export default {
         profile_group_id: this.profileGroupId,
       };
       this.createPlanningAction(planning).then((response) => {
+        const addUserPromises = [];
+        const addEquipementPromises = [];
         for (let driver in this.selectedDrivers) {
           let userWPlanning = {
             user_id: this.selectedDrivers[driver].id,
             planning_id: response.id,
           };
-          this.addUserToPlanning(userWPlanning).then(() => {
-            usersAddedSuccessfully.push(this.selectedDrivers[driver]);
-          });
+          addUserPromises.push(this.addUserToPlanning(userWPlanning));
         }
 
         for (let equ in this.selectedRTGs) {
@@ -204,12 +205,21 @@ export default {
             equipement_id: this.selectedRTGs[equ].id,
             planning_id: response.id,
           };
-          this.addEquipementToPlanning(equWPlanning).then(() => {
-            equAddedSuccessfully.push(this.selectedRTGs[equ]);
-            this.setBoxesData()
-          });
+          addEquipementPromises.push(
+            this.addEquipementToPlanning(equWPlanning)
+          );
         }
 
+        Promise.all([...addUserPromises, ...addEquipementPromises])
+          .then(() => {
+            // All promises have resolved
+            this.setBoxesData();
+          })
+          .catch((error) => {
+            this.setLoadingValueAction(false);
+            // Handle error if any of the promises fail
+            console.error(error);
+          });
       });
     },
 
@@ -231,8 +241,11 @@ export default {
       let month = (currentDate.getMonth() + 1).toString().padStart(2, "0"); // Months are zero indexed, so we add 1
       let day = currentDate.getDate().toString().padStart(2, "0");
       let formattedDate = year + "-" + month + "-" + day;
+      console.log(formattedDate);
       const dateObject = {
-        date: formattedDate,
+        date: "2024-04-26",
+        shift_id: this.shiftId,
+        profile_group_id: this.profileGroupId,
       };
 
       try {
@@ -271,7 +284,6 @@ export default {
           }
 
           this.rtgPlanning(); // Call rtgPlanning() after all promises have resolved
-          this.setLoadingValueAction(false);
         }
       } catch (error) {
         this.setLoadingValueAction(false);
@@ -421,8 +433,7 @@ export default {
           });
         }
       }
-      console.log(itemsPlanning);
-      this.confirmPlanning()
+      this.confirmPlanning(itemsPlanning);
 
       // console.log(
       //   this.drivers.map((driver) => ({
@@ -431,13 +442,27 @@ export default {
       //   }))
       // );
     },
-    confirmPlanning() {
+    confirmPlanning(itemsPlanningArray) {
+      const promises = [];
       for (let item in this.arrayToSave) {
-        this.setBoxAction(this.arrayToSave[item]).then((response) => {
-          console.log(response);
-          this.setLoadingValueAction(false)
-        });
+        promises.push(this.setBoxAction(this.arrayToSave[item]));
       }
+      Promise.all(promises)
+    .then(() => {
+      // Once all promises are resolved, set loading value to false
+      this.setLoadingValueAction(false)
+        .then(() => {
+          // After setting loading value, log the result
+          console.log(itemsPlanningArray);
+          this.$router.push('/rtg-planning-output');
+        });
+    })
+    .catch((error) => {
+      // Handle any errors that occur during the process
+      console.error("Error:", error);
+      this.setLoadingValueAction(false);
+      
+    });
     },
   },
 };
