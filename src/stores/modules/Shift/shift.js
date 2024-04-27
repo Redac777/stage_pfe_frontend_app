@@ -21,6 +21,18 @@ const shiftsModule = {
           });
       });
     },
+
+    setShiftByCategory({ commit, state }, category) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("shifts/getByCategory", category)
+          .then((response) => {
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
   },
   getters: {
     getShifts: (state) => {
