@@ -1,5 +1,9 @@
 <template>
   <div class="main-parent">
+    <!-- Test -->
+    <!-- <div class="test">
+      <p>{{ planningData }}</p>
+    </div> -->
     <div class="parent">
       <!-- List drivers with associated switches -->
       <div class="label-column">Drivers</div>
@@ -75,6 +79,14 @@ export default {
     ConfirmDialog,
   },
 
+  //props
+  props: {
+    planningData: {
+      type: Object,
+      default: null,
+    },
+  },
+
   //data
   data() {
     return {
@@ -90,6 +102,9 @@ export default {
       drivers: [],
       rtgs: [],
       tableHeaders: [],
+      inputs: null,
+      planning: null,
+      allPlannings:[]
     };
   },
 
@@ -104,6 +119,7 @@ export default {
       "getCurrentPlanning",
       "getPlanningDrivers",
       "getPlanningEquipements",
+      "getPlannings",
     ]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
@@ -137,16 +153,29 @@ export default {
       "setPlanningEquipements",
       "setEquipementById",
       "setBoxAction",
+      "setShiftByCategory",
     ]),
 
     // set drivers and equipements data
-    setData() {
-      const inputs = {
-        profile_group: "rtg",
-        role: "driver",
-      };
+    async setData() {
       this.setLoadingValueAction(true);
-      this.setDriversAction(inputs).then(() => {
+      if (this.planningData) {
+        const response = await this.setShiftByCategory({
+          category: this.planningData.shift,
+        });
+        this.inputs = {
+          profile_group: "rtg",
+          role: "driver",
+          shift_id: response[0].id,
+        };
+      } else {
+        this.inputs = {
+          profile_group: "rtg",
+          role: "driver",
+        };
+      }
+      console.log(this.inputs);
+      this.setDriversAction(this.inputs).then(() => {
         this.driversList = this.getDrivers;
         if (this.driversList.length > 0) {
           this.shiftId = this.driversList[0].shift_id;
@@ -185,11 +214,27 @@ export default {
       this.itemsPlanning = [];
       this.showConfirmDialog = false;
       this.setLoadingValueAction(true);
-      const planning = {
-        shift_id: this.shiftId,
-        profile_group_id: this.profileGroupId,
-      };
-      this.createPlanningAction(planning).then((response) => {
+      if (this.planningData) {
+        const date = new Date(this.planningData.date);
+        // Get the year, month, and day components
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
+        const day = String(date.getDate()).padStart(2, "0");
+
+        // Construct the formatted date string in "YYYY-mm-dd" format
+        const formattedDate = `${year}-${month}-${day}`;
+        this.planning = {
+          shift_id: this.shiftId,
+          profile_group_id: this.profileGroupId,
+          planned_at: formattedDate,
+        };
+      } else {
+        this.planning = {
+          shift_id: this.shiftId,
+          profile_group_id: this.profileGroupId,
+        };
+      }
+      this.createPlanningAction(this.planning).then((response) => {
         const addUserPromises = [];
         const addEquipementPromises = [];
         for (let driver in this.selectedDrivers) {
@@ -243,17 +288,20 @@ export default {
       let formattedDate = year + "-" + month + "-" + day;
       console.log(formattedDate);
       const dateObject = {
-        date: "2024-04-26",
+        date: formattedDate,
         shift_id: this.shiftId,
         profile_group_id: this.profileGroupId,
+        profileType: "rtg",
       };
 
       try {
+        // let type = "rtg";
         await this.setCurrentPlanning(dateObject);
-        this.planning = this.getCurrentPlanning;
-        if (this.planning) {
+        this.allPlannings = this.getPlannings;
+        if (this.allPlannings) {
+          this.planning = this.allPlannings[this.allPlannings.length - 1];
           const planningId = {
-            planning_id: this.planning[0].id,
+            planning_id: this.planning.id,
           };
 
           const driversPromise = this.setPlanningDrivers(planningId);
@@ -420,8 +468,8 @@ export default {
                 )?.id;
           parts = itemsPlanning[0][j].title.split("+")[0].split("-");
 
-          this.arrayToSave.push({
-            planning_id: this.planning[0].id,
+          const boxObject = {
+            planning_id: this.planning.id,
             user_id: itemsPlanning[i][0].id,
             equipement_id: equipementId,
             break:
@@ -430,7 +478,9 @@ export default {
                 : false,
             start_time: parts[0],
             ends_time: parts[1],
-          });
+          }
+          console.log(boxObject)
+          this.arrayToSave.push(boxObject);
         }
       }
       this.confirmPlanning(itemsPlanning);
@@ -448,21 +498,19 @@ export default {
         promises.push(this.setBoxAction(this.arrayToSave[item]));
       }
       Promise.all(promises)
-    .then(() => {
-      // Once all promises are resolved, set loading value to false
-      this.setLoadingValueAction(false)
         .then(() => {
-          // After setting loading value, log the result
-          console.log(itemsPlanningArray);
-          this.$router.push('/rtg-planning-output');
+          // Once all promises are resolved, set loading value to false
+          this.setLoadingValueAction(false).then(() => {
+            // After setting loading value, log the result
+            console.log(itemsPlanningArray);
+            window.location.reload();
+          });
+        })
+        .catch((error) => {
+          // Handle any errors that occur during the process
+          console.error("Error:", error);
+          this.setLoadingValueAction(false);
         });
-    })
-    .catch((error) => {
-      // Handle any errors that occur during the process
-      console.error("Error:", error);
-      this.setLoadingValueAction(false);
-      
-    });
     },
   },
 };
@@ -538,5 +586,11 @@ export default {
   font-weight: bold;
   font-size: 1.2rem;
   transform: rotate(180deg);
+}
+
+.test {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>

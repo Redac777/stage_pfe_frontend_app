@@ -33,6 +33,18 @@ const shiftsModule = {
           });
       });
     },
+
+    setShiftByTime({ commit, state }) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.get("shifts/getShiftByTime")
+          .then((response) => {
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
   },
   getters: {
     getShifts: (state) => {

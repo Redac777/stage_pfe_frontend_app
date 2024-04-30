@@ -2,10 +2,12 @@ import CustomizedAxios from "../../../plugins/axios";
 const equipementToPlanningModule = {
   state: {
     plannings: [],
-    currentPlanning:null,
-    planningDrivers:[],
-    setPlanningEquipements:[]
-
+    currentPlanning: null,
+    currentStsPlanning: null,
+    currentRsPlanning: null,
+    currentAmPlanning: null,
+    planningDrivers: [],
+    setPlanningEquipements: [],
   },
   mutations: {
     ADD_PLANNING(state, payload) {
@@ -16,11 +18,21 @@ const equipementToPlanningModule = {
     },
     SET_PLANNING_DRIVERS(state, payload) {
       state.planningDrivers = payload;
-  },
-  SET_PLANNING_EQUIPEMENTS(state, payload) {
+    },
+    SET_PLANNING_EQUIPEMENTS(state, payload) {
       state.planningEquipements = payload;
+    },
+    CLEAR_PLANNINGS(state) {
+      state.plannings = [];
+      state.currentPlanning = null;
+      state.currentStsPlanning = null;
+      state.currentRsPlanning = null;
+      state.currentAmPlanning = null;
+      state.planningDrivers = [];
+      state.setPlanningEquipements = [];
+      // Clear other related states as needed
+    }
   },
-},
   actions: {
     // addEquipementsToPlanningAction({ commit, state }, user) {
     //   return new Promise((resolve, reject) => {
@@ -70,11 +82,17 @@ const equipementToPlanningModule = {
             reject(error);
           });
       });
-  },
+    },
 
-    addEquipementWorkingHoursToPlanning({ commit, state }, equipementWWHPlanning) {
+    addEquipementWorkingHoursToPlanning(
+      { commit, state },
+      equipementWWHPlanning
+    ) {
       return new Promise((resolve, reject) => {
-        CustomizedAxios.post("equipementsplanningsworkinghours/add", equipementWWHPlanning)
+        CustomizedAxios.post(
+          "equipementsplanningsworkinghours/add",
+          equipementWWHPlanning
+        )
           .then((response) => {
             resolve(response.data.payload);
           })
@@ -86,10 +104,12 @@ const equipementToPlanningModule = {
 
     setCurrentPlanning({ commit, state }, date) {
       return new Promise((resolve, reject) => {
+        let profileType = date.profileType;
+        delete date.profileType;
         CustomizedAxios.post("plannings/getByDate", date)
           .then((response) => {
-            commit("SET_CURRENT_PLANNING", response.data.payload);
-            resolve(response.data.payload);
+              commit("SET_CURRENT_PLANNING", response.data.payload);
+              resolve(response.data.payload);
           })
           .catch((error) => {
             reject(error);
@@ -121,21 +141,43 @@ const equipementToPlanningModule = {
             reject(error);
           });
       });
+    },
+    
+      clearPlannings({ commit }) {
+        // Clear plannings array and related states
+        commit('CLEAR_PLANNINGS');
+        // Clear data stored in localStorage
+        localStorage.removeItem('plannings');
+        localStorage.removeItem('currentPlanning');
+        localStorage.removeItem('currentStsPlanning');
+        localStorage.removeItem('currentRsPlanning');
+        localStorage.removeItem('currentAmPlanning');
+        localStorage.removeItem('planningDrivers');
+        localStorage.removeItem('setPlanningEquipements');
+        // Clear other related data stored in localStorage as needed
+      
     }
-},
+    
+    
+
+
+  },
   getters: {
     getPlannings(state) {
       return state.plannings;
     },
-    getCurrentPlanning(state){
-      return state.currentPlanning
+    getCurrentPlanning(state) {
+      return state.currentPlanning;
     },
-    getPlanningDrivers(state){
-      return state.planningDrivers
+    getPlanningDrivers(state) {
+      return state.planningDrivers;
     },
-    getPlanningEquipements(state){
-      return state.planningEquipements
-    }
+    getPlanningEquipements(state) {
+      return state.planningEquipements;
+    },
+    resetCurrentPlanning() {
+      return (this.currentPlanning = null);
+    },
   },
 };
 export default equipementToPlanningModule;
