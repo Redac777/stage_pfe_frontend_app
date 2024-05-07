@@ -56,7 +56,7 @@
           <v-icon>mdi-plus</v-icon>
         </v-btn>
         <v-btn @click="openSettingsDialog" class="settings-btn">
-          <v-icon>mdi-cog</v-icon>
+          <v-icon>mdi-magnify</v-icon>
         </v-btn>
         <div class="legend-item break">Break</div>
         <div class="legend-item none-break">Work</div>
@@ -488,7 +488,7 @@ thead td {
 }
 
 .add-btn{
-  background-color: #653e0f;
+  background-color: #1177b3;
   color: white;
 }
 </style>
