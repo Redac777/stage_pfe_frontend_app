@@ -100,7 +100,7 @@ export default {
 
   methods: {
 
-    ...mapActions(["logoutAction"]),
+    ...mapActions(["logoutAction","clearPlannings"]),
     getAuthUser() {
       this.authUser = this.getUserActive;
     },
@@ -109,6 +109,7 @@ export default {
       this.logoutAction()
         .then(() => {
           console.log(this.getMessages.logout);
+          this.clearPlannings()
           this.redirectAfterLogout();
         })
         .catch((error) => {

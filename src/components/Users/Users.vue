@@ -190,6 +190,7 @@
                         <td>{{ item.profile_groupName }}</td>
                         <td>{{ item.shiftName }}</td>
                         <td>{{ item.workingHours }}</td>
+                        <td>{{ item.sby_workingHours }}</td>
                         <td>
                             <div class="actions">
                                 <v-btn icon class="icon" size="small" color="green-darken-4" @click="editItem(item)">
@@ -250,6 +251,7 @@ export default {
             lastname: "",
             email: "",
             workingHours: 0,
+            sby_workingHours:0,
             role_id: "",
             roleName: "",
             shift_id: "",
@@ -286,8 +288,8 @@ export default {
                 sortable: true,
                 key: 'shift',
             },
-            { title: 'Working Hours', key: 'workingHours', sortable: true },
-
+            { title: 'Working Hours(min)', key: 'workingHours', sortable: true },
+            { title: 'SBY Working Hours(min)', key: 'sbyworkingHours', sortable: true },
             { title: 'Actions', key: 'actions', sortable: false },
         ],
         users: [],
@@ -348,6 +350,7 @@ export default {
                         matricule: item.matricule,
                         email: item.email,
                         workingHours: item.workingHours || item.workingHours === 0 ? item.workingHours : 'undefined',
+                        sby_workingHours:item.sby_workingHours || item.sby_workingHours===0 ? item.sby_workingHours : 'undefined',
                         roleName: item.role.name,
                         profile_groupName: item.profile_group ? item.profile_group.type : 'none',
                         shiftName: item.shift ? item.shift.category : 'none',
@@ -569,7 +572,7 @@ export default {
                 this.setLoadingValueAction(true);
                 const promises = [];
                 for (const rowData of jsonData.slice(1)) { // Start from index 1 to skip header row
-                    const [matricule, firstname, lastname, email, roleName, profileGroupName, shiftCategory, workingHours] = rowData;
+                    const [matricule, firstname, lastname, email, roleName, profileGroupName, shiftCategory, workingHours,sby_workingHours] = rowData;
                     // console.log(roleName + " " + profileGroupName + " " + shiftCategory);
                     const role = this.roles.find(role => role.name === roleName);
                     const profileGroup = this.profileGroups.find(profileGroup => profileGroup.type === profileGroupName);
@@ -583,7 +586,8 @@ export default {
                             role_id: role.id,
                             profile_group_id: profileGroup.id,
                             shift_id: shift.id,
-                            workingHours
+                            workingHours,
+                            sby_workingHours
                         };
                         const promise = this.registerUserAction(user)
                             .then(response => {

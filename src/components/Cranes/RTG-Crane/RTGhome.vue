@@ -104,7 +104,7 @@ export default {
       tableHeaders: [],
       inputs: null,
       planning: null,
-      allPlannings:[]
+      allPlannings: [],
     };
   },
 
@@ -114,8 +114,6 @@ export default {
     ...mapGetters([
       "getDrivers",
       "getEquipements",
-      "getDrivers",
-      "getRTGs",
       "getCurrentPlanning",
       "getPlanningDrivers",
       "getPlanningEquipements",
@@ -147,7 +145,6 @@ export default {
       "addUserToPlanning",
       "addEquipementToPlanning",
       "setCurrentPlanning",
-      "setLoadingValueAction",
       "setPlanningDrivers",
       "setUserById",
       "setPlanningEquipements",
@@ -160,6 +157,7 @@ export default {
     async setData() {
       this.setLoadingValueAction(true);
       if (this.planningData) {
+        console.log(this.planningData)
         const response = await this.setShiftByCategory({
           category: this.planningData.shift,
         });
@@ -298,7 +296,7 @@ export default {
         // let type = "rtg";
         await this.setCurrentPlanning(dateObject);
         this.allPlannings = this.getPlannings;
-        if (this.allPlannings) {
+        if (this.allPlannings && this.allPlannings.length != 0) {
           this.planning = this.allPlannings[this.allPlannings.length - 1];
           const planningId = {
             planning_id: this.planning.id,
@@ -352,7 +350,19 @@ export default {
       this.drivers = this.drivers.sort(function (a, b) {
         return b.workingHours - a.workingHours;
       });
-      let startTime = 7;
+      let currentTime = new Date().getHours();
+      let startTime = 0;
+      switch (true) {
+        case currentTime >= 7 && currentTime <= 14: // Between 7h and 14h59
+          startTime = 7;
+          break;
+        case currentTime >= 15 && currentTime <= 22: // Between 15h and 22h59
+          startTime = 15;
+          break;
+        default: // Between 23h and 24h or 00h and 6h59
+          startTime = 23;
+          break;
+      }
       for (let i = 0; i < nbrCols; i++) {
         let hours = Math.floor(startTime); // Extract whole hours
         let minutes = Math.round((startTime - hours) * 60); // Extract remaining minutes and round
@@ -437,7 +447,7 @@ export default {
           i++
         ) {
           itemsPlanning[i][k] = "DP";
-        }
+        } 
         const doubleBreakDrivers = [];
 
         for (let i = 1; i < nbrDrivers + 1; i++) {
@@ -448,12 +458,27 @@ export default {
             });
           }
         }
-        let tempDriver = null;
-        for (let i = 1; i < nbrDoubleBreak + 1; i++) {
-          tempDriver = itemsPlanning[i][0];
-          itemsPlanning[i][0] = doubleBreakDrivers[i - 1].driver;
-          itemsPlanning[doubleBreakDrivers[i - 1].index][0] = tempDriver;
+
+
+        const firstValues = []
+        
+        for(let i=1 ; i<doubleBreakDrivers.length+1;i++){
+            firstValues.push(itemsPlanning[i][0])
         }
+        console.log(doubleBreakDrivers)
+        console.log(firstValues)
+        console.log(itemsPlanning)
+        const nonCommonValuesT1 = firstValues.filter(obj1 => !doubleBreakDrivers.some(obj2 => obj1.matricule === obj2.driver.matricule));
+        const nonCommonValuesT2 = doubleBreakDrivers.filter(obj1=> !firstValues.some(obj2 => obj2.matricule === obj1.driver.matricule));
+        for(let i = 1;i<nonCommonValuesT1.length+1;i++){
+            let temp = nonCommonValuesT1[i-1]
+            let driver = this.drivers.find(obj=>obj.matricule===nonCommonValuesT2[i-1].driver.matricule)
+            let index = this.drivers.indexOf(driver)
+            console.log(index)
+            itemsPlanning[i][0] = driver
+            itemsPlanning[index+1][0] = temp
+        }
+
       }
 
       const id = 1;
@@ -478,8 +503,8 @@ export default {
                 : false,
             start_time: parts[0],
             ends_time: parts[1],
-          }
-          console.log(boxObject)
+          };
+          console.log(boxObject);
           this.arrayToSave.push(boxObject);
         }
       }

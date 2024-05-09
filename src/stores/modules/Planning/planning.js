@@ -2,19 +2,27 @@ import CustomizedAxios from "../../../plugins/axios";
 const equipementToPlanningModule = {
   state: {
     plannings: [],
+    rsPlannings:[],
     currentPlanning: null,
-    currentStsPlanning: null,
-    currentRsPlanning: null,
-    currentAmPlanning: null,
+    currentSTSPlanning: null,
+    currentRSPlanning: null,
+    currentAMPlanning: null,
     planningDrivers: [],
     setPlanningEquipements: [],
+    planningEquipements:[],
   },
   mutations: {
     ADD_PLANNING(state, payload) {
       state.plannings.push(payload);
     },
+    ADD_RS_PLANNING(state, payload) {
+      state.rsPlannings.push(payload);
+    },
     SET_CURRENT_PLANNING(state, payload) {
       state.currentPlanning = payload;
+    },
+    SET_CURRENT_RS_PLANNING(state, payload) {
+      state.currentRSPlanning = payload;
     },
     SET_PLANNING_DRIVERS(state, payload) {
       state.planningDrivers = payload;
@@ -24,10 +32,11 @@ const equipementToPlanningModule = {
     },
     CLEAR_PLANNINGS(state) {
       state.plannings = [];
+      state.rsPlannings = [];
       state.currentPlanning = null;
-      state.currentStsPlanning = null;
-      state.currentRsPlanning = null;
-      state.currentAmPlanning = null;
+      state.currentSTSPlanning = null;
+      state.currentRSPlanning = null;
+      state.currentAMPlanning = null;
       state.planningDrivers = [];
       state.setPlanningEquipements = [];
       // Clear other related states as needed
@@ -59,12 +68,24 @@ const equipementToPlanningModule = {
           });
       });
     },
+    createRSPlanningAction({ commit, state }, planning) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/add", planning)
+          .then((response) => {
+            commit("ADD_RS_PLANNING", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
 
     addUserToPlanning({ commit, state }, userWPlanning) {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("usersplannings/add", userWPlanning)
           .then((response) => {
-            commit("SET_CURRENT_PLANNING", response.data.payload);
+            // commit("SET_CURRENT_PLANNING", response.data.payload);
             resolve(response.data.payload);
           })
           .catch((error) => {
@@ -104,7 +125,6 @@ const equipementToPlanningModule = {
 
     setCurrentPlanning({ commit, state }, date) {
       return new Promise((resolve, reject) => {
-        let profileType = date.profileType;
         delete date.profileType;
         CustomizedAxios.post("plannings/getByDate", date)
           .then((response) => {
@@ -116,7 +136,19 @@ const equipementToPlanningModule = {
           });
       });
     },
-
+    setCurrentRSPlanning({ commit, state }, date) {
+      return new Promise((resolve, reject) => {
+        delete date.profileType;
+        CustomizedAxios.post("plannings/getByDate", date)
+          .then((response) => {
+              commit("SET_CURRENT_RS_PLANNING", response.data.payload);
+              resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
     setPlanningDrivers({ commit, state }, planning) {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("usersplannings/getByPlanning", planning)
@@ -148,6 +180,7 @@ const equipementToPlanningModule = {
         commit('CLEAR_PLANNINGS');
         // Clear data stored in localStorage
         localStorage.removeItem('plannings');
+        localStorage.removeItem('rsPlannings')
         localStorage.removeItem('currentPlanning');
         localStorage.removeItem('currentStsPlanning');
         localStorage.removeItem('currentRsPlanning');
@@ -166,8 +199,14 @@ const equipementToPlanningModule = {
     getPlannings(state) {
       return state.plannings;
     },
+    getRSPlannings(state){
+      return state.rsPlannings;
+    },
     getCurrentPlanning(state) {
       return state.currentPlanning;
+    },
+    getCurrentRSPlanning(state){
+      return state.currentRSPlanning
     },
     getPlanningDrivers(state) {
       return state.planningDrivers;

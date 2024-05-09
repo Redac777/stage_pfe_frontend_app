@@ -5,10 +5,11 @@
                     Reset
                 </v-btn> -->
             <DashboardNavigation @updateActiveComponent="updateActiveComponent"/>
-            <RTGhome v-if="activeComponent == 'RTGhome' && (this.plannings && this.plannings.length===0) || this.createdPlanningData" :planningData="createdPlanningData"  />
+            <RTGhome v-if="activeComponent == 'RTGhome' && (!this.plannings || (this.plannings && this.plannings.length===0)) || this.createdPlanningData" :planningData="createdPlanningData"  />
             <RTGPlanningOutput v-if="activeComponent == 'RTGhome' && this.plannings && this.plannings.length!==0 && !this.createdPlanningData"  @createPlanning="handleCreatePlanning"/>
             <STShome v-if="activeComponent == 'STShome'"/>
-            <RShome v-if="activeComponent == 'RShome'"/>
+            <RShome v-if="activeComponent == 'RShome' && (!this.rsPlannings ||(this.rsPlannings && this.rsPlannings.length===0)) || this.createdRSPlanningData" :rsplanningData="createdRSPlanningData"/>
+            <RSPlanningOutput v-if="activeComponent == 'RShome' && this.rsPlannings && this.rsPlannings.length!==0 && !this.createdRSPlanningData"  @createPlanning="handleCreateRSPlanning"/>
             <AMhome v-if="activeComponent == 'AMhome'"/>
             </div>
     </div>
@@ -18,17 +19,23 @@
 <script>
 import { mapActions, mapGetters } from 'vuex';
 import RTGPlanningOutput from '../Cranes/RTG-Crane/RTGPlanningOutput.vue';
+import RSPlanningOutput from '../Cranes/RS-Crane/RSPlanningOutput.vue';
 
 export default {
     data(){
         return{
             activeComponent: 'RTGhome',
             plannings: null,
-            createdPlanningData: null
+            rsPlannings:null,
+            createdPlanningData: null,
+            createdRSPlanningData:null
         }
     },
     computed:{
-        ...mapGetters(["getPlannings"])
+        ...mapGetters(["getPlannings","getRSPlannings"]),
+        // includePlanning(){
+        //     return this.plannings && this.plannings.length!==0 && this.plannings.find(planning=>planning)
+        // }
     },
 
     mounted(){
@@ -42,6 +49,7 @@ export default {
         },
         getCurrentPlanningMethod(){
             this.plannings = this.getPlannings
+            this.rsPlannings = this.getRSPlannings
         },
 
         reset(){
@@ -49,9 +57,14 @@ export default {
         },
 
         handleCreatePlanning(data){
-            console.log(data)
+            // console.log(data)
             this.createdPlanningData = data
-            console.log(JSON.stringify(this.createdPlanningData))
+            // console.log(JSON.stringify(this.createdPlanningData))
+        },
+        handleCreateRSPlanning(data){
+            // console.log(data)
+            this.createdRSPlanningData = data
+            // console.log(JSON.stringify(this.createdRSPlanningData))
         }
     }
     

@@ -84,11 +84,20 @@
         </template>
       </v-data-table>
     </div>
+    <div class="finish-button">
+      <v-btn
+        @click="finishPlanning"
+        density="default"
+        style="background-color: #15263f; color: white; width: 120px"
+        >Finish</v-btn
+      >
+    </div>
   </div>
 </template>
 
 <script>
 import DashboardNavigation from "@/components/Dashboard/DashboardNavigation.vue";
+import { createWebHistory } from "vue-router";
 import { mapActions, mapGetters } from "vuex";
 
 export default {
@@ -108,7 +117,10 @@ export default {
       showCreateDialog: false,
       selectedCreateDate: new Date(),
       selectedCreateShift: "",
-      createdPlanningData : null
+      createdPlanningData: null,
+      dateCountChange: 0,
+      userWorkingHours: {},
+      usersWorkingHours: [],
     };
   },
   components: {
@@ -122,6 +134,11 @@ export default {
         else this.setPlanning();
       }
     },
+    selectedDate(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.dateCountChange += 1;
+      }
+    },
   },
 
   computed: {
@@ -130,15 +147,20 @@ export default {
     // Returns the formatted date in yyyy-mm-dd format
     formattedDate() {
       // Convert selectedDate to local timezone
-      if (this.selectedDate) {
+      if (this.dateCountChange > 0) {
         const localDate = new Date(
           this.selectedDate.getTime() +
             this.selectedDate.getTimezoneOffset() * 60000
         );
-        localDate.setDate(localDate.getDate()+1);
+        // if (localDate.getTime() !== todayDate.getTime())
+        // localDate.setDate(localDate.getDate()+1);
+        // else
+        localDate.setDate(localDate.getDate() + 1);
         // console.log(localDate)
         // Get the date string in yyyy-mm-dd format
         return localDate.toISOString().split("T")[0];
+      } else {
+        return new Date().toISOString().split("T")[0];
       }
     },
   },
@@ -155,19 +177,20 @@ export default {
       "setShiftByCategory",
       "setShiftByTime",
       "setProfileGroupByType",
+      "editUserAction",
     ]),
     // Settings
     openSettingsDialog() {
       this.showSettingsDialog = true;
     },
-    openCreateDialog(){
+    openCreateDialog() {
       this.showCreateDialog = true;
     },
     closeSettingsDialog() {
       this.showSettingsDialog = false;
     },
 
-    closeCreateDialog(){
+    closeCreateDialog() {
       this.showCreateDialog = false;
     },
     applySettings() {
@@ -175,16 +198,15 @@ export default {
       this.closeSettingsDialog();
     },
 
-    applyCreate(){
+    applyCreate() {
       this.createdPlanningData = {
         date: this.selectedCreateDate,
-        shift: this.selectedCreateShift
-      }
+        shift: this.selectedCreateShift,
+      };
       // console.log(this.createdPlanningData)
-      this.$emit('createPlanning', this.createdPlanningData);
+      this.$emit("createPlanning", this.createdPlanningData);
       this.closeCreateDialog();
     },
-
 
     // Set initial shift in dialog select shift
     setInitialShift() {
@@ -257,7 +279,7 @@ export default {
           };
           this.setProfileGroupByType(activeType).then((response) => {
             this.profileGroupId = response[0].id;
-            console.log(this.formattedDate);
+            // console.log(this.formattedDate);
             const dateObject = {
               date: this.formattedDate,
               shift_id: this.shiftId,
@@ -276,6 +298,7 @@ export default {
         await this.setCurrentPlanning(dateObject);
         this.planning = this.getCurrentPlanning;
         if (this.planning) {
+          // console.log(this.planning)
           const planningId = {
             planning_id: this.planning.id,
           };
@@ -329,11 +352,58 @@ export default {
             this.planningTable = [];
 
             // Iterate over each unique user
+            this.userWorkingHours = {};
+            this.usersWorkingHours = [];
             uniqueUsers.forEach((userId) => {
               // Find the boxes for the current user
               const userBoxes = this.planning.filter(
                 (box) => box.user.id === userId
               );
+
+              userBoxes.forEach((box) => {
+                const { user, start_time, ends_time, break: isBreak } = box;
+                // console.log(user.firstname+ " "+user.workingHours)
+                // this.userWorkingHours = {}
+                // Check if break is false
+                if (!isBreak) {
+                  // Convert start_time and ends_time to minutes
+                  const [startHours, startMinutes] = start_time
+                    .split(":")
+                    .map(Number);
+                  const [endHours, endMinutes] = ends_time
+                    .split(":")
+                    .map(Number);
+
+                  // Calculate working hours
+                  const startTimeMinutes = startHours * 60 + startMinutes;
+                  const endTimeMinutes = endHours * 60 + endMinutes;
+                  const workingMinutes = endTimeMinutes - startTimeMinutes;
+                  console.log(workingMinutes)
+                  if (!this.userWorkingHours[user.id]) {
+                    // If this.userWorkingHours[user.id] doesn't exist, initialize it as an object with oldValue and totalWorkingHours properties
+                    this.userWorkingHours[user.id] = {
+                      oldValue: user.workingHours,
+                      totalWorkingHours: user.workingHours + workingMinutes,
+                    };
+                  } else {
+                    // If this.userWorkingHours[user.id] already exists, update its properties
+                    this.userWorkingHours[user.id].oldValue = user.workingHours;
+                    this.userWorkingHours[user.id].totalWorkingHours +=
+                      workingMinutes;
+                  }
+                }
+              });
+
+              console.log(this.userWorkingHours);
+              const userToUpdate = {
+                id: userId,
+                workingHours: this.userWorkingHours[userId]?.totalWorkingHours || 0,
+              };
+              //console.log(userToUpdate)
+              this.usersWorkingHours.push(userToUpdate);
+              // this.editUserAction(userToUpdate),then((response)=>{
+              //   console.log(response)
+              // })
 
               // Create a new row for the current user
               const row = {
@@ -383,6 +453,7 @@ export default {
               }
 
               this.planningTable.push(row);
+              // console.log(row)
               this.setLoadingValueAction(false);
             });
           });
@@ -398,6 +469,18 @@ export default {
 
     toggleDatePicker() {
       this.showDatePicker = !this.showDatePicker; // Toggle the visibility
+    },
+
+    finishPlanning() {
+      this.usersWorkingHours = this.usersWorkingHours.filter(usWh => usWh.workingHours!=0)
+      // console.log(this.usersWorkingHours)
+      this.setLoadingValueAction(true);
+      this.usersWorkingHours.forEach((user) => {
+        this.editUserAction(user).then(() => {
+          this.setLoadingValueAction(false);
+          console.log("updated successfully")
+        });
+      });
     },
   },
 };
@@ -483,12 +566,20 @@ thead td {
   width: 100%;
 }
 .v-data-table {
-  max-height: 75vh;
+  max-height: 65vh;
   margin: 0 8px;
 }
 
-.add-btn{
+.add-btn {
   background-color: #1177b3;
   color: white;
+}
+
+.finish-button {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: fit-content;
 }
 </style>
