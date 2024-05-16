@@ -3,7 +3,7 @@
       <v-img
         class="mx-auto my-12"
         max-width="128"
-        src="../assets/images/TA-logo.png"
+        src="../../assets/images/TA-logo.png"
       ></v-img>
   
       <v-card

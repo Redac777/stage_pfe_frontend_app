@@ -37,10 +37,34 @@
               :items="shifts"
               label="Select Shift"
             ></v-select>
+            <v-select
+              v-model="selectedDayTime"
+              :items="dayTimes"
+              label="Select Day time"
+            ></v-select>
           </v-card-text>
           <v-card-actions>
             <v-btn color="primary" @click="applyCreate">Apply</v-btn>
             <v-btn @click="closeCreateDialog">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </div>
+    <div>
+      <v-dialog v-model="dialogDelete" max-width="500px">
+        <v-card>
+          <v-card-title class="dialogText"
+            >Are you sure you want to delete this planning?</v-card-title
+          >
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn class="dialogCancel" variant="text" @click="closeDelete"
+              >Cancel</v-btn
+            >
+            <v-btn class="dialogOk" variant="text" @click="deleteItemConfirm"
+              >OK</v-btn
+            >
+            <v-spacer></v-spacer>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -57,6 +81,9 @@
         </v-btn>
         <v-btn @click="openSettingsDialog" class="settings-btn">
           <v-icon>mdi-magnify</v-icon>
+        </v-btn>
+        <v-btn @click="openDeleteDialog" class="delete-btn">
+          <v-icon>mdi-delete</v-icon>
         </v-btn>
         <div class="legend-item break">Break</div>
         <div class="legend-item none-break">Work</div>
@@ -99,6 +126,7 @@
 import DashboardNavigation from "@/components/Dashboard/DashboardNavigation.vue";
 import { createWebHistory } from "vue-router";
 import { mapActions, mapGetters } from "vuex";
+import moment from "moment";
 
 export default {
   data() {
@@ -121,6 +149,9 @@ export default {
       dateCountChange: 0,
       userWorkingHours: {},
       usersWorkingHours: [],
+      dialogDelete: false,
+      dayTimes: ["Morning", "Afternoon", "Evening"],
+      selectedDayTime: "",
     };
   },
   components: {
@@ -137,6 +168,60 @@ export default {
     selectedDate(newVal, oldVal) {
       if (newVal !== oldVal) {
         this.dateCountChange += 1;
+      }
+    },
+    selectedDayTime(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        if (this.selectedCreateDate) {
+          let date = new Date(this.selectedCreateDate);
+          let year = date.getFullYear();
+          let month = ("0" + (date.getMonth() + 1)).slice(-2);
+          let day = ("0" + date.getDate()).slice(-2);
+          let formattedDate = `${year}-${month}-${day}`;
+          let time;
+          switch (this.selectedDayTime) {
+            case "Morning":
+              time = "07:00:00";
+              break;
+            case "Afternoon":
+              time = "15:00:00";
+              break;
+            case "Evening":
+              time = "23:00:00";
+              break;
+            default:
+              time = "00:00:00";
+          }
+          let dateTime = `${formattedDate}T${time}`;
+          console.log(this.getActualShift(dateTime))
+        }
+      }
+    },
+    selectedCreateDate(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        if (this.selectedDayTime) {
+          let date = new Date(this.selectedCreateDate);
+          let year = date.getFullYear();
+          let month = ("0" + (date.getMonth() + 1)).slice(-2);
+          let day = ("0" + date.getDate()).slice(-2);
+          let formattedDate = `${year}-${month}-${day}`;
+          let time;
+          switch (this.selectedDayTime) {
+            case "Morning":
+              time = "07:00:00";
+              break;
+            case "Afternoon":
+              time = "15:00:00";
+              break;
+            case "Evening":
+              time = "23:00:00";
+              break;
+            default:
+              time = "00:00:00";
+          }
+          let dateTime = `${formattedDate}T${time}`;
+          console.log(this.getActualShift(dateTime))
+        }
       }
     },
   },
@@ -163,10 +248,35 @@ export default {
         return new Date().toISOString().split("T")[0];
       }
     },
+    // selectedCreateShift() {
+    //   if (this.selectedDayTime) {
+    //     let date = new Date(this.selectedDayTime);
+    //     let year = date.getFullYear();
+    //     let month = ("0" + (date.getMonth() + 1)).slice(-2);
+    //     let day = ("0" + date.getDate()).slice(-2);
+    //     let formattedDate = `${year}-${month}-${day}`;
+    //     let time;
+    //     switch (this.selectedDayTime) {
+    //       case "Morning":
+    //         time = "07:00:00";
+    //         break;
+    //       case "Afternoon":
+    //         time = "15:00:00";
+    //         break;
+    //       case "Evening":
+    //         time = "23:00:00";
+    //         break;
+    //       default:
+    //         time = "00:00:00";
+    //     }
+    //     let dateTime = `${formattedDate} ${time}`;
+
+    //   }
+    // },
   },
   mounted() {
-    this.setPlanning();
     this.setInitialShift();
+    this.setPlanning();
   },
 
   methods: {
@@ -178,10 +288,14 @@ export default {
       "setShiftByTime",
       "setProfileGroupByType",
       "editUserAction",
+      "deleteRTGPlanningAction",
     ]),
     // Settings
     openSettingsDialog() {
       this.showSettingsDialog = true;
+    },
+    openDeleteDialog() {
+      this.dialogDelete = true;
     },
     openCreateDialog() {
       this.showCreateDialog = true;
@@ -210,9 +324,12 @@ export default {
 
     // Set initial shift in dialog select shift
     setInitialShift() {
-      this.setShiftByTime().then((response) => {
-        this.selectedShift = response[0].category;
-      });
+      this.selectedShift = this.getActualShift();
+      this.setShiftByCategory({ category: this.selectedShift }).then(
+        (response) => {
+          this.shiftId = response[0].id;
+        }
+      );
     },
 
     // select profile group in navigation dashboard
@@ -248,23 +365,19 @@ export default {
         let month = (currentDate.getMonth() + 1).toString().padStart(2, "0"); // Months are zero indexed, so we add 1
         let day = currentDate.getDate().toString().padStart(2, "0");
         let formattedDate = year + "-" + month + "-" + day;
-        this.setShiftByTime().then((response) => {
-          this.shiftId = response[0].id;
-
-          const activeType = {
-            type: this.activeProfileGroup,
+        const activeType = {
+          type: this.activeProfileGroup,
+        };
+        this.setProfileGroupByType(activeType).then((response) => {
+          this.profileGroupId = response[0].id;
+          const dateObject = {
+            date: formattedDate,
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
+            profileType: "rtg",
           };
-          this.setProfileGroupByType(activeType).then((response) => {
-            this.profileGroupId = response[0].id;
-            const dateObject = {
-              date: formattedDate,
-              shift_id: this.shiftId,
-              profile_group_id: this.profileGroupId,
-              profileType: "rtg",
-            };
-
-            this.DisplayPlanning(dateObject);
-          });
+          console.log(dateObject);
+          this.DisplayPlanning(dateObject);
         });
       } else {
         this.showDatePicker = false;
@@ -378,7 +491,7 @@ export default {
                   const startTimeMinutes = startHours * 60 + startMinutes;
                   const endTimeMinutes = endHours * 60 + endMinutes;
                   const workingMinutes = endTimeMinutes - startTimeMinutes;
-                  console.log(workingMinutes)
+                  console.log(workingMinutes);
                   if (!this.userWorkingHours[user.id]) {
                     // If this.userWorkingHours[user.id] doesn't exist, initialize it as an object with oldValue and totalWorkingHours properties
                     this.userWorkingHours[user.id] = {
@@ -397,7 +510,8 @@ export default {
               console.log(this.userWorkingHours);
               const userToUpdate = {
                 id: userId,
-                workingHours: this.userWorkingHours[userId]?.totalWorkingHours || 0,
+                workingHours:
+                  this.userWorkingHours[userId]?.totalWorkingHours || 0,
               };
               //console.log(userToUpdate)
               this.usersWorkingHours.push(userToUpdate);
@@ -472,15 +586,78 @@ export default {
     },
 
     finishPlanning() {
-      this.usersWorkingHours = this.usersWorkingHours.filter(usWh => usWh.workingHours!=0)
+      this.usersWorkingHours = this.usersWorkingHours.filter(
+        (usWh) => usWh.workingHours != 0
+      );
       // console.log(this.usersWorkingHours)
       this.setLoadingValueAction(true);
       this.usersWorkingHours.forEach((user) => {
         this.editUserAction(user).then(() => {
           this.setLoadingValueAction(false);
-          console.log("updated successfully")
+          console.log("updated successfully");
         });
       });
+    },
+
+    closeDelete() {
+      this.dialogDelete = false;
+    },
+    deleteItemConfirm() {
+      this.setLoadingValueAction(true);
+      this.deleteRTGPlanningAction({ id: this.planning[0].planning_id }).then(
+        () => {
+          this.dialogDelete = false;
+          this.setLoadingValueAction(false);
+          this.createdPlanningData = {
+            date: this.selectedDate,
+            shift: this.selectedShift,
+          };
+
+          this.$emit("createPlanning", this.createdPlanningData);
+        }
+      );
+      // this.createdPlanningData = {
+      //   date: this.selectedDate,
+      //   shift: this.selectedShift,
+      // };
+      // console.log(this.createdPlanningData)
+      // console.log(this.selectedShift)
+      // console.log(this.selectedDate)
+      // console.log(this.planning[0].planning.shift_id)
+    },
+    getActualShift(date) {
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
+      let thisDate = new Date("2022-02-10T07:00:00");
+
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+        return shift[1];
+      else if (
+        nowDate.getHours() == 23 ||
+        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      )
+        return shift[2];
+    },
+    shiftArrays(array) {
+      let c = "";
+      c = array[3];
+      array[3] = array[2];
+      array[2] = array[1];
+      array[1] = array[0];
+      array[0] = c;
+
+      return array;
     },
   },
 };
@@ -505,6 +682,14 @@ export default {
   border-radius: 5px;
   padding: 5px;
   background-color: #79997e;
+}
+.dialogCancel {
+  background-color: red;
+  color: white;
+}
+.dialogOk {
+  background-color: blue;
+  color: white;
 }
 
 td {
@@ -555,6 +740,11 @@ thead td {
   color: white;
 }
 
+.delete-btn {
+  background-color: rgb(205, 48, 48);
+  color: white;
+}
+
 .planning {
   display: flex;
   justify-content: space-between;
@@ -566,7 +756,7 @@ thead td {
   width: 100%;
 }
 .v-data-table {
-  max-height: 65vh;
+  max-height: 70h;
   margin: 0 8px;
 }
 

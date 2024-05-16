@@ -15,6 +15,14 @@ const equipementToPlanningModule = {
     ADD_PLANNING(state, payload) {
       state.plannings.push(payload);
     },
+    DELETE_RTG_PLANNING(state,payload){
+      state.currentRSPlanning = null
+      state.plannings = state.plannings.filter(planning => planning.id != payload.id)
+    },
+    DELETE_RS_PLANNING(state,payload){
+      state.currentPlanning = null
+      state.rsPlannings = state.rsPlannings.filter(planning => planning.id != payload.id)
+    },
     ADD_RS_PLANNING(state, payload) {
       state.rsPlannings.push(payload);
     },
@@ -81,6 +89,30 @@ const equipementToPlanningModule = {
       });
     },
 
+    deleteRTGPlanningAction({commit,state},planning){
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/delete", planning)
+          .then((response) => {
+            commit("DELETE_RTG_PLANNING",response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    deleteRSPlanningAction({commit,state},planning){
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/delete", planning)
+          .then((response) => {
+            commit("DELETE_RS_PLANNING",response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
     addUserToPlanning({ commit, state }, userWPlanning) {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("usersplannings/add", userWPlanning)

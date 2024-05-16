@@ -69,6 +69,7 @@
 <script>
 import ConfirmDialog from "../ConfirmDialog.vue";
 import { mapGetters, mapActions } from "vuex";
+import moment from "moment";
 
 export default {
   //components
@@ -115,6 +116,7 @@ export default {
       "getPlanningDrivers",
       "getPlanningEquipements",
       "getRSPlannings",
+      
     ]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
@@ -165,12 +167,19 @@ export default {
           shift_id: response[0].id,
         };
       } else {
+        
+        const shiftCategory = this.getActualShift()
+        console.log(shiftCategory)
+        const response = await this.setShiftByCategory({
+          category: shiftCategory,
+        });
         this.inputs = {
           profile_group: "rs",
           role: "driver",
+          shift_id:response[0].id
         };
       }
-      console.log(this.inputs);
+      // console.log(this.inputs);
       this.setDriversAction(this.inputs).then(() => {
         this.driversList = this.getDrivers;
         if (this.driversList.length > 0) {
@@ -463,6 +472,34 @@ export default {
           console.error("Error:", error);
           this.setLoadingValueAction(false);
         });
+    },
+    getActualShift() {
+      let thisDate = new Date("2022-02-10T07:00:00");
+      let nowDate = new Date();
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+        return shift[1];
+      else if (
+        nowDate.getHours() == 23 ||
+        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      )
+        return shift[2];
+    },
+    shiftArrays(array) {
+      let c = "";
+      c = array[3];
+      array[3] = array[2];
+      array[2] = array[1];
+      array[1] = array[0];
+      array[0] = c;
+
+      return array;
     },
   },
 };

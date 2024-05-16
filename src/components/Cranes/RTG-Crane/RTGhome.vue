@@ -73,6 +73,7 @@
 <script>
 import ConfirmDialog from "../ConfirmDialog.vue";
 import { mapGetters, mapActions } from "vuex";
+import moment from "moment";
 
 export default {
   components: {
@@ -157,22 +158,30 @@ export default {
     async setData() {
       this.setLoadingValueAction(true);
       if (this.planningData) {
-        console.log(this.planningData)
+        // console.log(this.planningData)
         const response = await this.setShiftByCategory({
           category: this.planningData.shift,
         });
+        console.log(this.planningData)
         this.inputs = {
           profile_group: "rtg",
           role: "driver",
           shift_id: response[0].id,
         };
       } else {
+        const shiftCategory = this.getActualShift()
+        const response = await this.setShiftByCategory({
+          category: shiftCategory,
+        });
         this.inputs = {
           profile_group: "rtg",
           role: "driver",
+          shift_id: response[0].id,
         };
       }
-      console.log(this.inputs);
+      
+      // console.log(this.inputs);
+      
       this.setDriversAction(this.inputs).then(() => {
         this.driversList = this.getDrivers;
         if (this.driversList.length > 0) {
@@ -206,6 +215,8 @@ export default {
 
     // returns selected drivers and rtgs
     createPlanning() {
+     
+      if(this.selectedDrivers.length!==0 && this.selectedRTGs!==0){
       this.drivers = [];
       this.rtgs = [];
       this.tableHeaders = [];
@@ -264,6 +275,8 @@ export default {
             console.error(error);
           });
       });
+      }
+      
     },
 
     //remove driver from confirm dialog
@@ -536,6 +549,34 @@ export default {
           console.error("Error:", error);
           this.setLoadingValueAction(false);
         });
+    },
+    getActualShift() {
+      let thisDate = new Date("2022-02-10T07:00:00");
+      let nowDate = new Date();
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+        return shift[1];
+      else if (
+        nowDate.getHours() == 23 ||
+        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      )
+        return shift[2];
+    },
+    shiftArrays(array) {
+      let c = "";
+      c = array[3];
+      array[3] = array[2];
+      array[2] = array[1];
+      array[1] = array[0];
+      array[0] = c;
+
+      return array;
     },
   },
 };
