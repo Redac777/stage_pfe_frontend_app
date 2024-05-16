@@ -37,6 +37,11 @@
               :items="shifts"
               label="Select Shift"
             ></v-select>
+            <v-select
+              v-model="selectedDayTime"
+              :items="dayTimes"
+              label="Select Day Period"
+            ></v-select>
           </v-card-text>
           <v-card-actions>
             <v-btn color="primary" @click="applyCreate">Apply</v-btn>
@@ -142,6 +147,8 @@ export default {
       userWorkingHours: {},
       usersWorkingHours: [],
       dialogDelete: false,
+      dayTimes: ["Morning", "Evening", "Night"],
+      selectedDayTime: "",
     };
   },
   components: {
@@ -155,6 +162,70 @@ export default {
         else this.setPlanning();
       }
     },
+    selectedDayTime(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        if (this.selectedCreateDate) {
+          let date = new Date(this.selectedCreateDate);
+          let year = date.getFullYear();
+          let month = ("0" + (date.getMonth() + 1)).slice(-2);
+          let day = ("0" + date.getDate()).slice(-2);
+          let formattedDate = `${year}-${month}-${day}`;
+          let time;
+          switch (this.selectedDayTime) {
+            case "Morning":
+              time = "07:00:00";
+              break;
+            case "Evening":
+              time = "15:00:00";
+              break;
+            case "Night":
+              time = "23:00:00";
+              break;
+            default:
+              time = "00:00:00";
+          }
+          let dateTime = `${formattedDate}T${time}`;
+          let shift = this.getActualShift(dateTime);
+          if (shift != "D") this.selectedCreateShift = shift;
+          else {
+            this.selectedCreateShift = "";
+            console.log("it's off");
+          }
+        }
+      }
+    },
+    selectedCreateDate(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        if (this.selectedDayTime) {
+          let date = new Date(this.selectedCreateDate);
+          let year = date.getFullYear();
+          let month = ("0" + (date.getMonth() + 1)).slice(-2);
+          let day = ("0" + date.getDate()).slice(-2);
+          let formattedDate = `${year}-${month}-${day}`;
+          let time;
+          switch (this.selectedDayTime) {
+            case "Morning":
+              time = "07:00:00";
+              break;
+            case "Evening":
+              time = "15:00:00";
+              break;
+            case "Night":
+              time = "23:00:00";
+              break;
+            default:
+              time = "00:00:00";
+          }
+          let dateTime = `${formattedDate}T${time}`;
+          let shift = this.getActualShift(dateTime);
+          if (shift != "D") this.selectedCreateShift = shift;
+          else {
+            this.selectedCreateShift = "";
+            console.log("it's off");
+          }
+        }
+      }
+    }
   },
 
   computed: {

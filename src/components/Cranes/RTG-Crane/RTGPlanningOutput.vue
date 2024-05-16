@@ -40,7 +40,7 @@
             <v-select
               v-model="selectedDayTime"
               :items="dayTimes"
-              label="Select Day time"
+              label="Select Day Period"
             ></v-select>
           </v-card-text>
           <v-card-actions>
@@ -150,7 +150,7 @@ export default {
       userWorkingHours: {},
       usersWorkingHours: [],
       dialogDelete: false,
-      dayTimes: ["Morning", "Afternoon", "Evening"],
+      dayTimes: ["Morning", "Evening", "Night"],
       selectedDayTime: "",
     };
   },
@@ -183,17 +183,22 @@ export default {
             case "Morning":
               time = "07:00:00";
               break;
-            case "Afternoon":
+            case "Evening":
               time = "15:00:00";
               break;
-            case "Evening":
+            case "Night":
               time = "23:00:00";
               break;
             default:
               time = "00:00:00";
           }
           let dateTime = `${formattedDate}T${time}`;
-          console.log(this.getActualShift(dateTime))
+          let shift = this.getActualShift(dateTime);
+          if (shift != "D") this.selectedCreateShift = shift;
+          else {
+            this.selectedCreateShift = "";
+            console.log("it's off");
+          }
         }
       }
     },
@@ -210,17 +215,22 @@ export default {
             case "Morning":
               time = "07:00:00";
               break;
-            case "Afternoon":
+            case "Evening":
               time = "15:00:00";
               break;
-            case "Evening":
+            case "Night":
               time = "23:00:00";
               break;
             default:
               time = "00:00:00";
           }
           let dateTime = `${formattedDate}T${time}`;
-          console.log(this.getActualShift(dateTime))
+          let shift = this.getActualShift(dateTime);
+          if (shift != "D") this.selectedCreateShift = shift;
+          else {
+            this.selectedCreateShift = "";
+            console.log("it's off");
+          }
         }
       }
     },
