@@ -2,41 +2,67 @@
   <div class="main-parent">
     <div class="parent">
       <!-- List drivers with associated switches -->
-      <div class="label-column">Drivers</div>
-      <div class="drivers-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedDrivers"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="drivername">
-              {{ item.firstname + " " + item.lastname }}
+      <div class="resources">
+        <div class="label-column">Drivers</div>
+        <div class="selectAll">
+          <label class="drivername">Select All</label>
+          <v-switch
+            v-model="selectAll"
+            @change="toggleSelectAll"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="drivers-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedDrivers"
+            :key="colIndex"
+            class="column"
+          >
+            <div
+              v-for="(item, rowIndex) in chunk"
+              :key="rowIndex"
+              class="driver"
+            >
+              <div class="drivername">
+                {{ item.firstname + " " + item.lastname }}
+              </div>
+              <v-switch
+                v-model="selectedDrivers"
+                :value="item"
+                hide-details
+              ></v-switch>
             </div>
-            <v-switch
-              v-model="selectedDrivers"
-              :value="item"
-              hide-details
-            ></v-switch>
           </div>
         </div>
       </div>
 
       <!-- List rss with associated switches -->
-      <div class="label-column">RSs</div>
-      <div class="rss-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedRSs"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rs">
-            <div class="rsname">{{ item.matricule }}</div>
-            <v-switch
-              v-model="selectedRSs"
-              :value="item"
-              hide-details
-            ></v-switch>
+      <div class="resources">
+        <div class="label-column">RSs</div>
+        <div class="selectAll">
+          <label class="rsname">Select All</label>
+          <v-switch
+            v-model="selectAllRSs"
+            @change="toggleSelectAllRSs"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="rss-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedRSs"
+            :key="colIndex"
+            class="column"
+          >
+            <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rs">
+              <div class="rsname">{{ item.matricule }}</div>
+              <v-switch
+                v-model="selectedRSs"
+                :value="item"
+                hide-details
+              ></v-switch>
+            </div>
           </div>
         </div>
       </div>
@@ -116,16 +142,15 @@ export default {
       "getPlanningDrivers",
       "getPlanningEquipements",
       "getRSPlannings",
-      
     ]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
-      return this.chunkArray(this.driversList, 6);
+      return this.chunkArray(this.driversList, 4);
     },
 
     // returns array of 6 rss per chunk
     chunkedRSs() {
-      return this.chunkArray(this.rssList, 6);
+      return this.chunkArray(this.rssList, 4);
     },
   },
 
@@ -151,13 +176,54 @@ export default {
       "setBoxAction",
       "setShiftByCategory",
     ]),
-    
+
+    toggleSelectAll() {
+      if (this.selectAll) {
+        this.selectAllDrivers();
+      } else {
+        this.deselectAllDrivers();
+      }
+    },
+    selectAllDrivers() {
+      this.selectedDrivers = [];
+      this.chunkedDrivers.forEach((chunk) => {
+        chunk.forEach((driver) => {
+          if (!this.selectedDrivers.includes(driver)) {
+            this.selectedDrivers.push(driver);
+          }
+        });
+      });
+    },
+    deselectAllDrivers() {
+      this.selectedDrivers = [];
+    },
+
+    toggleSelectAllRSs() {
+      if (this.selectAllRSs) {
+        this.selectAllRSsList();
+      } else {
+        this.deselectAllRSsList();
+      }
+    },
+    selectAllRSsList() {
+      this.selectedRSs = [];
+      this.chunkedRSs.forEach((chunk) => {
+        chunk.forEach((rs) => {
+          if (!this.selectedRSs.includes(rs)) {
+            this.selectedRSs.push(rs);
+          }
+        });
+      });
+    },
+    deselectAllRSsList() {
+      this.selectedRSs = [];
+    },
 
     // set drivers and equipements
     async setData() {
       this.setLoadingValueAction(true);
       if (this.rsplanningData) {
-        console.log(JSON.stringify(this.rsplanningData))
+        console.log(JSON.stringify(this.rsplanningData));
         const response = await this.setShiftByCategory({
           category: this.rsplanningData.shift,
         });
@@ -167,16 +233,15 @@ export default {
           shift_id: response[0].id,
         };
       } else {
-        
-        const shiftCategory = this.getActualShift()
-        console.log(shiftCategory)
+        const shiftCategory = this.getActualShift();
+        console.log(shiftCategory);
         const response = await this.setShiftByCategory({
           category: shiftCategory,
         });
         this.inputs = {
           profile_group: "rs",
           role: "driver",
-          shift_id:response[0].id
+          shift_id: response[0].id,
         };
       }
       // console.log(this.inputs);
@@ -205,7 +270,6 @@ export default {
       this.showConfirmDialog = false;
       this.setLoadingValueAction(true);
       if (this.rsplanningData) {
-        
         const date = new Date(this.rsplanningData.date);
         // Get the year, month, and day components
         const year = date.getFullYear();
@@ -235,7 +299,7 @@ export default {
           };
           addUserPromises.push(this.addUserToPlanning(userWPlanning));
         }
-        console.log(this.selectedRSs)
+        console.log(this.selectedRSs);
         for (let equ in this.selectedRSs) {
           let equWPlanning = {
             equipement_id: this.selectedRSs[equ].id,
@@ -307,7 +371,7 @@ export default {
         await this.setCurrentRSPlanning(dateObject);
         this.allPlannings = this.getRSPlannings;
         // console.log(this.allPlannings)
-        if (this.allPlannings && this.allPlannings.length!=0) {
+        if (this.allPlannings && this.allPlannings.length != 0) {
           this.planning = this.allPlannings[this.allPlannings.length - 1];
           const planningId = {
             planning_id: this.planning.id,
@@ -326,7 +390,7 @@ export default {
               };
               const response = await this.setUserById(user);
               this.drivers.push(response);
-              console.log(this.drivers)
+              console.log(this.drivers);
             }
           }
 
@@ -338,7 +402,7 @@ export default {
               };
               const response = await this.setEquipementById(equipement);
               this.rss.push(response);
-              console.log(this.rss)
+              console.log(this.rss);
             }
           }
 
@@ -354,7 +418,7 @@ export default {
     rsPlanning() {
       let nbrDrivers = this.drivers.length;
       let nbrRtgs = this.rss.length;
-      
+
       this.drivers = this.drivers.sort(function (a, b) {
         return b.sby_workingHours - a.sby_workingHours;
       });
@@ -374,7 +438,7 @@ export default {
       let totalHours = 8;
       let continuedHours = totalHours - nbrDrivers;
       let intervalEndTime = 0;
-      for (let i = 0; i < nbrDrivers +1 ; i++) {
+      for (let i = 0; i < nbrDrivers + 1; i++) {
         let intervalHour = 0;
 
         // Calculate endTime
@@ -393,15 +457,16 @@ export default {
       const itemsPlanning = [];
       itemsPlanning.push(["Drivers | Time", ...this.tableHeaders]);
 
-
       for (let i = 0; i < nbrDrivers; i++) {
-        itemsPlanning.push(Array(itemsPlanning.length + 1).fill(this.drivers[i].id));
+        itemsPlanning.push(
+          Array(itemsPlanning.length + 1).fill(this.drivers[i].id)
+        );
       }
 
       for (let i = 1; i < nbrDrivers + 1; i++) {
         itemsPlanning[i][i] = "P";
       }
-      let rssIndex = 0
+      let rssIndex = 0;
       for (let j = 1; j < nbrDrivers + 2; j++) {
         rssIndex = 0;
         for (let i = 1; i < nbrDrivers + 1; i++) {
@@ -421,7 +486,7 @@ export default {
       for (let i = 1; i < nbrDrivers + 1; i++) {
         itemsPlanning[i][0] = this.drivers[i - 1];
       }
-      console.log(itemsPlanning)
+      console.log(itemsPlanning);
       let parts = [];
       for (let i = 1; i < nbrDrivers + 1; i++) {
         for (let j = 1; j < nbrDrivers + 2; j++) {
@@ -432,15 +497,12 @@ export default {
                   (rs) => rs.matricule === itemsPlanning[i][j].matricule
                 )?.id;
           parts = itemsPlanning[0][j].title.split("+")[0].split("-");
-          console.log(parts)
+          console.log(parts);
           const boxObject = {
             planning_id: this.planning.id,
             user_id: itemsPlanning[i][0].id,
             equipement_id: equipementId,
-            break:
-              itemsPlanning[i][j] == "P"
-                ? true
-                : false,
+            break: itemsPlanning[i][j] == "P" ? true : false,
             start_time: parts[0],
             ends_time: parts[1],
           };
@@ -449,8 +511,6 @@ export default {
         }
       }
       this.confirmPlanning(itemsPlanning);
-
-      
     },
 
     confirmPlanning(itemsPlanningArray) {
@@ -513,12 +573,12 @@ export default {
   height: 88%;
   gap: 0.3rem;
 }
-
 .parent {
+  margin-top: 2rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 2rem;
-  width: 100%;
+  width: fit-content;
   height: fit-content;
 }
 
@@ -528,6 +588,7 @@ export default {
   justify-content: center;
   align-items: center;
   height: fit-content;
+  margin-top: 1rem;
 }
 
 .drivers-container,
@@ -542,13 +603,28 @@ export default {
   align-items: flex-start;
 }
 
-.driver,
+.driver {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
+}
 .rs {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem; /* Espacement entre les drivers */
+  gap: 0.4rem;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
+}
+.selectAll {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0.8rem 0.6rem;
 }
 
 .v-switch {
@@ -561,19 +637,30 @@ export default {
 .drivername {
   font-size: 0.9rem;
   font-weight: bold;
-  width: 100px;
+  width: fit-content;
 }
 
 .rsname {
   font-size: 0.9rem;
   font-weight: bold;
+  width: fit-content;
 }
 
 .label-column {
-  writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */
   font-weight: bold;
   font-size: 1.2rem;
-  transform: rotate(180deg);
+}
+
+.resources {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd; /* Light gray border */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px;
+}
+
+.hr {
+  border: 1px solid #ddd;
 }
 </style>

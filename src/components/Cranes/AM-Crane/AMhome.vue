@@ -2,205 +2,242 @@
   <div class="main-parent">
     <div class="parent">
       <!-- List ams with associated switches -->
-      <div class="label-column">AMS</div>
-      <div class="ams-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedAMs"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="am">
-            <div class="amname">{{ item.firstname + " " + item.lastname }}</div>
-            <v-switch
-              v-model="selectedAMs"
-              :value="item"
-              hide-details
-            ></v-switch>
+      <div class="resources">
+        <div class="label-column">AMS</div>
+        <div class="selectAll">
+          <label class="amname">Select All</label>
+          <v-switch
+            v-model="selectAll"
+            @change="toggleSelectAll"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="ams-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedAMs"
+            :key="colIndex"
+            class="column"
+          >
+            <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="am">
+              <div class="amname">
+                {{ item.firstname + " " + item.lastname }}
+              </div>
+              <v-switch
+                v-model="selectedAMs"
+                :value="item"
+                hide-details
+              ></v-switch>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- List stss with associated switches -->
-      <div class="label-column">STSs</div>
-      <div class="stss-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedSTSs"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div
-              class="stsname"
-              @click="openDialog(item)"
-              @mouseover="showIcons[item.matricule] = true"
-              @mouseleave="showIcons[item.matricule] = false"
-            >
-              <span
-                :class="{
-                  'blue-text': hasIntervalsOrWorkers(item),
-                  'green-text': includedWoutIntOrWork(item),
-                }"
-                >{{ item.matricule }}</span
+      <div class="resources">
+        <div class="label-column">STSs</div>
+        <div class="selectAll">
+          <label class="stsname">Select All</label>
+          <v-switch
+            v-model="selectAllSTSs"
+            @change="toggleSelectAllSTSs"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="stss-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedSTSs"
+            :key="colIndex"
+            class="column"
+          >
+            <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
+              <div
+                class="stsname"
+                @click="openDialog(item)"
+                @mouseover="showIcons[item.matricule] = true"
+                @mouseleave="showIcons[item.matricule] = false"
               >
-            </div>
-            <v-switch
-              v-model="selectedSTSs"
-              :value="item"
-              hide-details
-              @change="onChange(item)"
-            ></v-switch>
-            <v-icon
-              v-if="showIcons[item.matricule] === true"
-              :class="{
-                'timer-icon-blue': !includedWoutIntOrWork(item),
-                'timer-icon-green': includedWoutIntOrWork(item),
-              }"
-              @click="openDialog(item)"
-              >mdi-cog</v-icon
-            >
-
-            <!-- Dialog for adding sts time intervals -->
-            <v-dialog
-              v-model="dialog[item.matricule]"
-              max-width="400"
-              @click:outside="closeDialog(item)"
-            >
-              <v-card>
-                <v-card-text>
-                  <v-radio-group v-model="selectedRole" row>
-                    <v-radio :label="'TA'" value="TA"></v-radio>
-                    <v-radio :label="'ST'" value="ST"></v-radio>
-                  </v-radio-group>
-                </v-card-text>
-              </v-card>
-              <v-card v-if="selectedRole === 'TA'">
-                <v-card-text
-                  v-for="(interval, index) in intervals[item.matricule]"
-                  :key="index"
+                <span
+                  :class="{
+                    'blue-text': hasIntervalsOrWorkers(item),
+                    'green-text': includedWoutIntOrWork(item),
+                  }"
+                  >{{ item.matricule }}</span
                 >
-                  <v-text-field
-                    label="Start Time"
-                    v-model="interval.startTime"
-                    type="time"
-                    :rules="[
-                      () => startTimeRule(interval.startTime, item, index),
-                    ]"
-                  ></v-text-field>
-                  <v-text-field
-                    label="End Time"
-                    v-model="interval.endTime"
-                    type="time"
-                    :rules="[() => endsTimeRule(interval.endTime, item, index)]"
-                  ></v-text-field>
-                  <div
-                    :class="
-                      isAddIntervalButtonDisabled(item)
-                        ? 'add-interval-button-disabled'
-                        : 'add-interval-button'
-                    "
-                    @click="addIntervalBelow(item, index)"
-                    v-if="index === intervals[item.matricule].length - 1"
+              </div>
+              <v-switch
+                v-model="selectedSTSs"
+                :value="item"
+                hide-details
+                @change="onChange(item)"
+              ></v-switch>
+              <v-icon
+                v-if="showIcons[item.matricule] === true"
+                :class="{
+                  'timer-icon-blue': !includedWoutIntOrWork(item),
+                  'timer-icon-green': includedWoutIntOrWork(item),
+                }"
+                @click="openDialog(item)"
+                >mdi-cog</v-icon
+              >
+
+              <!-- Dialog for adding sts time intervals -->
+              <v-dialog
+                v-model="dialog[item.matricule]"
+                max-width="400"
+                @click:outside="closeDialog(item)"
+              >
+                <v-card>
+                  <v-card-text>
+                    <v-radio-group v-model="selectedRole" row>
+                      <v-radio :label="'TA'" value="TA"></v-radio>
+                      <v-radio :label="'ST'" value="ST"></v-radio>
+                    </v-radio-group>
+                  </v-card-text>
+                </v-card>
+                <v-card v-if="selectedRole === 'TA'">
+                  <v-card-text
+                    v-for="(interval, index) in intervals[item.matricule]"
+                    :key="index"
                   >
-                    <v-icon color="white">mdi-plus</v-icon>
-                  </div>
-                </v-card-text>
-                <v-card-actions>
-                  <v-btn
-                    color="primary"
-                    @click="saveTime(item)"
-                    :disabled="isSaveButtonDisabled(item)"
-                    :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
-                    >Save</v-btn
-                  >
-                  <v-btn @click="closeDialog(item)">Close</v-btn>
-                </v-card-actions>
-              </v-card>
-              <v-card v-else-if="selectedRole === 'ST'">
-                <v-select
-                  v-model="selectedSTWorker"
-                  :items="stComps"
-                  label="Select ST Company"
-                ></v-select>
-                <v-card-actions>
-                  <v-btn
-                    color="primary"
-                    @click="saveTime(item)"
-                    :disabled="isSaveButtonDisabled(item)"
-                    :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
-                    >Save</v-btn
-                  >
-                  <v-btn @click="closeDialog(item)">Close</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
+                    <v-text-field
+                      label="Start Time"
+                      v-model="interval.startTime"
+                      type="time"
+                      :rules="[
+                        () => startTimeRule(interval.startTime, item, index),
+                      ]"
+                    ></v-text-field>
+                    <v-text-field
+                      label="End Time"
+                      v-model="interval.endTime"
+                      type="time"
+                      :rules="[
+                        () => endsTimeRule(interval.endTime, item, index),
+                      ]"
+                    ></v-text-field>
+                    <div
+                      :class="
+                        isAddIntervalButtonDisabled(item)
+                          ? 'add-interval-button-disabled'
+                          : 'add-interval-button'
+                      "
+                      @click="addIntervalBelow(item, index)"
+                      v-if="index === intervals[item.matricule].length - 1"
+                    >
+                      <v-icon color="white">mdi-plus</v-icon>
+                    </div>
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-btn
+                      color="primary"
+                      @click="saveTime(item)"
+                      :disabled="isSaveButtonDisabled(item)"
+                      :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
+                      >Save</v-btn
+                    >
+                    <v-btn @click="closeDialog(item)">Close</v-btn>
+                  </v-card-actions>
+                </v-card>
+                <v-card v-else-if="selectedRole === 'ST'">
+                  <v-select
+                    v-model="selectedSTWorker"
+                    :items="stComps"
+                    label="Select ST Company"
+                  ></v-select>
+                  <v-card-actions>
+                    <v-btn
+                      color="primary"
+                      @click="saveTime(item)"
+                      :disabled="isSaveButtonDisabled(item)"
+                      :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
+                      >Save</v-btn
+                    >
+                    <v-btn @click="closeDialog(item)">Close</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- List ams roles with associated switches -->
-      <div class="label-column">Roles</div>
-      <div class="amsroles-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedRoles"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="role">
-            <div
-              :class="
-                item.name !== 'assistant' ? 'rolename' : 'assistantrolename'
-              "
-              @click="openRoleDialog(item)"
-              @mouseover="
-                item !== 'assistant'
-                  ? (showRoleIcons[item] = true)
-                  : (showRoleIcons[item] = false)
-              "
-              @mouseleave="showRoleIcons[item] = false"
-            >
-              <span
-                :class="{
-                  'blue-text': hasNumber(item),
-                  'green-text': includedWoutNum(item),
-                }"
-                >{{ item }}</span
+      <div class="resources">
+        <div class="label-column">Roles</div>
+        <div class="selectAll">
+          <label class="amname">Select All</label>
+          <v-switch
+            v-model="selectAllRoles"
+            @change="toggleSelectAllRoles"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="amsroles-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedRoles"
+            :key="colIndex"
+            class="column"
+          >
+            <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="role">
+              <div
+                :class="
+                  item.name !== 'assistant' ? 'rolename' : 'assistantrolename'
+                "
+                @click="openRoleDialog(item)"
+                @mouseover="
+                  item !== 'assistant'
+                    ? (showRoleIcons[item] = true)
+                    : (showRoleIcons[item] = false)
+                "
+                @mouseleave="showRoleIcons[item] = false"
               >
-            </div>
-            <v-switch
-              v-model="selectedRoles"
-              :value="item"
-              hide-details
-              @change="onChangeRole(item)"
-            ></v-switch>
-            <v-icon
-              v-if="showRoleIcons[item] == true"
-              :class="{
-                'timer-icon-blue': !includedWoutNum(item),
-                'timer-icon-green': includedWoutNum(item),
-              }"
-              @click="openRoleDialog(item)"
-              >mdi-cog</v-icon
-            >
-            <v-dialog v-model="roleDialog[item]" max-width="400">
-              <v-card>
-                <v-card-title
-                  >Enter Number of Workers for {{ item }}</v-card-title
+                <span
+                  :class="{
+                    'blue-text': hasNumber(item),
+                    'green-text': includedWoutNum(item),
+                  }"
+                  >{{ item }}</span
                 >
-                <v-card-text>
-                  <v-text-field
-                    v-model="roleCount"
-                    label="Number of Workers"
-                    type="number"
-                  ></v-text-field>
-                </v-card-text>
-                <v-card-actions>
-                  <v-btn color="primary" @click="saveRoleData(item)"
-                    >Save</v-btn
+              </div>
+              <v-switch
+                v-model="selectedRoles"
+                :value="item"
+                hide-details
+                @change="onChangeRole(item)"
+              ></v-switch>
+              <v-icon
+                v-if="showRoleIcons[item] == true"
+                :class="{
+                  'timer-icon-blue': !includedWoutNum(item),
+                  'timer-icon-green': includedWoutNum(item),
+                }"
+                @click="openRoleDialog(item)"
+                >mdi-cog</v-icon
+              >
+              <v-dialog v-model="roleDialog[item]" max-width="400">
+                <v-card>
+                  <v-card-title
+                    >Enter Number of Workers for {{ item }}</v-card-title
                   >
-                  <v-btn @click="closeRoleDialog(item, false)">Close</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
+                  <v-card-text>
+                    <v-text-field
+                      v-model="roleCount"
+                      label="Number of Workers"
+                      type="number"
+                    ></v-text-field>
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-btn color="primary" @click="saveRoleData(item)"
+                      >Save</v-btn
+                    >
+                    <v-btn @click="closeRoleDialog(item, false)">Close</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
+            </div>
           </div>
         </div>
       </div>
@@ -276,6 +313,9 @@ export default {
       isRoleSaved: {},
       shiftId: null,
       profileGroupId: null,
+      selectAll: false,
+      selectAllSTSs: false,
+      selectAllRoles:false
     };
   },
 
@@ -393,16 +433,16 @@ export default {
 
     // returns array of 6 ams per chunk
     chunkedAMs() {
-      return this.chunkArray(this.amsList, 6);
+      return this.chunkArray(this.amsList, 4);
     },
 
     // returns array of 6 stss per chunk
     chunkedSTSs() {
-      return this.chunkArray(this.stssList, 6);
+      return this.chunkArray(this.stssList, 4);
     },
 
     chunkedRoles() {
-      return this.chunkArray(this.roles, 6);
+      return this.chunkArray(this.roles, 4);
     },
   },
 
@@ -424,6 +464,68 @@ export default {
       "addEquipementToPlanning",
       "addEquipementWorkingHoursToPlanning",
     ]),
+    toggleSelectAll() {
+      if (this.selectAll) {
+        this.selectAllDrivers();
+      } else {
+        this.deselectAllDrivers();
+      }
+    },
+    selectAllDrivers() {
+      this.selectedAMs = [];
+      this.chunkedAMs.forEach((chunk) => {
+        chunk.forEach((driver) => {
+          if (!this.selectedAMs.includes(driver)) {
+            this.selectedAMs.push(driver);
+          }
+        });
+      });
+    },
+    deselectAllDrivers() {
+      this.selectedAMs = [];
+    },
+
+    toggleSelectAllSTSs() {
+      if (this.selectAllSTSs) {
+        this.selectAllSTSsList();
+      } else {
+        this.deselectAllSTSsList();
+      }
+    },
+    selectAllSTSsList() {
+      this.selectedSTSs = [];
+      this.chunkedSTSs.forEach((chunk) => {
+        chunk.forEach((sts) => {
+          if (!this.selectedSTSs.includes(sts)) {
+            this.selectedSTSs.push(sts);
+          }
+        });
+      });
+    },
+    deselectAllSTSsList() {
+      this.selectedSTSs = [];
+    },
+
+    toggleSelectAllRoles() {
+      if (this.selectAllRoles) {
+        this.selectAllRolesList();
+      } else {
+        this.deselectAllRolesList();
+      }
+    },
+    selectAllRolesList() {
+      this.selectedRoles = [];
+      this.chunkedRoles.forEach((chunk) => {
+        chunk.forEach((role) => {
+          if (!this.selectedRoles.includes(role)) {
+            this.selectedRoles.push(role);
+          }
+        });
+      });
+    },
+    deselectAllRolesList() {
+      this.selectedRoles = [];
+    },
 
     // set AMs
     setDrivers() {
@@ -577,49 +679,51 @@ export default {
             usersAddedSuccessfully.push(this.selectedAMs[am]);
           });
         }
-        const mapKeys = Array.from(new Set(this.selectedSTSs)).map((sts) => sts.matricule);
+        const mapKeys = Array.from(new Set(this.selectedSTSs)).map(
+          (sts) => sts.matricule
+        );
         for (let equ in mapKeys) {
-          if(this.intervals[this.selectedSTSs[equ].matricule]){
-            let equWPlanning = {
-            equipement_id: this.selectedSTSs[equ].id,
-            planning_id: response.id,
-          };
-          this.addEquipementToPlanning(equWPlanning).then((response) => {
-              for (let interval in this.intervals[
-              this.selectedSTSs[equ].matricule
-            ]) {
-              let intervalWPlanning = {
-                equipement_planning_id: response.id,
-                start_time:
-                  this.intervals[this.selectedSTSs[equ].matricule][interval]
-                    .startTime,
-                end_time:
-                  this.intervals[this.selectedSTSs[equ].matricule][interval]
-                    .endTime,
-              };
-              
-              this.addEquipementWorkingHoursToPlanning(intervalWPlanning).then(
-                (response) => {
-                  console.log(response);
-                }
-              );
-            }
-            
-            equAddedSuccessfully.push(this.selectedSTSs[equ]);
-          });
-          }
-          else{
+          if (this.intervals[this.selectedSTSs[equ].matricule]) {
             let equWPlanning = {
               equipement_id: this.selectedSTSs[equ].id,
               planning_id: response.id,
-              subcontract:this.workers.find((worker) => worker.STS === this.selectedSTSs[equ].matricule).worker
-            }
+            };
             this.addEquipementToPlanning(equWPlanning).then((response) => {
-              console.log(response)
+              for (let interval in this.intervals[
+                this.selectedSTSs[equ].matricule
+              ]) {
+                let intervalWPlanning = {
+                  equipement_planning_id: response.id,
+                  start_time:
+                    this.intervals[this.selectedSTSs[equ].matricule][interval]
+                      .startTime,
+                  end_time:
+                    this.intervals[this.selectedSTSs[equ].matricule][interval]
+                      .endTime,
+                };
+
+                this.addEquipementWorkingHoursToPlanning(
+                  intervalWPlanning
+                ).then((response) => {
+                  console.log(response);
+                });
+              }
+
               equAddedSuccessfully.push(this.selectedSTSs[equ]);
-            })
+            });
+          } else {
+            let equWPlanning = {
+              equipement_id: this.selectedSTSs[equ].id,
+              planning_id: response.id,
+              subcontract: this.workers.find(
+                (worker) => worker.STS === this.selectedSTSs[equ].matricule
+              ).worker,
+            };
+            this.addEquipementToPlanning(equWPlanning).then((response) => {
+              console.log(response);
+              equAddedSuccessfully.push(this.selectedSTSs[equ]);
+            });
           }
-          
         }
 
         this.setLoadingValueAction(false);
@@ -844,10 +948,11 @@ export default {
 }
 
 .parent {
+  margin-top: 2rem;
   display: flex;
-  justify-content: center;
-  gap: 2rem;
-  width: 100%;
+  justify-content: space-between;
+  gap: 1rem;
+  width: fit-content;
   height: fit-content;
 }
 
@@ -857,13 +962,14 @@ export default {
   justify-content: center;
   align-items: center;
   height: fit-content;
+  margin-top: 1rem;
 }
 
 .ams-container,
 .stss-container,
 .amsroles-container {
   display: flex;
-  gap: 2rem;
+  gap: 0.5rem;
 }
 
 .column {
@@ -872,23 +978,39 @@ export default {
   align-items: flex-start;
 }
 
-.am,
+.am {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
+}
 .sts {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem; /* Espacement entre les ams */
+  gap: 0.4rem;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
 }
 
 .role {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  width: 150px;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
 }
 
+.selectAll {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0.8rem 0.6rem;
+}
 .v-switch {
   display: flex;
   justify-content: center;
@@ -896,16 +1018,16 @@ export default {
   font-size: x-small !important;
 }
 
-.amname {
-  font-size: 0.9rem;
-  font-weight: bold;
-  width: 100px;
-}
-
+.amname,
 .stsname,
 .rolename {
   font-size: 0.9rem;
   font-weight: bold;
+  width: fit-content;
+}
+
+.stsname,
+.rolename {
   cursor: pointer;
 }
 
@@ -953,16 +1075,25 @@ export default {
 }
 
 .label-column {
-  writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */
   font-weight: bold;
   font-size: 1.2rem;
-  transform: rotate(180deg);
 }
 
 .sts,
 .role {
   position: relative;
+}
+.resources {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd; /* Light gray border */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px;
+}
+
+.hr {
+  border: 1px solid #ddd;
 }
 
 .timer-icon-blue {

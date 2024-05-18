@@ -2,114 +2,141 @@
   <div class="main-parent">
     <div class="parent">
       <!-- List drivers with associated switches -->
-      <div class="label-column">Drivers</div>
-      <div class="drivers-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedDrivers"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="drivername">
-              {{ item.firstname + " " + item.lastname }}
+      <div class="resources">
+        <div class="label-column">Drivers</div>
+        <div class="selectAll">
+          <label class="drivername">Select All</label>
+          <v-switch
+            v-model="selectAll"
+            @change="toggleSelectAll"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="drivers-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedDrivers"
+            :key="colIndex"
+            class="column"
+          >
+            <div
+              v-for="(item, rowIndex) in chunk"
+              :key="rowIndex"
+              class="driver"
+            >
+              <div class="drivername">
+                {{ item.firstname + " " + item.lastname }}
+              </div>
+              <v-switch
+                v-model="selectedDrivers"
+                :value="item"
+                hide-details
+              ></v-switch>
             </div>
-            <v-switch
-              v-model="selectedDrivers"
-              :value="item"
-              hide-details
-            ></v-switch>
           </div>
         </div>
       </div>
-
       <!-- List stss with associated switches -->
-      <div class="label-column">STSs</div>
-      <div class="stss-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedSTSs"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
-            <div
-              class="stsname"
-              @click="openDialog(item)"
-              @mouseover="showIcons[item.matricule] = true"
-              @mouseleave="showIcons[item.matricule] = false"
-            >
-              <span
-                :class="{
-                  'blue-text': hasIntervals(item),
-                  'green-text': includedWoutIntOrWork(item),
-                }"
-                >{{ item.matricule }}</span
+      <div class="resources">
+        <div class="label-column">STSs</div>
+        <div class="selectAll">
+          <label class="stsname">Select All</label>
+          <v-switch
+            v-model="selectAllSTSs"
+            @change="toggleSelectAllSTSs"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="stss-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedSTSs"
+            :key="colIndex"
+            class="column"
+          >
+            <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="sts">
+              <div
+                class="stsname"
+                @click="openDialog(item)"
+                @mouseover="showIcons[item.matricule] = true"
+                @mouseleave="showIcons[item.matricule] = false"
               >
-            </div>
-            <v-switch
-              v-model="selectedSTSs"
-              :value="item"
-              hide-details
-              @change="onChange(item)"
-            ></v-switch>
-            <v-icon
-              v-if="showIcons[item.matricule] == true"
-              :class="{
-                'timer-icon-blue': !includedWoutIntOrWork(item),
-                'timer-icon-green': includedWoutIntOrWork(item),
-              }"
-              @click="openDialog(item)"
-              >mdi-timer</v-icon
-            >
-
-            <!-- Dialog for adding sts time intervals -->
-            <v-dialog
-              v-model="dialog[item.matricule]"
-              max-width="400"
-              @click:outside="closeDialog(item)"
-            >
-              <v-card>
-                <v-card-text
-                  v-for="(interval, index) in intervals[item.matricule]"
-                  :key="index"
+                <span
+                  :class="{
+                    'blue-text': hasIntervals(item),
+                    'green-text': includedWoutIntOrWork(item),
+                  }"
+                  >{{ item.matricule }}</span
                 >
-                  <v-text-field
-                    label="Start Time"
-                    v-model="interval.startTime"
-                    type="time"
-                    :rules="[
-                      () => startTimeRule(interval.startTime, item, index),
-                    ]"
-                  ></v-text-field>
-                  <v-text-field
-                    label="End Time"
-                    v-model="interval.endTime"
-                    type="time"
-                    :rules="[() => endsTimeRule(interval.endTime, item, index)]"
-                  ></v-text-field>
-                  <div
-                    :class="
-                      isAddIntervalButtonDisabled(item)
-                        ? 'add-interval-button-disabled'
-                        : 'add-interval-button'
-                    "
-                    @click="addIntervalBelow(item, index)"
-                    v-if="index === intervals[item.matricule].length - 1"
+              </div>
+              <v-switch
+                v-model="selectedSTSs"
+                :value="item"
+                hide-details
+                @change="onChange(item)"
+              ></v-switch>
+              <v-icon
+                v-if="showIcons[item.matricule] == true"
+                :class="{
+                  'timer-icon-blue': !includedWoutIntOrWork(item),
+                  'timer-icon-green': includedWoutIntOrWork(item),
+                }"
+                @click="openDialog(item)"
+                >mdi-timer</v-icon
+              >
+
+              <!-- Dialog for adding sts time intervals -->
+              <v-dialog
+                v-model="dialog[item.matricule]"
+                max-width="400"
+                @click:outside="closeDialog(item)"
+              >
+                <v-card>
+                  <v-card-text
+                    v-for="(interval, index) in intervals[item.matricule]"
+                    :key="index"
                   >
-                    <v-icon color="white">mdi-plus</v-icon>
-                  </div>
-                </v-card-text>
-                <v-card-actions>
-                  <v-btn
-                    color="primary"
-                    @click="saveDialog(item)"
-                    :disabled="isSaveButtonDisabled(item)"
-                    :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
-                    >Save</v-btn
-                  >
-                  <v-btn @click="closeDialog(item, false)">Close</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
+                    <v-text-field
+                      label="Start Time"
+                      v-model="interval.startTime"
+                      type="time"
+                      :rules="[
+                        () => startTimeRule(interval.startTime, item, index),
+                      ]"
+                    ></v-text-field>
+                    <v-text-field
+                      label="End Time"
+                      v-model="interval.endTime"
+                      type="time"
+                      :rules="[
+                        () => endsTimeRule(interval.endTime, item, index),
+                      ]"
+                    ></v-text-field>
+                    <div
+                      :class="
+                        isAddIntervalButtonDisabled(item)
+                          ? 'add-interval-button-disabled'
+                          : 'add-interval-button'
+                      "
+                      @click="addIntervalBelow(item, index)"
+                      v-if="index === intervals[item.matricule].length - 1"
+                    >
+                      <v-icon color="white">mdi-plus</v-icon>
+                    </div>
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-btn
+                      color="primary"
+                      @click="saveDialog(item)"
+                      :disabled="isSaveButtonDisabled(item)"
+                      :class="{ 'disabled-button': isSaveButtonDisabled(item) }"
+                      >Save</v-btn
+                    >
+                    <v-btn @click="closeDialog(item, false)">Close</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
+            </div>
           </div>
         </div>
       </div>
@@ -170,6 +197,8 @@ export default {
       keysArray: [],
       shiftId: null,
       profileGroupId: null,
+      selectAll: false,
+      selectAllSTSs: false,
     };
   },
 
@@ -264,13 +293,15 @@ export default {
 
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
-      return this.chunkArray(this.driversList, 6);
+      return this.chunkArray(this.driversList, 4);
     },
 
     // returns array of 6 stss per chunk
     chunkedSTSs() {
-      return this.chunkArray(this.stssList, 6);
+      return this.chunkArray(this.stssList, 4);
     },
+
+
   },
 
   //mounted
@@ -288,8 +319,50 @@ export default {
       "createPlanningAction",
       "addUserToPlanning",
       "addEquipementToPlanning",
-      "addEquipementWorkingHoursToPlanning"
+      "addEquipementWorkingHoursToPlanning",
     ]),
+
+    toggleSelectAll() {
+      if (this.selectAll) {
+        this.selectAllDrivers();
+      } else {
+        this.deselectAllDrivers();
+      }
+    },
+    selectAllDrivers() {
+      this.selectedDrivers = [];
+      this.chunkedDrivers.forEach((chunk) => {
+        chunk.forEach((driver) => {
+          if (!this.selectedDrivers.includes(driver)) {
+            this.selectedDrivers.push(driver);
+          }
+        });
+      });
+    },
+    deselectAllDrivers() {
+      this.selectedDrivers = [];
+    },
+
+    toggleSelectAllSTSs() {
+      if (this.selectAllSTSs) {
+        this.selectAllSTSsList();
+      } else {
+        this.deselectAllSTSsList();
+      }
+    },
+    selectAllSTSsList() {
+      this.selectedSTSs = [];
+      this.chunkedSTSs.forEach((chunk) => {
+        chunk.forEach((sts) => {
+          if (!this.selectedSTSs.includes(sts)) {
+            this.selectedSTSs.push(sts);
+          }
+        });
+      });
+    },
+    deselectAllSTSsList() {
+      this.selectedSTSs = [];
+    },
 
     //set drivers and equipements data
     setData() {
@@ -446,18 +519,26 @@ export default {
             planning_id: response.id,
           };
           this.addEquipementToPlanning(equWPlanning).then((response) => {
-            console.log("STS : " + this.selectedSTSs[equ].matricule)
-           for(let interval in this.intervals[this.selectedSTSs[equ].matricule]){
-             let intervalWPlanning = {
-              equipement_planning_id: response.id,
-              start_time: this.intervals[this.selectedSTSs[equ].matricule][interval].startTime,
-              end_time: this.intervals[this.selectedSTSs[equ].matricule][interval].endTime
-             }
-             this.addEquipementWorkingHoursToPlanning(intervalWPlanning).then((response) => {
-               console.log(response)
-             })
-           }
-           
+            console.log("STS : " + this.selectedSTSs[equ].matricule);
+            for (let interval in this.intervals[
+              this.selectedSTSs[equ].matricule
+            ]) {
+              let intervalWPlanning = {
+                equipement_planning_id: response.id,
+                start_time:
+                  this.intervals[this.selectedSTSs[equ].matricule][interval]
+                    .startTime,
+                end_time:
+                  this.intervals[this.selectedSTSs[equ].matricule][interval]
+                    .endTime,
+              };
+              this.addEquipementWorkingHoursToPlanning(intervalWPlanning).then(
+                (response) => {
+                  console.log(response);
+                }
+              );
+            }
+
             equAddedSuccessfully.push(this.selectedSTSs[equ]);
           });
         }
@@ -563,6 +644,7 @@ export default {
             ].endTime !== "")
         );
       });
+      if (this.selectedSTSs.length!==this.chunkedSTSs.length) this.selectAllSTSs = false
       this.keysArray = Object.keys(this.intervals).filter(
         (key) =>
           this.intervals[key].length !== 0 &&
@@ -585,10 +667,11 @@ export default {
 }
 
 .parent {
+  margin-top: 2rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 2rem;
-  width: 100%;
+  width: fit-content;
   height: fit-content;
 }
 
@@ -598,6 +681,7 @@ export default {
   justify-content: center;
   align-items: center;
   height: fit-content;
+  margin-top: 1rem;
 }
 
 .drivers-container,
@@ -612,19 +696,31 @@ export default {
   align-items: flex-start;
 }
 
-.driver,
+.driver {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
+}
 .sts {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 1rem; /* Espacement entre les drivers */
-}
-
-.sts {
+  gap: 0.4rem;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
   position: relative;
 }
 
+.selectAll {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0.8rem 0.6rem;
+}
 .v-switch {
   display: flex;
   justify-content: center;
@@ -632,16 +728,14 @@ export default {
   font-size: x-small !important;
 }
 
-.drivername {
+.drivername,
+.stsname {
   font-size: 0.9rem;
   font-weight: bold;
+  width: fit-content;
 }
 
 .stsname {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  font-weight: bold;
   cursor: pointer;
 }
 
@@ -654,7 +748,6 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-
   height: 3rem;
   background-color: #1867c0;
   cursor: pointer;
@@ -682,11 +775,21 @@ export default {
 }
 
 .label-column {
-  writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */
   font-weight: bold;
   font-size: 1.2rem;
-  transform: rotate(180deg);
+}
+
+.resources {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd; /* Light gray border */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px;
+}
+
+.hr {
+  border: 1px solid #ddd;
 }
 
 .timer-icon-blue {

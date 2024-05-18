@@ -6,41 +6,67 @@
     </div> -->
     <div class="parent">
       <!-- List drivers with associated switches -->
-      <div class="label-column">Drivers</div>
-      <div class="drivers-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedDrivers"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="driver">
-            <div class="drivername">
-              {{ item.firstname + " " + item.lastname }}
+      <div class="resources">
+        <div class="label-column">Drivers</div>
+        <div class="selectAll">
+          <label class="drivername">Select All</label>
+          <v-switch
+            v-model="selectAll"
+            @change="toggleSelectAll"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="drivers-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedDrivers"
+            :key="colIndex"
+            class="column"
+          >
+            <div
+              v-for="(item, rowIndex) in chunk"
+              :key="rowIndex"
+              class="driver"
+            >
+              <div class="drivername">
+                {{ item.firstname + " " + item.lastname }}
+              </div>
+              <v-switch
+                v-model="selectedDrivers"
+                :value="item"
+                hide-details
+              ></v-switch>
             </div>
-            <v-switch
-              v-model="selectedDrivers"
-              :value="item"
-              hide-details
-            ></v-switch>
           </div>
         </div>
       </div>
 
       <!-- List rtgs with associated switches -->
-      <div class="label-column">RTGs</div>
-      <div class="rtgs-container">
-        <div
-          v-for="(chunk, colIndex) in chunkedRTGs"
-          :key="colIndex"
-          class="column"
-        >
-          <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rtg">
-            <div class="rtgname">{{ item.matricule }}</div>
-            <v-switch
-              v-model="selectedRTGs"
-              :value="item"
-              hide-details
-            ></v-switch>
+      <div class="resources">
+        <div class="label-column">RTGs</div>
+        <div class="selectAll">
+          <label class="rtgname">Select All</label>
+          <v-switch
+            v-model="selectAllRTGs"
+            @change="toggleSelectAllRTGs"
+            hide-details
+          ></v-switch>
+        </div>
+        <hr class="hr" />
+        <div class="rtgs-container">
+          <div
+            v-for="(chunk, colIndex) in chunkedRTGs"
+            :key="colIndex"
+            class="column"
+          >
+            <div v-for="(item, rowIndex) in chunk" :key="rowIndex" class="rtg">
+              <div class="rtgname">{{ item.matricule }}</div>
+              <v-switch
+                v-model="selectedRTGs"
+                :value="item"
+                hide-details
+              ></v-switch>
+            </div>
           </div>
         </div>
       </div>
@@ -106,6 +132,8 @@ export default {
       inputs: null,
       planning: null,
       allPlannings: [],
+      selectAll: false,
+      selectAllRTGs: false,
     };
   },
 
@@ -122,12 +150,12 @@ export default {
     ]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
-      if (this.driversList) return this.chunkArray(this.driversList, 6);
+      if (this.driversList) return this.chunkArray(this.driversList, 4);
     },
 
     // returns array of 6 rtgs per chunk
     chunkedRTGs() {
-      return this.chunkArray(this.rtgsList, 6);
+      return this.chunkArray(this.rtgsList, 4);
     },
   },
 
@@ -154,6 +182,48 @@ export default {
       "setShiftByCategory",
     ]),
 
+    toggleSelectAll() {
+      if (this.selectAll) {
+        this.selectAllDrivers();
+      } else {
+        this.deselectAllDrivers();
+      }
+    },
+    selectAllDrivers() {
+      this.selectedDrivers = [];
+      this.chunkedDrivers.forEach((chunk) => {
+        chunk.forEach((driver) => {
+          if (!this.selectedDrivers.includes(driver)) {
+            this.selectedDrivers.push(driver);
+          }
+        });
+      });
+    },
+    deselectAllDrivers() {
+      this.selectedDrivers = [];
+    },
+
+    toggleSelectAllRTGs() {
+      if (this.selectAllRTGs) {
+        this.selectAllRTGsList();
+      } else {
+        this.deselectAllRTGsList();
+      }
+    },
+    selectAllRTGsList() {
+      this.selectedRTGs = [];
+      this.chunkedRTGs.forEach((chunk) => {
+        chunk.forEach((rtg) => {
+          if (!this.selectedRTGs.includes(rtg)) {
+            this.selectedRTGs.push(rtg);
+          }
+        });
+      });
+    },
+    deselectAllRTGsList() {
+      this.selectedRTGs = [];
+    },
+
     // set drivers and equipements data
     async setData() {
       this.setLoadingValueAction(true);
@@ -162,14 +232,14 @@ export default {
         const response = await this.setShiftByCategory({
           category: this.planningData.shift,
         });
-        console.log(this.planningData)
+        console.log(this.planningData);
         this.inputs = {
           profile_group: "rtg",
           role: "driver",
           shift_id: response[0].id,
         };
       } else {
-        const shiftCategory = this.getActualShift()
+        const shiftCategory = this.getActualShift();
         const response = await this.setShiftByCategory({
           category: shiftCategory,
         });
@@ -179,9 +249,9 @@ export default {
           shift_id: response[0].id,
         };
       }
-      
+
       // console.log(this.inputs);
-      
+
       this.setDriversAction(this.inputs).then(() => {
         this.driversList = this.getDrivers;
         if (this.driversList.length > 0) {
@@ -215,68 +285,66 @@ export default {
 
     // returns selected drivers and rtgs
     createPlanning() {
-     
-      if(this.selectedDrivers.length!==0 && this.selectedRTGs!==0){
-      this.drivers = [];
-      this.rtgs = [];
-      this.tableHeaders = [];
-      this.itemsPlanning = [];
-      this.showConfirmDialog = false;
-      this.setLoadingValueAction(true);
-      if (this.planningData) {
-        const date = new Date(this.planningData.date);
-        // Get the year, month, and day components
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
-        const day = String(date.getDate()).padStart(2, "0");
+      if (this.selectedDrivers.length !== 0 && this.selectedRTGs !== 0) {
+        this.drivers = [];
+        this.rtgs = [];
+        this.tableHeaders = [];
+        this.itemsPlanning = [];
+        this.showConfirmDialog = false;
+        this.setLoadingValueAction(true);
+        if (this.planningData) {
+          const date = new Date(this.planningData.date);
+          // Get the year, month, and day components
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
+          const day = String(date.getDate()).padStart(2, "0");
 
-        // Construct the formatted date string in "YYYY-mm-dd" format
-        const formattedDate = `${year}-${month}-${day}`;
-        this.planning = {
-          shift_id: this.shiftId,
-          profile_group_id: this.profileGroupId,
-          planned_at: formattedDate,
-        };
-      } else {
-        this.planning = {
-          shift_id: this.shiftId,
-          profile_group_id: this.profileGroupId,
-        };
-      }
-      this.createPlanningAction(this.planning).then((response) => {
-        const addUserPromises = [];
-        const addEquipementPromises = [];
-        for (let driver in this.selectedDrivers) {
-          let userWPlanning = {
-            user_id: this.selectedDrivers[driver].id,
-            planning_id: response.id,
+          // Construct the formatted date string in "YYYY-mm-dd" format
+          const formattedDate = `${year}-${month}-${day}`;
+          this.planning = {
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
+            planned_at: formattedDate,
           };
-          addUserPromises.push(this.addUserToPlanning(userWPlanning));
-        }
-
-        for (let equ in this.selectedRTGs) {
-          let equWPlanning = {
-            equipement_id: this.selectedRTGs[equ].id,
-            planning_id: response.id,
+        } else {
+          this.planning = {
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
           };
-          addEquipementPromises.push(
-            this.addEquipementToPlanning(equWPlanning)
-          );
         }
+        this.createPlanningAction(this.planning).then((response) => {
+          const addUserPromises = [];
+          const addEquipementPromises = [];
+          for (let driver in this.selectedDrivers) {
+            let userWPlanning = {
+              user_id: this.selectedDrivers[driver].id,
+              planning_id: response.id,
+            };
+            addUserPromises.push(this.addUserToPlanning(userWPlanning));
+          }
 
-        Promise.all([...addUserPromises, ...addEquipementPromises])
-          .then(() => {
-            // All promises have resolved
-            this.setBoxesData();
-          })
-          .catch((error) => {
-            this.setLoadingValueAction(false);
-            // Handle error if any of the promises fail
-            console.error(error);
-          });
-      });
+          for (let equ in this.selectedRTGs) {
+            let equWPlanning = {
+              equipement_id: this.selectedRTGs[equ].id,
+              planning_id: response.id,
+            };
+            addEquipementPromises.push(
+              this.addEquipementToPlanning(equWPlanning)
+            );
+          }
+
+          Promise.all([...addUserPromises, ...addEquipementPromises])
+            .then(() => {
+              // All promises have resolved
+              this.setBoxesData();
+            })
+            .catch((error) => {
+              this.setLoadingValueAction(false);
+              // Handle error if any of the promises fail
+              console.error(error);
+            });
+        });
       }
-      
     },
 
     //remove driver from confirm dialog
@@ -460,7 +528,7 @@ export default {
           i++
         ) {
           itemsPlanning[i][k] = "DP";
-        } 
+        }
         const doubleBreakDrivers = [];
 
         for (let i = 1; i < nbrDrivers + 1; i++) {
@@ -472,26 +540,36 @@ export default {
           }
         }
 
+        const firstValues = [];
 
-        const firstValues = []
-        
-        for(let i=1 ; i<doubleBreakDrivers.length+1;i++){
-            firstValues.push(itemsPlanning[i][0])
+        for (let i = 1; i < doubleBreakDrivers.length + 1; i++) {
+          firstValues.push(itemsPlanning[i][0]);
         }
-        console.log(doubleBreakDrivers)
-        console.log(firstValues)
-        console.log(itemsPlanning)
-        const nonCommonValuesT1 = firstValues.filter(obj1 => !doubleBreakDrivers.some(obj2 => obj1.matricule === obj2.driver.matricule));
-        const nonCommonValuesT2 = doubleBreakDrivers.filter(obj1=> !firstValues.some(obj2 => obj2.matricule === obj1.driver.matricule));
-        for(let i = 1;i<nonCommonValuesT1.length+1;i++){
-            let temp = nonCommonValuesT1[i-1]
-            let driver = this.drivers.find(obj=>obj.matricule===nonCommonValuesT2[i-1].driver.matricule)
-            let index = this.drivers.indexOf(driver)
-            console.log(index)
-            itemsPlanning[i][0] = driver
-            itemsPlanning[index+1][0] = temp
+        console.log(doubleBreakDrivers);
+        console.log(firstValues);
+        console.log(itemsPlanning);
+        const nonCommonValuesT1 = firstValues.filter(
+          (obj1) =>
+            !doubleBreakDrivers.some(
+              (obj2) => obj1.matricule === obj2.driver.matricule
+            )
+        );
+        const nonCommonValuesT2 = doubleBreakDrivers.filter(
+          (obj1) =>
+            !firstValues.some(
+              (obj2) => obj2.matricule === obj1.driver.matricule
+            )
+        );
+        for (let i = 1; i < nonCommonValuesT1.length + 1; i++) {
+          let temp = nonCommonValuesT1[i - 1];
+          let driver = this.drivers.find(
+            (obj) => obj.matricule === nonCommonValuesT2[i - 1].driver.matricule
+          );
+          let index = this.drivers.indexOf(driver);
+          console.log(index);
+          itemsPlanning[i][0] = driver;
+          itemsPlanning[index + 1][0] = temp;
         }
-
       }
 
       const id = 1;
@@ -530,6 +608,7 @@ export default {
       //   }))
       // );
     },
+    
     confirmPlanning(itemsPlanningArray) {
       const promises = [];
       for (let item in this.arrayToSave) {
@@ -592,14 +671,16 @@ export default {
 }
 
 .parent {
+  margin-top: 2rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 2rem;
-  width: 100%;
+  width: fit-content;
   height: fit-content;
 }
 
 .create-button {
+  margin-top: 1rem;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -610,7 +691,7 @@ export default {
 .drivers-container,
 .rtgs-container {
   display: flex;
-  gap: 2rem;
+  gap: 0.5rem;
 }
 
 .column {
@@ -619,13 +700,29 @@ export default {
   align-items: flex-start;
 }
 
-.driver,
+.driver {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;
+}
 .rtg {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem; /* Espacement entre les drivers */
+  gap: 0.4rem;
+  margin: 0 0.6rem;
+  flex-wrap: wrap;  
+}
+
+.selectAll{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 150px;
+  margin: 0.8rem 0.6rem;
 }
 
 .v-switch {
@@ -635,28 +732,34 @@ export default {
   font-size: x-small !important;
 }
 
-.drivername {
-  font-size: 0.9rem;
-  font-weight: bold;
-  width: 100px;
-}
-
+.drivername,
 .rtgname {
   font-size: 0.9rem;
   font-weight: bold;
+  width: fit-content;
 }
 
 .label-column {
-  writing-mode: vertical-rl; /* Écriture verticale */
   text-align: center; /* Alignement horizontal */
   font-weight: bold;
   font-size: 1.2rem;
-  transform: rotate(180deg);
 }
 
 .test {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.resources {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd; /* Light gray border */
+  border-radius: 8px; /* Rounded corners */
+  padding: 20px;
+}
+
+.hr {
+  border: 1px solid #ddd;
 }
 </style>
