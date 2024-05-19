@@ -1,5 +1,9 @@
 <template>
   <div class="main-parent">
+    <div class="header">
+      <h2>Current Shift: {{ actualShift }}</h2>
+      <p>Today's Date: {{ todayDate }}</p>
+    </div>
     <div class="parent">
       <!-- List ams with associated switches -->
       <div class="resources">
@@ -276,7 +280,7 @@
 <script>
 import ConfirmDialog from "../ConfirmDialog.vue";
 import { mapGetters, mapActions } from "vuex";
-
+import moment from "moment";
 export default {
   components: {
     ConfirmDialog,
@@ -315,7 +319,10 @@ export default {
       profileGroupId: null,
       selectAll: false,
       selectAllSTSs: false,
-      selectAllRoles:false
+      selectAllRoles: false,
+      inputs:null,
+      actualShift: null,
+      todayDate: "",
     };
   },
 
@@ -448,7 +455,7 @@ export default {
 
   //mounted
   mounted() {
-    this.setDrivers();
+    this.setData();
     this.setIsRoleSaved();
   },
 
@@ -463,6 +470,7 @@ export default {
       "addUserToPlanning",
       "addEquipementToPlanning",
       "addEquipementWorkingHoursToPlanning",
+      "setShiftByCategory"
     ]),
     toggleSelectAll() {
       if (this.selectAll) {
@@ -528,13 +536,21 @@ export default {
     },
 
     // set AMs
-    setDrivers() {
-      const inputs = {
+    async setData() {
+      const today = new Date();
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      this.todayDate = today.toLocaleDateString(undefined, options);
+      this.actualShift = this.getActualShift();
+      const response = await this.setShiftByCategory({
+        category: this.actualShift,
+      });
+      this.inputs = {
         profile_group: "am",
         role: "am",
+        shift_id: response[0].id,
       };
       this.setLoadingValueAction(true);
-      this.setDriversAction(inputs).then((response) => {
+      this.setDriversAction(this.inputs).then((response) => {
         this.setLoadingValueAction(false);
         this.amsList = this.getDrivers;
         if (this.amsList.length > 0) {
@@ -934,6 +950,33 @@ export default {
         delete this.numWorkers[item];
       }
     },
+    getActualShift() {
+      let thisDate = new Date("2022-02-10T07:00:00");
+      let nowDate = new Date();
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+        return shift[1];
+      else if (
+        nowDate.getHours() == 23 ||
+        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      )
+        return shift[2];
+    },
+    shiftArrays(array) {
+      let c = "";
+      c = array[3];
+      array[3] = array[2];
+      array[2] = array[1];
+      array[1] = array[0];
+      array[0] = c;
+
+      return array;
+    },
   },
 };
 </script>
@@ -948,10 +991,10 @@ export default {
 }
 
 .parent {
-  margin-top: 2rem;
+  margin-top: 1rem;
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.2rem;
   width: fit-content;
   height: fit-content;
 }
@@ -962,7 +1005,7 @@ export default {
   justify-content: center;
   align-items: center;
   height: fit-content;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .ams-container,
@@ -982,7 +1025,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0 0.6rem;
   flex-wrap: wrap;
 }
@@ -992,14 +1035,14 @@ export default {
   align-items: center;
   gap: 0.4rem;
   margin: 0 0.6rem;
-  flex-wrap: wrap;
+
 }
 
 .role {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0 0.6rem;
   flex-wrap: wrap;
 }
@@ -1008,7 +1051,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0.8rem 0.6rem;
 }
 .v-switch {
@@ -1021,7 +1064,7 @@ export default {
 .amname,
 .stsname,
 .rolename {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: bold;
   width: fit-content;
 }
@@ -1118,5 +1161,14 @@ export default {
 
 .green-text {
   color: #2e7d32;
+}
+.header {
+  background-color: #f5f5f5; /* Light gray background */
+  border-bottom: 2px solid #ccc; /* Bottom border */
+  padding: 5px 10px; /* Padding for spacing */
+  text-align: center; /* Center align the text */
+  font-size: 0.7rem; /* Increase font size */
+  font-weight: bold; /* Bold text */
+  margin-bottom: 0.2rem; /* Space below the header */
 }
 </style>

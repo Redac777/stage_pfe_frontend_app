@@ -1,6 +1,10 @@
 <template>
   <div class="parent">
     <!-- Settings dialog -->
+    <div class="header">
+      <h2>Current Shift: {{ selectedShift }}</h2>
+      <p>Today's Date: {{ todayDate }}</p>
+    </div>
     <div>
       <v-dialog v-model="showSettingsDialog" max-width="500">
         <template v-slot:activator="{ on }"></template>
@@ -149,6 +153,9 @@ export default {
       dialogDelete: false,
       dayTimes: ["Morning", "Evening", "Night"],
       selectedDayTime: "",
+      dateCountChange: 0,
+      // actualShift: null,
+      todayDate: "",
     };
   },
   components: {
@@ -170,26 +177,22 @@ export default {
           let month = ("0" + (date.getMonth() + 1)).slice(-2);
           let day = ("0" + date.getDate()).slice(-2);
           let formattedDate = `${year}-${month}-${day}`;
-          let time;
+          let dateTime = `${formattedDate}`;
+          this.shifts = this.getActualShift(dateTime);
+          console.log(this.shifts)
+          this.shifts.pop()
           switch (this.selectedDayTime) {
             case "Morning":
-              time = "07:00:00";
+              this.selectedCreateShift = this.shifts[0];
               break;
             case "Evening":
-              time = "15:00:00";
+              this.selectedCreateShift = this.shifts[1];
               break;
             case "Night":
-              time = "23:00:00";
+              this.selectedCreateShift = this.shifts[2];
               break;
             default:
               time = "00:00:00";
-          }
-          let dateTime = `${formattedDate}T${time}`;
-          let shift = this.getActualShift(dateTime);
-          if (shift != "D") this.selectedCreateShift = shift;
-          else {
-            this.selectedCreateShift = "";
-            console.log("it's off");
           }
         }
       }
@@ -202,30 +205,31 @@ export default {
           let month = ("0" + (date.getMonth() + 1)).slice(-2);
           let day = ("0" + date.getDate()).slice(-2);
           let formattedDate = `${year}-${month}-${day}`;
-          let time;
+          let dateTime = `${formattedDate}`;
+          this.shifts = this.getActualShift(dateTime);
+          
+          this.shifts.pop()
           switch (this.selectedDayTime) {
             case "Morning":
-              time = "07:00:00";
+              this.selectedCreateShift = this.shifts[0];
               break;
             case "Evening":
-              time = "15:00:00";
+              this.selectedCreateShift = this.shifts[1];
               break;
             case "Night":
-              time = "23:00:00";
+              this.selectedCreateShift = this.shifts[2];
               break;
             default:
               time = "00:00:00";
           }
-          let dateTime = `${formattedDate}T${time}`;
-          let shift = this.getActualShift(dateTime);
-          if (shift != "D") this.selectedCreateShift = shift;
-          else {
-            this.selectedCreateShift = "";
-            console.log("it's off");
-          }
         }
       }
-    }
+    },
+    selectedDate(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.dateCountChange += 1;
+      }
+    },
   },
 
   computed: {
@@ -238,15 +242,20 @@ export default {
     // Returns the formatted date in yyyy-mm-dd format
     formattedDate() {
       // Convert selectedDate to local timezone
-      if (this.selectedDate) {
+      if (this.dateCountChange > 0) {
         const localDate = new Date(
           this.selectedDate.getTime() +
             this.selectedDate.getTimezoneOffset() * 60000
         );
+        // if (localDate.getTime() !== todayDate.getTime())
+        // localDate.setDate(localDate.getDate()+1);
+        // else
         localDate.setDate(localDate.getDate() + 1);
         // console.log(localDate)
         // Get the date string in yyyy-mm-dd format
         return localDate.toISOString().split("T")[0];
+      } else {
+        return new Date().toISOString().split("T")[0];
       }
     },
   },
@@ -300,7 +309,16 @@ export default {
 
     // Set initial shift in dialog select shift
     setInitialShift() {
-      this.selectedShift = this.getActualShift();
+      const nowDate = new Date();
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15)
+        this.selectedShift = this.getActualShift()[0];
+      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+        this.selectedShift = this.getActualShift()[1];
+      else if (
+        nowDate.getHours() == 23 ||
+        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      )
+        this.selectedShift = this.getActualShift()[2];
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
@@ -308,23 +326,6 @@ export default {
       );
     },
 
-    // select profile group in navigation dashboard
-    //   updateActiveComponent(value) {
-    //     switch (value) {
-    //       case "RTGhome":
-    //         this.activeProfileGroup = "rtg";
-    //         break;
-    //       case "STShome":
-    //         this.activeProfileGroup = "sts";
-    //         break;
-    //       case "RShome":
-    //         this.activeProfileGroup = "rs";
-    //         break;
-    //       case "AMhome":
-    //         this.activeProfileGroup = "am";
-    //         break;
-    //     }
-    //   },
 
     isDriver(key) {
       return key === "driver";
@@ -333,6 +334,9 @@ export default {
       return value === "B";
     },
     setPlanning(value) {
+      const today = new Date(this.formattedDate)
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
       this.planningTable = [];
       if (!value) {
@@ -375,6 +379,7 @@ export default {
               profile_group_id: this.profileGroupId,
               profileType: "rs",
             };
+            console.log(dateObject)
             this.DisplayPlanning(dateObject);
           });
         });
@@ -391,6 +396,7 @@ export default {
           };
           this.setPlanningBoxes(planningId).then(() => {
             this.planning = this.getPlanningBoxes;
+            // console.log(this.planning)
             // Extract unique time intervals
             // Initialize an empty array to store unique time intervals
             const timeIntervals = [];
@@ -400,7 +406,7 @@ export default {
               const existingIntervalIndex = timeIntervalsTable.findIndex(
                 (interval) => {
                   return (
-                    interval.title === `${box.start_time} - ${box.ends_time}`
+                    interval.title === `${box.start_time}:00 - ${box.ends_time}:00`
                   );
                 }
               );
@@ -408,7 +414,7 @@ export default {
               // If the current time interval doesn't exist in the array, add it
               if (existingIntervalIndex === -1) {
                 timeIntervalsTable.push({
-                  title: `${box.start_time} - ${box.ends_time}`,
+                  title: `${box.start_time}:00 - ${box.ends_time}:00`,
                   sortable: false,
                   key: `timeInterval_${timeIntervalsTable.length}`,
                 });
@@ -582,20 +588,20 @@ export default {
       //       console.log("delete sby_workinghours"+ JSON.stringify(user))
       //     }
       // })
-      this.setLoadingValueAction(true);
-      this.usersWorkingHours.forEach((user) => {
-        if (user.workingHours === 0) {
-          delete user.workingHours;
-          // console.log("delete workinghours"+ JSON.stringify(user))
-        } else if (user.sby_workingHours === 0) {
-          delete user.sby_workingHours;
-          // console.log("delete sby_workinghours"+ JSON.stringify(user))
-        }
-        this.editUserAction(user).then(() => {
-          this.setLoadingValueAction(false);
-          console.log("updated successfully");
-        });
-      });
+      // this.setLoadingValueAction(true);
+      // this.usersWorkingHours.forEach((user) => {
+      //   if (user.workingHours === 0) {
+      //     delete user.workingHours;
+      //     // console.log("delete workinghours"+ JSON.stringify(user))
+      //   } else if (user.sby_workingHours === 0) {
+      //     delete user.sby_workingHours;
+      //     // console.log("delete sby_workinghours"+ JSON.stringify(user))
+      //   }
+      //   this.editUserAction(user).then(() => {
+      //     this.setLoadingValueAction(false);
+      //     console.log("updated successfully");
+      //   });
+      // });
     },
     closeDelete() {
       this.dialogDelete = false;
@@ -623,23 +629,30 @@ export default {
       // console.log(this.selectedDate)
       // console.log(this.planning[0].planning.shift_id)
     },
-    getActualShift() {
+    getActualShift(date) {
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
       let thisDate = new Date("2022-02-10T07:00:00");
-      let nowDate = new Date();
+
       let shift = ["D", "A", "B", "C"];
       let momentDate = moment(thisDate);
 
       while (momentDate.add(72, "hours").toDate() < nowDate) {
         shift = this.shiftArrays(shift);
       }
-      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
-      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
-        return shift[1];
-      else if (
-        nowDate.getHours() == 23 ||
-        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
-      )
-        return shift[2];
+      // if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      // else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      //   return shift[1];
+      // else if (
+      //   nowDate.getHours() == 23 ||
+      //   (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      // )
+      //   return shift[2];
+      return shift;
     },
     shiftArrays(array) {
       let c = "";
@@ -725,6 +738,7 @@ thead td {
 }
 
 .planning {
+  margin-top: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -762,5 +776,14 @@ thead td {
 .dialogOk {
   background-color: blue;
   color: white;
+}
+.header {
+  background-color: #f5f5f5; /* Light gray background */
+  border-bottom: 2px solid #ccc; /* Bottom border */
+  padding: 5px 10px; /* Padding for spacing */
+  text-align: center; /* Center align the text */
+  font-size: 0.7rem; /* Increase font size */
+  font-weight: bold; /* Bold text */
+  margin-bottom: 0.2rem; /* Space below the header */
 }
 </style>

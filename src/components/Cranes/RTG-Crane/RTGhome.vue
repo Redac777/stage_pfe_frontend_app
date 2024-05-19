@@ -4,6 +4,10 @@
     <!-- <div class="test">
       <p>{{ planningData }}</p>
     </div> -->
+    <div class="header">
+      <h2>Current Shift: {{ actualShift }}</h2>
+      <p>Today's Date: {{ todayDate }}</p>
+    </div>
     <div class="parent">
       <!-- List drivers with associated switches -->
       <div class="resources">
@@ -134,6 +138,8 @@ export default {
       allPlannings: [],
       selectAll: false,
       selectAllRTGs: false,
+      actualShift: null,
+      todayDate: '',
     };
   },
 
@@ -226,22 +232,29 @@ export default {
 
     // set drivers and equipements data
     async setData() {
+      const today = new Date();
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
       if (this.planningData) {
-        // console.log(this.planningData)
+        console.log(JSON.stringify(this.planningData))
+        this.actualShift = this.planningData.shift
+        const dateToPlan = new Date(this.planningData.date)
+        this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
         const response = await this.setShiftByCategory({
           category: this.planningData.shift,
         });
-        console.log(this.planningData);
+        // console.log(this.planningData);
         this.inputs = {
           profile_group: "rtg",
           role: "driver",
           shift_id: response[0].id,
         };
       } else {
-        const shiftCategory = this.getActualShift();
+        this.actualShift = this.getActualShift();
+        console.log(this.getActualShift())
         const response = await this.setShiftByCategory({
-          category: shiftCategory,
+          category: this.actualShift,
         });
         this.inputs = {
           profile_group: "rtg",
@@ -608,7 +621,7 @@ export default {
       //   }))
       // );
     },
-    
+
     confirmPlanning(itemsPlanningArray) {
       const promises = [];
       for (let item in this.arrayToSave) {
@@ -634,7 +647,6 @@ export default {
       let nowDate = new Date();
       let shift = ["D", "A", "B", "C"];
       let momentDate = moment(thisDate);
-
       while (momentDate.add(72, "hours").toDate() < nowDate) {
         shift = this.shiftArrays(shift);
       }
@@ -671,7 +683,7 @@ export default {
 }
 
 .parent {
-  margin-top: 2rem;
+  margin-top: 1rem;
   display: flex;
   justify-content: space-between;
   gap: 2rem;
@@ -680,7 +692,7 @@ export default {
 }
 
 .create-button {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -704,7 +716,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0 0.6rem;
   flex-wrap: wrap;
 }
@@ -714,14 +726,14 @@ export default {
   align-items: center;
   gap: 0.4rem;
   margin: 0 0.6rem;
-  flex-wrap: wrap;  
+  flex-wrap: wrap;
 }
 
-.selectAll{
+.selectAll {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0.8rem 0.6rem;
 }
 
@@ -734,7 +746,7 @@ export default {
 
 .drivername,
 .rtgname {
-  font-size: 0.9rem;
+  font-size:0.75rem;
   font-weight: bold;
   width: fit-content;
 }
@@ -762,4 +774,14 @@ export default {
 .hr {
   border: 1px solid #ddd;
 }
+.header {
+  background-color: #f5f5f5; /* Light gray background */
+  border-bottom: 2px solid #ccc; /* Bottom border */
+  padding: 5px 10px; /* Padding for spacing */
+  text-align: center; /* Center align the text */
+  font-size: 0.7rem; /* Increase font size */
+  font-weight: bold; /* Bold text */
+  margin-bottom: 0.2rem; /* Space below the header */
+}
+
 </style>

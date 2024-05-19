@@ -78,11 +78,11 @@ export default {
       switch (value) {
         case "RTGhome":
           this.createdRSPlanningData = null;
-          this.rsPlannings = null;
+          // this.rsPlannings = null;
           break;
         case "RShome":
           this.createdPlanningData = null;
-          this.plannings = null;
+          // this.plannings = null;
       }
     },
     getCurrentPlanningMethod() {

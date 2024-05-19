@@ -1,6 +1,10 @@
 <template>
   <div class="parent">
     <!-- Settings dialog -->
+    <div class="header">
+      <h2>Current Shift: {{ selectedShift }}</h2>
+      <p>Today's Date: {{ todayDate }}</p>
+    </div>
     <div>
       <v-dialog v-model="showSettingsDialog" max-width="500">
         <template v-slot:activator="{ on }"></template>
@@ -152,6 +156,7 @@ export default {
       dialogDelete: false,
       dayTimes: ["Morning", "Evening", "Night"],
       selectedDayTime: "",
+      todayDate: "",
     };
   },
   components: {
@@ -178,26 +183,22 @@ export default {
           let month = ("0" + (date.getMonth() + 1)).slice(-2);
           let day = ("0" + date.getDate()).slice(-2);
           let formattedDate = `${year}-${month}-${day}`;
-          let time;
+          let dateTime = `${formattedDate}`;
+          this.shifts = this.getActualShift(dateTime);
+          console.log(this.shifts)
+          this.shifts.pop()
           switch (this.selectedDayTime) {
             case "Morning":
-              time = "07:00:00";
+              this.selectedCreateShift = this.shifts[0];
               break;
             case "Evening":
-              time = "15:00:00";
+              this.selectedCreateShift = this.shifts[1];
               break;
             case "Night":
-              time = "23:00:00";
+              this.selectedCreateShift = this.shifts[2];
               break;
             default:
               time = "00:00:00";
-          }
-          let dateTime = `${formattedDate}T${time}`;
-          let shift = this.getActualShift(dateTime);
-          if (shift != "D") this.selectedCreateShift = shift;
-          else {
-            this.selectedCreateShift = "";
-            console.log("it's off");
           }
         }
       }
@@ -210,26 +211,22 @@ export default {
           let month = ("0" + (date.getMonth() + 1)).slice(-2);
           let day = ("0" + date.getDate()).slice(-2);
           let formattedDate = `${year}-${month}-${day}`;
-          let time;
+          let dateTime = `${formattedDate}`;
+          this.shifts = this.getActualShift(dateTime);
+          
+          this.shifts.pop()
           switch (this.selectedDayTime) {
             case "Morning":
-              time = "07:00:00";
+              this.selectedCreateShift = this.shifts[0];
               break;
             case "Evening":
-              time = "15:00:00";
+              this.selectedCreateShift = this.shifts[1];
               break;
             case "Night":
-              time = "23:00:00";
+              this.selectedCreateShift = this.shifts[2];
               break;
             default:
               time = "00:00:00";
-          }
-          let dateTime = `${formattedDate}T${time}`;
-          let shift = this.getActualShift(dateTime);
-          if (shift != "D") this.selectedCreateShift = shift;
-          else {
-            this.selectedCreateShift = "";
-            console.log("it's off");
           }
         }
       }
@@ -258,31 +255,6 @@ export default {
         return new Date().toISOString().split("T")[0];
       }
     },
-    // selectedCreateShift() {
-    //   if (this.selectedDayTime) {
-    //     let date = new Date(this.selectedDayTime);
-    //     let year = date.getFullYear();
-    //     let month = ("0" + (date.getMonth() + 1)).slice(-2);
-    //     let day = ("0" + date.getDate()).slice(-2);
-    //     let formattedDate = `${year}-${month}-${day}`;
-    //     let time;
-    //     switch (this.selectedDayTime) {
-    //       case "Morning":
-    //         time = "07:00:00";
-    //         break;
-    //       case "Afternoon":
-    //         time = "15:00:00";
-    //         break;
-    //       case "Evening":
-    //         time = "23:00:00";
-    //         break;
-    //       default:
-    //         time = "00:00:00";
-    //     }
-    //     let dateTime = `${formattedDate} ${time}`;
-
-    //   }
-    // },
   },
   mounted() {
     this.setInitialShift();
@@ -334,7 +306,16 @@ export default {
 
     // Set initial shift in dialog select shift
     setInitialShift() {
-      this.selectedShift = this.getActualShift();
+      const nowDate = new Date();
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15)
+        this.selectedShift = this.getActualShift()[0];
+      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+        this.selectedShift = this.getActualShift()[1];
+      else if (
+        nowDate.getHours() == 23 ||
+        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      )
+        this.selectedShift = this.getActualShift()[2];
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
@@ -367,6 +348,9 @@ export default {
       return value === "B" || value === "DB";
     },
     setPlanning(value) {
+      const today = new Date(this.formattedDate)
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
       this.planningTable = [];
       if (!value) {
@@ -650,14 +634,15 @@ export default {
       while (momentDate.add(72, "hours").toDate() < nowDate) {
         shift = this.shiftArrays(shift);
       }
-      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
-      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
-        return shift[1];
-      else if (
-        nowDate.getHours() == 23 ||
-        (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
-      )
-        return shift[2];
+      // if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      // else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      //   return shift[1];
+      // else if (
+      //   nowDate.getHours() == 23 ||
+      //   (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      // )
+      //   return shift[2];
+      return shift;
     },
     shiftArrays(array) {
       let c = "";
@@ -756,6 +741,7 @@ thead td {
 }
 
 .planning {
+  margin-top: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -766,7 +752,7 @@ thead td {
   width: 100%;
 }
 .v-data-table {
-  max-height: 70h;
+  max-height: 60vh;
   margin: 0 8px;
 }
 
@@ -781,5 +767,14 @@ thead td {
   justify-content: center;
   align-items: center;
   height: fit-content;
+}
+.header {
+  background-color: #f5f5f5; /* Light gray background */
+  border-bottom: 2px solid #ccc; /* Bottom border */
+  padding: 5px 10px; /* Padding for spacing */
+  text-align: center; /* Center align the text */
+  font-size: 0.7rem; /* Increase font size */
+  font-weight: bold; /* Bold text */
+  margin-bottom: 0.2rem; /* Space below the header */
 }
 </style>

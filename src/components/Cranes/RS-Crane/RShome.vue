@@ -1,5 +1,9 @@
 <template>
   <div class="main-parent">
+    <div class="header">
+      <h2>Current Shift: {{ actualShift }}</h2>
+      <p>Today's Date: {{ todayDate }}</p>
+    </div>
     <div class="parent">
       <!-- List drivers with associated switches -->
       <div class="resources">
@@ -129,6 +133,10 @@ export default {
       inputs: null,
       planning: null,
       allPlannings: [],
+      selectAll: false,
+      selectAllRSs: false,
+      actualShift: null,
+      todayDate: "",
     };
   },
 
@@ -221,9 +229,15 @@ export default {
 
     // set drivers and equipements
     async setData() {
+      const today = new Date();
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
       if (this.rsplanningData) {
-        console.log(JSON.stringify(this.rsplanningData));
+        // console.log(JSON.stringify(this.rsplanningData));
+        this.actualShift = this.rsplanningData.shift;
+        const dateToPlan = new Date(this.rsplanningData.date);
+        this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
         const response = await this.setShiftByCategory({
           category: this.rsplanningData.shift,
         });
@@ -233,10 +247,10 @@ export default {
           shift_id: response[0].id,
         };
       } else {
-        const shiftCategory = this.getActualShift();
-        console.log(shiftCategory);
+        this.actualShift = this.getActualShift();
+        console.log(this.getActualShift());
         const response = await this.setShiftByCategory({
-          category: shiftCategory,
+          category: this.actualShift,
         });
         this.inputs = {
           profile_group: "rs",
@@ -418,7 +432,7 @@ export default {
     rsPlanning() {
       let nbrDrivers = this.drivers.length;
       let nbrRtgs = this.rss.length;
-
+      this.rss.sort((a, b) => (a.matricule === "SBY" ? 1 : b.matricule === "SBY" ? -1 : 0));
       this.drivers = this.drivers.sort(function (a, b) {
         return b.sby_workingHours - a.sby_workingHours;
       });
@@ -436,18 +450,9 @@ export default {
           break;
       }
       let totalHours = 8;
-      let continuedHours = totalHours - nbrDrivers;
       let intervalEndTime = 0;
-      for (let i = 0; i < nbrDrivers + 1; i++) {
-        let intervalHour = 0;
-
-        // Calculate endTime
-        if (i === nbrDrivers) {
-          intervalHour += continuedHours;
-          intervalEndTime = endTime + intervalHour;
-        } else {
-          intervalEndTime = endTime + 1;
-        }
+      for (let i = 0; i < totalHours; i++) {
+        intervalEndTime = endTime + 1;
         this.tableHeaders.push({
           title: endTime + " - " + intervalEndTime,
           sortable: false,
@@ -467,7 +472,7 @@ export default {
         itemsPlanning[i][i] = "P";
       }
       let rssIndex = 0;
-      for (let j = 1; j < nbrDrivers + 2; j++) {
+      for (let j = 1; j < totalHours + 1; j++) {
         rssIndex = 0;
         for (let i = 1; i < nbrDrivers + 1; i++) {
           if (itemsPlanning[i][j] != "P") {
@@ -489,7 +494,7 @@ export default {
       console.log(itemsPlanning);
       let parts = [];
       for (let i = 1; i < nbrDrivers + 1; i++) {
-        for (let j = 1; j < nbrDrivers + 2; j++) {
+        for (let j = 1; j < totalHours + 1; j++) {
           const equipementId =
             itemsPlanning[i][j] == "P"
               ? null
@@ -574,7 +579,7 @@ export default {
   gap: 0.3rem;
 }
 .parent {
-  margin-top: 2rem;
+  margin-top: 1rem;
   display: flex;
   justify-content: space-between;
   gap: 2rem;
@@ -588,7 +593,7 @@ export default {
   justify-content: center;
   align-items: center;
   height: fit-content;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .drivers-container,
@@ -607,7 +612,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0 0.6rem;
   flex-wrap: wrap;
 }
@@ -623,7 +628,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 150px;
+  width: 120px;
   margin: 0.8rem 0.6rem;
 }
 
@@ -634,14 +639,8 @@ export default {
   font-size: x-small !important;
 }
 
-.drivername {
-  font-size: 0.9rem;
-  font-weight: bold;
-  width: fit-content;
-}
-
-.rsname {
-  font-size: 0.9rem;
+.drivername,.rsname {
+  font-size: 0.75rem;
   font-weight: bold;
   width: fit-content;
 }
@@ -662,5 +661,15 @@ export default {
 
 .hr {
   border: 1px solid #ddd;
+}
+
+.header {
+  background-color: #f5f5f5; /* Light gray background */
+  border-bottom: 2px solid #ccc; /* Bottom border */
+  padding: 5px 10px; /* Padding for spacing */
+  text-align: center; /* Center align the text */
+  font-size: 0.7rem; /* Increase font size */
+  font-weight: bold; /* Bold text */
+  margin-bottom: 0.2rem; /* Space below the header */
 }
 </style>
