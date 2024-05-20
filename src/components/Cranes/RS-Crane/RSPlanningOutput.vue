@@ -103,13 +103,40 @@
                 <div
                   class="content"
                   :class="{
-                    break: !isDriver(key) && isBreak(value),
-                    'none-break': !isDriver(key) && !isBreak(value),
+                    break: !isDriver(key) && isBreak(value.matricule || value),
+                    'none-break':
+                      !isDriver(key) && !isBreak(value.matricule || value),
                   }"
+                  @click="value !== null && openEditDialog(item, key)"
                 >
-                  {{ value }}
+                  {{ value.matricule || value }}
                 </div>
               </td>
+            </template>
+            <template>
+              <v-dialog
+                v-model="showEditDialog"
+                max-width="500"
+                class="custom-dialog"
+              >
+                <v-card>
+                  <v-card-title>Edit Cell</v-card-title>
+                  <v-card-text>
+                    <!-- Display the current cell value and allow the user to edit -->
+                    <v-select
+                      v-model="itemToEdit.value"
+                      :items="filteredEquipements"
+                      label="Select Equipment"
+                      dense
+                    ></v-select>
+                  </v-card-text>
+                  <v-card-actions>
+                    <!-- Save and Cancel buttons -->
+                    <v-btn color="primary" @click="saveCell">Save</v-btn>
+                    <v-btn @click="cancelEdit">Cancel</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
             </template>
           </tr>
         </template>
@@ -156,6 +183,16 @@ export default {
       dateCountChange: 0,
       // actualShift: null,
       todayDate: "",
+      showEditDialog: false,
+      editableCell: null,
+      itemToEdit: {
+        item: null,
+        key: null,
+        value: null,
+      },
+      equipments: [],
+      filteredEquipements: [],
+      boxesObjects: {},
     };
   },
   components: {
@@ -237,6 +274,7 @@ export default {
       "getCurrentRSPlanning",
       "getPlanningBoxes",
       "deleteRTGPlanningAction",
+      "getEquipements"
     ]),
 
     // Returns the formatted date in yyyy-mm-dd format
@@ -260,6 +298,7 @@ export default {
     },
   },
   mounted() {
+    this.setEquipements();
     this.setInitialShift();
     this.setPlanning();
   },
@@ -274,6 +313,8 @@ export default {
       "setProfileGroupByType",
       "editUserAction",
       "deleteRSPlanningAction",
+      "setEquipementsAction",
+      "setBoxUpdateAction"
     ]),
     // Settings
     openSettingsDialog() {
@@ -531,9 +572,15 @@ export default {
                   let cellContent = "";
                   boxesInInterval.forEach((box) => {
                     if (!box.equipement_id) {
-                      cellContent = "B"; // Set to "P" if not planned yet
+                      cellContent = {
+                        matricule: "B",
+                        boxId: box.id,
+                      };
                     } else {
-                      cellContent = box.equipement.matricule; // Set to equipement's matricule
+                      cellContent = {
+                        matricule: box.equipement.matricule,
+                        boxId: box.id,
+                      };
                     }
                   });
                   row[`interval_${index}`] = cellContent;
@@ -664,6 +711,70 @@ export default {
 
       return array;
     },
+    setEquipements() {
+      this.setLoadingValueAction(true);
+      this.setEquipementsAction().then(() => {
+        this.equipments = this.getEquipements
+          .filter((equipement) => equipement.profile_group.type === "rs")
+          .map((equip) => equip.matricule);
+        this.equipments.push("B");
+        console.log(this.equipments)
+        this.setLoadingValueAction(false);
+      });
+    },
+    openEditDialog(item, key) {
+      // console.log(item[key])
+      // Set the editable cell object
+      this.filteredEquipements = [];
+      const sameColumnItems = this.planningTable
+        .map((it) => it[key].matricule)
+        .filter((it) => it != item[key].matricule && it != "B");
+      this.filteredEquipements = this.equipments.filter(
+        (equip) => !sameColumnItems.includes(equip)
+      );
+      // console.log(this.filteredEquipements)
+      this.itemToEdit.item = item;
+      this.itemToEdit.key = key;
+      this.itemToEdit.value = item[key].matricule;
+      // Open the edit dialog
+      this.showEditDialog = true;
+    },
+    saveCell() {
+      // Check if this.editableCell is not null
+      if (this.itemToEdit.item && this.itemToEdit.key !== null) {
+        // Update the value of the cell in the item object
+        this.itemToEdit.item[this.itemToEdit.key].matricule = this.itemToEdit.value;
+        const equipement = this.getEquipements.find(equ=>equ.matricule===this.itemToEdit.value)
+        // console.log(equipement)
+        if(equipement || this.itemToEdit.value==="B"){
+          this.setLoadingValueAction(true)
+          this.setBoxUpdateAction({
+            id: this.itemToEdit.item[this.itemToEdit.key].boxId,
+            equipement_id:equipement?equipement.id:null,
+            break:this.itemToEdit.value==="B"
+          }).then(()=>{
+            console.log("box updated successfully")
+            this.setLoadingValueAction(false)
+          })
+          // console.log(equipement.id)
+          // console.log(this.itemToEdit.item[this.itemToEdit.key].boxId)
+        }
+        // Close the edit dialog
+        this.showEditDialog = false;
+
+        // Reset itemToEdit
+        this.itemToEdit.item = null;
+        this.itemToEdit.key = null;
+        this.itemToEdit.value = null;
+      }
+      // console.log(this.editableCell.value)
+      // console.log(this.editableCell.item[this.editableCell.key])
+    },
+    cancelEdit() {
+      // Reset any changes made in the dialog
+      // Close the edit dialog
+      this.showEditDialog = false;
+    },
   },
 };
 </script>
@@ -785,5 +896,8 @@ thead td {
   font-size: 0.7rem; /* Increase font size */
   font-weight: bold; /* Bold text */
   margin-bottom: 0.2rem; /* Space below the header */
+}
+.content{
+  cursor: pointer;
 }
 </style>

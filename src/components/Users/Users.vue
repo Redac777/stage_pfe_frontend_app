@@ -26,7 +26,6 @@
                 <!-- Add new user part -->
                 <template v-slot:top>
                     <v-toolbar flat v-bind:class="{ 'addUserButtonZone': true }">
-
                         <!-- Dialog to add new user -->
                         <v-dialog v-model="dialog" max-width="500px">
                             <!-- Button to display add user dialog -->

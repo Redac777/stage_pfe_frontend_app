@@ -34,6 +34,17 @@ const boxModule = {
           });
       });
     },
+    setBoxUpdateAction({commit,state},box){
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("boxes/update",box)
+          .then((response) => {
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    }
   },
   getters: {
     getPlanningBoxes(state) {
