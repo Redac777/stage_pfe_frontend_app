@@ -67,40 +67,22 @@ export default {
       drawer: true,
       rail: true,
       authUser: null,
-      items: [
-        {
-          icon: "mdi-view-dashboard",
-          title: "Planning",
-          value: "planning",
-          selected: true,
-        },
-        {
-          icon: "mdi-account-group-outline",
-          title: "Users",
-          value: "users",
-          selected: false,
-        },
-        {
-          icon: "mdi-crane",
-          title: "Equipments",
-          value: "equipments",
-          selected: false,
-        },
-      ],
+      role: null,
+      items: [],
     };
   },
 
   mounted() {
     this.getAuthUser();
+    this.setItems();
   },
 
   computed: {
-    ...mapGetters(["getMessages", "getUserActive"]),
+    ...mapGetters(["getMessages", "getUserActive", "getUserRole"]),
   },
 
   methods: {
-
-    ...mapActions(["logoutAction","clearPlannings"]),
+    ...mapActions(["logoutAction", "clearPlannings"]),
     getAuthUser() {
       this.authUser = this.getUserActive;
     },
@@ -109,7 +91,7 @@ export default {
       this.logoutAction()
         .then(() => {
           console.log(this.getMessages.logout);
-          this.clearPlannings()
+          // this.clearPlannings();
           this.redirectAfterLogout();
         })
         .catch((error) => {
@@ -138,6 +120,44 @@ export default {
           break;
       }
     },
+    setItems() {
+      this.items = [];
+      this.role = this.getUserRole;
+      // console.log(this.role.name)
+      switch (this.role.name) {
+        case "admin":
+          this.items = [
+            {
+              icon: "mdi-view-dashboard",
+              title: "Planning",
+              value: "planning",
+              selected: true,
+            },
+            {
+              icon: "mdi-account-group-outline",
+              title: "Users",
+              value: "users",
+              selected: false,
+            },
+            {
+              icon: "mdi-crane",
+              title: "Equipments",
+              value: "equipments",
+              selected: false,
+            },
+          ];
+          break;
+        case "driver":
+          this.items = [
+          {
+              icon: "mdi-view-dashboard",
+              title: "Planning",
+              value: "planning",
+              selected: true,
+            },
+          ]
+      }
+    },
   },
 };
 </script>
@@ -162,7 +182,6 @@ export default {
 .topitems {
   height: 80vh;
 }
-
 
 .bottomitems {
   width: 100%;

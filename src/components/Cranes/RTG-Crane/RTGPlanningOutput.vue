@@ -167,7 +167,7 @@ export default {
       tableHeaders: [],
       selectedDate: new Date(),
       selectedShift: "",
-      shifts: ["A", "B", "C"],
+      shifts: ["A", "B", "C", "D"],
       showDatePicker: false,
       activeProfileGroup: "rtg",
       shiftId: -1,
@@ -811,9 +811,11 @@ export default {
 
 td {
   font-weight: bold;
+  font-size: 0.75rem;
 }
 thead td {
   font-weight: bolder;
+  font-size: 0.75rem;
 }
 .legend {
   display: flex;

@@ -5,6 +5,7 @@ const usersModule = {
     drivers: [],
     error: null,
     token: null,
+    userRole:null,
     activeUser: null,
     messages: {
       logout: "",
@@ -14,6 +15,7 @@ const usersModule = {
     LOGIN_USER(state, payload) {
       state.activeUser = payload.user;
       state.token = payload.token;
+      state.userRole = payload.role;
     },
     LOGOUT_USER(state, message) {
       state.activeUser = null;
@@ -187,6 +189,9 @@ const usersModule = {
     getDrivers: (state) => {
       return state.drivers;
     },
+    getUserRole:(state) =>{
+      return state.userRole;
+    }
   },
 };
 

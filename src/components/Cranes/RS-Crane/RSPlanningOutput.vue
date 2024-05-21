@@ -165,7 +165,7 @@ export default {
       tableHeaders: [],
       selectedDate: new Date(),
       selectedShift: "",
-      shifts: ["A", "B", "C"],
+      shifts: ["A", "B", "C", "D"],
       showDatePicker: false,
       activeProfileGroup: "rs",
       shiftId: -1,
@@ -799,12 +799,13 @@ export default {
   padding: 5px;
   background-color: #79997e;
 }
-
 td {
   font-weight: bold;
+  font-size: 0.75rem;
 }
 thead td {
   font-weight: bolder;
+  font-size: 0.75rem;
 }
 .legend {
   display: flex;
@@ -900,4 +901,7 @@ thead td {
 .content{
   cursor: pointer;
 }
+/* .v-data-table-footer{
+background-color: red;
+} */
 </style>

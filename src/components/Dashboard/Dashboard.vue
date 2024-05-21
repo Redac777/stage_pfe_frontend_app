@@ -5,7 +5,7 @@
       <DashboardNavigation @updateActiveComponent="updateActiveComponent" />
       <RTGhome
       v-if="
-          (activeComponent == 'RTGhome' &&
+          (activeComponent == 'RTGhome' && (this.role && this.role.name === 'admin') &&
             (!this.plannings ||
               (this.plannings && this.plannings.length === 0))) ||
           this.createdPlanningData
@@ -21,10 +21,10 @@
         "
         @createPlanning="handleCreatePlanning"
       />
-      <STShome v-if="activeComponent == 'STShome'" />
+      <STShome v-if="activeComponent == 'STShome' && (this.role && this.role.name === 'admin')" />
       <RShome
         v-if="
-          (activeComponent == 'RShome' &&
+          (activeComponent == 'RShome' && (this.role && this.role.name === 'admin') &&
             (!this.rsPlannings ||
               (this.rsPlannings && this.rsPlannings.length === 0))) ||
           this.createdRSPlanningData
@@ -40,7 +40,7 @@
         "
         @createPlanning="handleCreateRSPlanning"
       />
-      <AMhome v-if="activeComponent == 'AMhome'" />
+      <AMhome v-if="activeComponent == 'AMhome' && (this.role && this.role.name === 'admin')" />
     </div>
   </div>
 </template>
@@ -58,10 +58,11 @@ export default {
       rsPlannings: null,
       createdPlanningData: null,
       createdRSPlanningData: null,
+      role:null
     };
   },
   computed: {
-    ...mapGetters(["getPlannings", "getRSPlannings"]),
+    ...mapGetters(["getPlannings", "getRSPlannings","getUserRole"]),
     // includePlanning(){
     //     return this.plannings && this.plannings.length!==0 && this.plannings.find(planning=>planning)
     // }
@@ -88,6 +89,8 @@ export default {
     getCurrentPlanningMethod() {
       this.plannings = this.getPlannings;
       this.rsPlannings = this.getRSPlannings;
+      this.role = this.getUserRole
+    
       // console.log(this.createdPlanningData)
     },
 
