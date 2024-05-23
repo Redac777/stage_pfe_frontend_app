@@ -149,13 +149,34 @@ export default {
           break;
         case "driver":
           this.items = [
-          {
+            {
               icon: "mdi-view-dashboard",
               title: "Planning",
               value: "planning",
               selected: true,
             },
-          ]
+          ];
+          break;
+        case "am":
+          this.items = [
+            {
+              icon: "mdi-view-dashboard",
+              title: "Planning",
+              value: "planning",
+              selected: true,
+            },
+          ];
+          break;
+        case "foreman":
+          this.items = [
+            {
+              icon: "mdi-view-dashboard",
+              title: "Planning",
+              value: "planning",
+              selected: true,
+            },
+          ];
+          break;
       }
     },
   },

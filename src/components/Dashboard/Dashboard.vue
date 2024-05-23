@@ -5,7 +5,7 @@
       <DashboardNavigation @updateActiveComponent="updateActiveComponent" />
       <RTGhome
       v-if="
-          (activeComponent == 'RTGhome' && (this.role && this.role.name === 'admin') &&
+          (activeComponent == 'RTGhome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
             (!this.plannings ||
               (this.plannings && this.plannings.length === 0))) ||
           this.createdPlanningData
@@ -21,10 +21,10 @@
         "
         @createPlanning="handleCreatePlanning"
       />
-      <STShome v-if="activeComponent == 'STShome' && (this.role && this.role.name === 'admin')" />
+      <STShome v-if="activeComponent == 'STShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am')" />
       <RShome
         v-if="
-          (activeComponent == 'RShome' && (this.role && this.role.name === 'admin') &&
+          (activeComponent == 'RShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
             (!this.rsPlannings ||
               (this.rsPlannings && this.rsPlannings.length === 0))) ||
           this.createdRSPlanningData
@@ -40,7 +40,7 @@
         "
         @createPlanning="handleCreateRSPlanning"
       />
-      <AMhome v-if="activeComponent == 'AMhome' && (this.role && this.role.name === 'admin')" />
+      <AMhome v-if="activeComponent == 'AMhome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am')" />
     </div>
   </div>
 </template>

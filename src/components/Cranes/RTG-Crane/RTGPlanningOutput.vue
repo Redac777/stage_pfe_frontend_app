@@ -73,29 +73,68 @@
         </v-card>
       </v-dialog>
     </div>
-
     <!-- Planning table -->
     <div class="planning">
       <!-- Settings button -->
 
       <!-- Legend -->
       <div class="legend">
-        <v-btn @click="openCreateDialog" class="add-btn">
+        <!-- Create Planning-->
+        <v-btn
+          @click="openCreateDialog"
+          class="add-btn"
+          v-if="
+            userRole && userRole.name !== 'driver' && userRole.name !== 'am'
+          "
+        >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
+
+        <!-- Search me -->
+        <v-btn
+          v-if="
+            userRole && (userRole.name === 'driver' || userRole.name === 'am')
+          "
+          class="search-me"
+          @click="searchMe"
+        >
+          <v-icon>mdi-account-search</v-icon>
+        </v-btn>
+
+        <!-- Search Planning -->
         <v-btn @click="openSettingsDialog" class="settings-btn">
           <v-icon>mdi-magnify</v-icon>
         </v-btn>
-        <v-btn @click="openDeleteDialog" class="delete-btn">
+
+        <!-- Delete Planning -->
+        <v-btn
+          @click="openDeleteDialog"
+          class="delete-btn"
+          v-if="
+            userRole && userRole.name !== 'driver' && userRole.name !== 'am'
+          "
+        >
           <v-icon>mdi-delete</v-icon>
         </v-btn>
-        <div class="legend-item break">Break</div>
-        <div class="legend-item none-break">Work</div>
+
+        <!-- Edit Planning -->
+        <v-btn
+          v-if="
+            userRole && userRole.name !== 'driver' && userRole.name !== 'am'
+          "
+          @click="editStateOn"
+          class="edit-btn"
+        >
+          <v-icon>mdi-pencil</v-icon>
+        </v-btn>
         <!-- Add other legend items here -->
       </div>
-
       <!-- Table -->
-      <v-data-table :headers="tableHeaders" :items="planningTable">
+      <v-data-table
+        :headers="tableHeaders"
+        :items="planningTable"
+        :search="search"
+      >
         <template v-slot:item="{ item }">
           <tr>
             <template v-for="(value, key) in item" :key="key">
@@ -103,13 +142,25 @@
                 <div
                   class="content"
                   :class="{
+                    'red-driver': isDriver(key) && isActiveUser(value),
                     break: !isDriver(key) && isBreak(value.matricule || value),
                     'none-break':
                       !isDriver(key) && !isBreak(value.matricule || value),
                   }"
-                  @click="value !== null && openEditDialog(item, key)"
                 >
-                  {{ value.matricule || value }}
+                  <span
+                    class="edit-icon"
+                    v-if="editState"
+                    @click="value !== null && openEditDialog(item, key)"
+                  >
+                    ✏️
+                    <!-- Or use an icon from a library like Font Awesome -->
+                  </span>
+                  {{
+                    isActiveUser(value)
+                      ? value + " (Me)"
+                      : value.matricule || value
+                  }}
                 </div>
               </td>
             </template>
@@ -132,7 +183,7 @@
                   </v-card-text>
                   <v-card-actions>
                     <!-- Save and Cancel buttons -->
-                    <v-btn color="primary" @click="saveCell">Save</v-btn>
+                    <v-btn color="primary" @click="saveCell()">Save</v-btn>
                     <v-btn @click="cancelEdit">Cancel</v-btn>
                   </v-card-actions>
                 </v-card>
@@ -142,12 +193,27 @@
         </template>
       </v-data-table>
     </div>
-    <div class="finish-button">
+    <div
+      class="buttons"
+      v-if="userRole && userRole.name !== 'driver' && userRole.name !== 'am'"
+    >
       <v-btn
+        class="finish"
         @click="finishPlanning"
         density="default"
         style="background-color: #15263f; color: white; width: 120px"
         >Finish</v-btn
+      >
+      <v-btn
+        :class="{
+          'disabled-button': !editState,
+          'enabled-button': editState,
+        }"
+        @click="saveEdits"
+        density="default"
+        :disabled="!editState"
+        style="background-color: #15263f; color: white; width: 120px"
+        >Update</v-btn
       >
     </div>
   </div>
@@ -194,6 +260,12 @@ export default {
       equipments: [],
       filteredEquipements: [],
       boxesObjects: {},
+      userRole: null,
+      editState: false,
+      itemsToEdit: [],
+      userActive: null,
+      search: "",
+      oldValue: null,
     };
   },
   components: {
@@ -271,7 +343,13 @@ export default {
   },
 
   computed: {
-    ...mapGetters(["getCurrentPlanning", "getPlanningBoxes", "getEquipements"]),
+    ...mapGetters([
+      "getCurrentPlanning",
+      "getPlanningBoxes",
+      "getEquipements",
+      "getUserRole",
+      "getUserActive",
+    ]),
 
     // Returns the formatted date in yyyy-mm-dd format
     formattedDate() {
@@ -294,9 +372,7 @@ export default {
     },
   },
   mounted() {
-    this.setInitialShift();
     this.setEquipements();
-    this.setPlanning();
   },
 
   methods: {
@@ -310,7 +386,7 @@ export default {
       "editUserAction",
       "deleteRTGPlanningAction",
       "setEquipementsAction",
-      "setBoxUpdateAction"
+      "setBoxUpdateAction",
     ]),
     // Settings
     openSettingsDialog() {
@@ -330,10 +406,15 @@ export default {
       this.showCreateDialog = false;
     },
     applySettings() {
+      this.setLoadingValueAction(true);
       this.setPlanning(true);
       this.closeSettingsDialog();
     },
 
+    // displayValue(value) {
+    //   console.log(this.userActive.firstname + " " + this.userActive.lastname);
+    //   console.log(value);
+    // },
     applyCreate() {
       this.createdPlanningData = {
         date: this.selectedCreateDate,
@@ -359,6 +440,7 @@ export default {
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
+          this.setPlanning();
         }
       );
     },
@@ -384,6 +466,11 @@ export default {
     isDriver(key) {
       return key === "driver";
     },
+    isActiveUser(value) {
+      return (
+        value === this.userActive.firstname + " " + this.userActive.lastname
+      );
+    },
     isBreak(value) {
       return value === "B" || value === "DB";
     },
@@ -391,7 +478,7 @@ export default {
       const today = new Date(this.formattedDate);
       const options = { year: "numeric", month: "long", day: "numeric" };
       this.todayDate = today.toLocaleDateString(undefined, options);
-      this.setLoadingValueAction(true);
+
       this.planningTable = [];
       if (!value) {
         let currentDate = new Date();
@@ -603,10 +690,10 @@ export default {
               // Iterate over each key in the row object
               for (let key in row) {
                 // Check if the value is "P" and if it's the second occurrence
-                if (row[key] === "B" && hasEncounteredP) {
+                if (row[key].matricule === "B" && hasEncounteredP) {
                   // Replace "P" with "DP"
-                  row[key] = "DB";
-                } else if (row[key] === "B") {
+                  row[key].matricule = "DB";
+                } else if (row[key].matricule === "B") {
                   // Set the flag to true if "P" is encountered for the first time
                   hasEncounteredP = true;
                 }
@@ -708,27 +795,27 @@ export default {
     },
     setEquipements() {
       this.setLoadingValueAction(true);
+      this.search = "";
+      this.userRole = this.getUserRole;
+      this.userActive = this.getUserActive;
+      console.log(this.userRole);
       this.setEquipementsAction().then(() => {
         this.equipments = this.getEquipements
           .filter((equipement) => equipement.profile_group.type === "rtg")
           .map((equip) => equip.matricule);
         this.equipments.push("B");
         // console.log(this.equipments)
-        this.setLoadingValueAction(false);
+        this.setInitialShift();
       });
     },
     openEditDialog(item, key) {
-      // console.log(item[key])
-      // Set the editable cell object
-      this.filteredEquipements = [];
-      const sameColumnItems = this.planningTable
-        .map((it) => it[key].matricule)
-        .filter((it) => it != item[key].matricule && it != "B");
-      this.filteredEquipements = this.equipments.filter(
-        (equip) => !sameColumnItems.includes(equip)
-      );
+      this.oldValue = null;
+      this.filteredEquipements = this.equipments;
       // console.log(this.filteredEquipements)
       this.itemToEdit.item = item;
+
+      this.oldValue = item[key].matricule;
+
       this.itemToEdit.key = key;
       this.itemToEdit.value = item[key].matricule;
       // Open the edit dialog
@@ -738,19 +825,46 @@ export default {
       // Check if this.editableCell is not null
       if (this.itemToEdit.item && this.itemToEdit.key !== null) {
         // Update the value of the cell in the item object
-        this.itemToEdit.item[this.itemToEdit.key].matricule = this.itemToEdit.value;
-        const equipement = this.getEquipements.find(equ=>equ.matricule===this.itemToEdit.value)
-        // console.log(equipement)
-        if(equipement || this.itemToEdit.value==="B"){
-          this.setLoadingValueAction(true)
-          this.setBoxUpdateAction({
-            id: this.itemToEdit.item[this.itemToEdit.key].boxId,
-            equipement_id:equipement?equipement.id:null,
-            break:this.itemToEdit.value==="B"
-          }).then(()=>{
-            console.log("box updated successfully")
-            this.setLoadingValueAction(false)
+        this.itemToEdit.item[this.itemToEdit.key].matricule =
+          this.itemToEdit.value;
+        const equipement = this.getEquipements.find(
+          (equ) => equ.matricule === this.itemToEdit.value
+        );
+        console.log(this.oldValue);
+        const sameColumnItem = this.planningTable
+          .filter((it) => {
+            return (
+              it[this.itemToEdit.key].boxId !=
+                this.itemToEdit.item[this.itemToEdit.key].boxId &&
+              it[this.itemToEdit.key].matricule ===
+                this.itemToEdit.item[this.itemToEdit.key].matricule &&
+                it[this.itemToEdit.key].matricule !== "B"
+                
+            );
           })
+          .map((it) => it[this.itemToEdit.key]);
+        if (sameColumnItem && sameColumnItem.length > 0) {
+          const equipement2 = this.getEquipements.find(
+            (equ) => equ.matricule === this.oldValue
+          );
+
+          sameColumnItem[0].matricule = this.oldValue;
+          const objectToReplace = {
+            id: sameColumnItem[0].boxId,
+            equipement_id: equipement2 ? equipement2.id : null,
+            break: sameColumnItem[0].matricule === "B" ? true : false,
+          };
+          // console.log("object To Replace : " + JSON.stringify(objectToReplace));
+          this.itemsToEdit.push(objectToReplace);
+        }
+
+        if (equipement || this.itemToEdit.value === "B") {
+          this.itemsToEdit.push({
+            id: this.itemToEdit.item[this.itemToEdit.key].boxId,
+            equipement_id: equipement ? equipement.id : null,
+            break: this.itemToEdit.value === "B",
+          });
+
           // console.log(equipement.id)
           // console.log(this.itemToEdit.item[this.itemToEdit.key].boxId)
         }
@@ -769,6 +883,29 @@ export default {
       // Reset any changes made in the dialog
       // Close the edit dialog
       this.showEditDialog = false;
+    },
+    editStateOn() {
+      this.editState = !this.editState;
+    },
+    saveEdits() {
+      // console.log(this.itemsToEdit)
+      if (this.itemsToEdit && this.itemsToEdit.length > 0) {
+        this.setLoadingValueAction(true);
+        this.itemsToEdit.forEach((item) => {
+          this.setBoxUpdateAction(item).then(() => {
+            this.setLoadingValueAction(false);
+          });
+          this.itemsToEdit = [];
+        });
+        // console.log(this.itemsToEdit)
+      }
+      this.editState = false;
+    },
+    searchMe() {
+      this.search =
+        this.search === ""
+          ? this.userActive.firstname + " " + this.userActive.lastname
+          : "";
     },
   },
 };
@@ -863,9 +1000,14 @@ thead td {
   background-color: rgb(205, 48, 48);
   color: white;
 }
+.edit-btn {
+  background-color: #1d6d0d;
+  color: white;
+}
 
 .planning {
   margin-top: 1rem;
+  height: 60vh;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -877,6 +1019,8 @@ thead td {
 }
 .v-data-table {
   max-height: 60vh;
+  /* max-width: 60vw; */
+  overflow-y: auto;
   margin: 0 8px;
 }
 
@@ -885,11 +1029,12 @@ thead td {
   color: white;
 }
 
-.finish-button {
+.buttons {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 2rem;
   height: fit-content;
 }
 .header {
@@ -910,6 +1055,30 @@ thead td {
   ); /* Adjust the opacity here (0.5 for 50% opacity) */
 }
 .content {
+  position: relative;
+}
+.edit-icon {
+  position: absolute;
+  top: 2px; /* Adjust the value to your preference */
+  right: 4px; /* Adjust the value to your preference */
   cursor: pointer;
+  font-size: 0.8rem; /* Adjust the size of the icon */
+  /* Optional: background color for better visibility */
+  border-radius: 50%; /* Optional: make it a circle */
+  padding: 2px; /* Optional: padding for better click area */
+}
+
+.enabled-button {
+  background-color: #1d6d0d !important;
+}
+.disabled-button {
+  background-color: gray !important;
+}
+.red-driver {
+  color: red;
+}
+.search-me {
+  color: white;
+  background-color: purple;
 }
 </style>

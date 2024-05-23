@@ -445,11 +445,11 @@ export default {
 
     // returns array of 6 stss per chunk
     chunkedSTSs() {
-      return this.chunkArray(this.stssList, 4);
+      return this.chunkArray(this.stssList, 6);
     },
 
     chunkedRoles() {
-      return this.chunkArray(this.roles, 4);
+      return this.chunkArray(this.roles, 6);
     },
   },
 
@@ -986,13 +986,15 @@ export default {
   display: flex;
   width: fit-content;
   flex-direction: column;
-  height: 88%;
+  max-height: 80vh; /* You can adjust this value as needed */
   gap: 0.3rem;
+  overflow-y: auto; 
 }
 
 .parent {
   margin-top: 1rem;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   gap: 0.2rem;
   width: fit-content;
@@ -1012,7 +1014,9 @@ export default {
 .stss-container,
 .amsroles-container {
   display: flex;
-  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
 }
 
 .column {
@@ -1064,7 +1068,7 @@ export default {
 .amname,
 .stsname,
 .rolename {
-  font-size: 0.75rem;
+  font-size:0.6rem;
   font-weight: bold;
   width: fit-content;
 }

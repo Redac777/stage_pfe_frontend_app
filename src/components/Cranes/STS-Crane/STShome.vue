@@ -300,12 +300,12 @@ export default {
 
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
-      return this.chunkArray(this.driversList, 4);
+      return this.chunkArray(this.driversList, 6);
     },
 
     // returns array of 6 stss per chunk
     chunkedSTSs() {
-      return this.chunkArray(this.stssList, 4);
+      return this.chunkArray(this.stssList, 6);
     },
   },
 
@@ -704,8 +704,9 @@ export default {
   display: flex;
   width: fit-content;
   flex-direction: column;
-  height: 88%;
+  max-height: 80vh; /* You can adjust this value as needed */
   gap: 0.3rem;
+  overflow-y: auto; 
 }
 
 .parent {
@@ -772,7 +773,7 @@ export default {
 
 .drivername,
 .stsname {
-  font-size: 0.75rem;
+  font-size:0.5rem;
   font-weight: bold;
   width: fit-content;
 }

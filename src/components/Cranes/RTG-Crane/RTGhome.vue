@@ -156,12 +156,12 @@ export default {
     ]),
     // returns array of 6 drivers per chunk
     chunkedDrivers() {
-      if (this.driversList) return this.chunkArray(this.driversList, 4);
+      if (this.driversList) return this.chunkArray(this.driversList, 6);
     },
 
     // returns array of 6 rtgs per chunk
     chunkedRTGs() {
-      return this.chunkArray(this.rtgsList, 4);
+      return this.chunkArray(this.rtgsList, 6);
     },
   },
 
@@ -678,8 +678,9 @@ export default {
   display: flex;
   width: fit-content;
   flex-direction: column;
-  height: 88%;
+  max-height: 80vh; /* You can adjust this value as needed */
   gap: 0.3rem;
+  overflow-y: auto; /* Enable vertical scrolling */
 }
 
 .parent {
@@ -692,7 +693,6 @@ export default {
 }
 
 .create-button {
-  margin-top: 0.5rem;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -703,7 +703,6 @@ export default {
 .drivers-container,
 .rtgs-container {
   display: flex;
-  gap: 0.5rem;
 }
 
 .column {
@@ -734,7 +733,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   width: 120px;
-  margin: 0.8rem 0.6rem;
+  margin: 0.6rem;
 }
 
 .v-switch {
@@ -746,7 +745,7 @@ export default {
 
 .drivername,
 .rtgname {
-  font-size:0.75rem;
+  font-size:0.6rem;
   font-weight: bold;
   width: fit-content;
 }
@@ -754,7 +753,7 @@ export default {
 .label-column {
   text-align: center; /* Alignement horizontal */
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .test {
