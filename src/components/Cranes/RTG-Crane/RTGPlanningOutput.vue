@@ -129,6 +129,7 @@
         </v-btn>
         <!-- Add other legend items here -->
       </div>
+
       <!-- Table -->
       <v-data-table
         :headers="tableHeaders"
@@ -191,7 +192,47 @@
             </template>
           </tr>
         </template>
+        <template v-slot:body.append>
+          <tr>
+            <td :colspan="tableHeaders.length" class="add-new-item-row">
+              <v-btn @click="openAddDialog" class="rounded-plus-btn" fab small>
+                <v-icon>mdi-plus</v-icon>
+              </v-btn>
+            </td>
+          </tr>
+        </template>
       </v-data-table>
+      <!-- Plus Button -->
+
+      <!-- Add Dialog -->
+      <template>
+        <v-dialog v-model="showAddDialog" max-width="500" class="custom-dialog">
+          <v-card>
+            <v-card-title>Add New Item</v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col cols="6">
+                  <v-select
+                    v-model="selectedDriver"
+                    :items="formattedUnassignedDrivers"
+                    item-title="fullName"
+                    item-value="id"
+                    label="Select Driver"
+                  ></v-select>
+                </v-col>
+                <v-col cols="6">
+                  <!-- Right part content goes here -->
+                  <p>Additional content or actions here</p>
+                </v-col>
+              </v-row>
+            </v-card-text>
+            <v-card-actions>
+              <v-btn color="primary" @click="handleAddDriver">Apply</v-btn>
+              <v-btn @click="cancelAdd">Close</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </template>
     </div>
     <div
       class="buttons"
@@ -218,17 +259,16 @@
     </div>
   </div>
 </template>
-
 <script>
 import DashboardNavigation from "@/components/Dashboard/DashboardNavigation.vue";
 import { createWebHistory } from "vue-router";
 import { mapActions, mapGetters } from "vuex";
 import moment from "moment";
-
 export default {
   data() {
     return {
       planning: [],
+      planningId: -1,
       planningTable: [],
       tableHeaders: [],
       selectedDate: new Date(),
@@ -266,6 +306,13 @@ export default {
       userActive: null,
       search: "",
       oldValue: null,
+      showAddDialog: false,
+      unassignedDrivers: [],
+      selectedDriver: {
+        id: -1,
+        fullName: "",
+      },
+      formattedUnassignedDrivers: [],
     };
   },
   components: {
@@ -349,6 +396,7 @@ export default {
       "getEquipements",
       "getUserRole",
       "getUserActive",
+      "getDrivers",
     ]),
 
     // Returns the formatted date in yyyy-mm-dd format
@@ -371,6 +419,7 @@ export default {
       }
     },
   },
+
   mounted() {
     this.setEquipements();
   },
@@ -387,6 +436,10 @@ export default {
       "deleteRTGPlanningAction",
       "setEquipementsAction",
       "setBoxUpdateAction",
+      "setDriversAction",
+      "setPlanningDrivers",
+      "setBoxAction",
+      "addUserToPlanning",
     ]),
     // Settings
     openSettingsDialog() {
@@ -440,6 +493,17 @@ export default {
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
+          // console.log(this.shiftId)
+          const inputs = {
+            profile_group: "rtg",
+            role: "driver",
+            shift_id: this.shiftId,
+          };
+          // console.log(inputs)
+          this.setDriversAction(inputs).then((response) => {
+            this.unassignedDrivers = this.getDrivers;
+            // console.log(this.unassignedDrivers)
+          });
           this.setPlanning();
         }
       );
@@ -478,7 +542,6 @@ export default {
       const today = new Date(this.formattedDate);
       const options = { year: "numeric", month: "long", day: "numeric" };
       this.todayDate = today.toLocaleDateString(undefined, options);
-
       this.planningTable = [];
       if (!value) {
         let currentDate = new Date();
@@ -533,9 +596,27 @@ export default {
         this.planning = this.getCurrentPlanning;
         if (this.planning) {
           // console.log(this.planning)
+          this.planningId = this.planning.id;
           const planningId = {
             planning_id: this.planning.id,
           };
+          this.setPlanningDrivers(planningId).then((response) => {
+            console.log(response);
+            console.log(this.unassignedDrivers);
+            this.unassignedDrivers = this.unassignedDrivers.filter(
+              (driver) =>
+                !response.some(
+                  (planningDriver) => planningDriver.user_id === driver.id
+                )
+            );
+            this.formattedUnassignedDrivers = this.unassignedDrivers.map(
+              (driver) => ({
+                id: driver.id,
+                fullName: `${driver.firstname} ${driver.lastname}`,
+              })
+            );
+            console.log(this.formattedUnassignedDrivers);
+          });
           this.setPlanningBoxes(planningId).then(() => {
             this.planning = this.getPlanningBoxes;
             // Extract unique time intervals
@@ -806,9 +887,11 @@ export default {
         this.equipments.push("B");
         // console.log(this.equipments)
         this.setInitialShift();
+        console.log("shift : " + this.shiftId);
       });
     },
     openEditDialog(item, key) {
+      console.log(item[key]);
       this.oldValue = null;
       this.filteredEquipements = this.equipments;
       // console.log(this.filteredEquipements)
@@ -822,6 +905,7 @@ export default {
       this.showEditDialog = true;
     },
     saveCell() {
+      // this.itemsToEdit = [];
       // Check if this.editableCell is not null
       if (this.itemToEdit.item && this.itemToEdit.key !== null) {
         // Update the value of the cell in the item object
@@ -838,11 +922,12 @@ export default {
                 this.itemToEdit.item[this.itemToEdit.key].boxId &&
               it[this.itemToEdit.key].matricule ===
                 this.itemToEdit.item[this.itemToEdit.key].matricule &&
-                it[this.itemToEdit.key].matricule !== "B"
-                
+              it[this.itemToEdit.key].matricule !== "B" &&
+              it[this.itemToEdit.key].matricule !== "DB"
             );
           })
           .map((it) => it[this.itemToEdit.key]);
+        console.log(sameColumnItem);
         if (sameColumnItem && sameColumnItem.length > 0) {
           const equipement2 = this.getEquipements.find(
             (equ) => equ.matricule === this.oldValue
@@ -852,17 +937,24 @@ export default {
           const objectToReplace = {
             id: sameColumnItem[0].boxId,
             equipement_id: equipement2 ? equipement2.id : null,
-            break: sameColumnItem[0].matricule === "B" ? true : false,
+            break:
+              sameColumnItem[0].matricule === "B" ||
+              sameColumnItem[0].matricule === "DB",
           };
           // console.log("object To Replace : " + JSON.stringify(objectToReplace));
           this.itemsToEdit.push(objectToReplace);
         }
 
-        if (equipement || this.itemToEdit.value === "B") {
+        if (
+          equipement ||
+          this.itemToEdit.value === "B" ||
+          this.itemToEdit.value === "DB"
+        ) {
           this.itemsToEdit.push({
             id: this.itemToEdit.item[this.itemToEdit.key].boxId,
             equipement_id: equipement ? equipement.id : null,
-            break: this.itemToEdit.value === "B",
+            break:
+              this.itemToEdit.value === "B" || this.itemToEdit.value === "DB",
           });
 
           // console.log(equipement.id)
@@ -888,7 +980,7 @@ export default {
       this.editState = !this.editState;
     },
     saveEdits() {
-      // console.log(this.itemsToEdit)
+      // console.log(this.itemsToEdit);
       if (this.itemsToEdit && this.itemsToEdit.length > 0) {
         this.setLoadingValueAction(true);
         this.itemsToEdit.forEach((item) => {
@@ -900,12 +992,111 @@ export default {
         // console.log(this.itemsToEdit)
       }
       this.editState = false;
+      this.itemsToEdit = [];
     },
     searchMe() {
       this.search =
         this.search === ""
           ? this.userActive.firstname + " " + this.userActive.lastname
           : "";
+    },
+    openAddDialog() {
+      this.showAddDialog = true;
+      console.log("add");
+      console.log(this.planningTable);
+    },
+    cancelAdd() {
+      this.showAddDialog = false;
+    },
+    addDriverToPlanningTable(driver) {
+      // Set loading value to true
+      this.setLoadingValueAction(true);
+
+      // Array to hold promises for adding the user to planning and creating boxes
+      const promises = [];
+
+      // Prepare data for adding the user to planning
+      const userWPlanning = {
+        user_id: driver.id,
+        planning_id: this.planningId,
+      };
+
+      // Add promise for adding the user to planning
+      promises.push(this.addUserToPlanning(userWPlanning));
+
+      // Create promises for creating boxes for each time interval
+      this.tableHeaders
+        .filter((header) => header.key.startsWith("timeInterval_"))
+        .forEach((header, index) => {
+          // Prepare data for box creation
+          const boxData = {
+            planning_id: this.planningId,
+            user_id: driver.id,
+            equipement_id: null,
+            break: true,
+            start_time: this.tableHeaders[index + 1].title.split(" - ")[0], // Adjust index to skip the driver column
+            ends_time: this.tableHeaders[index + 1].title.split(" - ")[1], // Same as start time
+            role: null,
+          };
+
+          // Add promise for creating the box
+          promises.push(
+            this.setBoxAction(boxData).then((response) => {
+              // Return the cell content for the header key
+              return {
+                [header.key]: {
+                  matricule: "B",
+                  boxId: response.id,
+                },
+              };
+            })
+          );
+        });
+
+      // Execute all promises
+      Promise.all(promises)
+        .then((results) => {
+          // Separate results into user addition response and cell contents
+          const [userAdditionResponse, ...cellContents] = results;
+
+          // Combine all cell contents into a single object
+          const combinedCellContents = Object.assign({}, ...cellContents);
+
+          // Create the new row with the combined cell contents
+          const newRow = {
+            driver: `${driver.firstname} ${driver.lastname}`,
+            id: driver.id,
+            ...combinedCellContents,
+          };
+
+          // Push the new row to the planningTable array
+          this.planningTable.push(newRow);
+          this.setEquipements();
+          // Set loading value to false
+          this.setLoadingValueAction(false);
+        })
+        .catch((error) => {
+          console.error(
+            "Error adding user to planning or creating boxes:",
+            error
+          );
+          // Set loading value to false in case of error
+          this.setLoadingValueAction(false);
+        });
+    },
+
+    handleAddDriver() {
+      // Add the driver to the planningTable
+      // this.addDriverToPlanningTable(this.selectedDriver);
+
+      // Optionally, perform any other actions needed after adding the driver
+      // For example, closing the add dialog
+      const driver = this.unassignedDrivers.find(
+        (driver) => driver.id === this.selectedDriver
+      );
+      this.addDriverToPlanningTable(driver);
+      // console.log(driver);
+      this.cancelAdd();
     },
   },
 };
@@ -937,10 +1128,12 @@ export default {
   padding: 5px;
   background-color: #79997e;
 }
+
 .dialogCancel {
   background-color: red;
   color: white;
 }
+
 .dialogOk {
   background-color: blue;
   color: white;
@@ -950,10 +1143,12 @@ td {
   font-weight: bold;
   font-size: 0.75rem;
 }
+
 thead td {
   font-weight: bolder;
   font-size: 0.75rem;
 }
+
 .legend {
   display: flex;
   justify-content: center;
@@ -961,6 +1156,7 @@ thead td {
   gap: 2rem;
   margin: 0 8px;
 }
+
 .legend-item {
   display: inline-block;
   padding: 5px 10px;
@@ -968,6 +1164,7 @@ thead td {
   font-size: 14px;
   font-weight: bolder;
 }
+
 .selects-container {
   display: flex;
   justify-content: center;
@@ -978,6 +1175,7 @@ thead td {
 .shift-select {
   width: 200px;
 }
+
 .shift-select-container {
   display: flex;
   justify-content: center;
@@ -1000,6 +1198,7 @@ thead td {
   background-color: rgb(205, 48, 48);
   color: white;
 }
+
 .edit-btn {
   background-color: #1d6d0d;
   color: white;
@@ -1017,7 +1216,9 @@ thead td {
 .parent {
   width: 100%;
 }
+
 .v-data-table {
+  position: relative;
   max-height: 60vh;
   /* max-width: 60vw; */
   overflow-y: auto;
@@ -1037,6 +1238,7 @@ thead td {
   gap: 2rem;
   height: fit-content;
 }
+
 .header {
   background-color: #f5f5f5; /* Light gray background */
   border-bottom: 2px solid #ccc; /* Bottom border */
@@ -1046,6 +1248,7 @@ thead td {
   font-weight: bold; /* Bold text */
   margin-bottom: 0.2rem; /* Space below the header */
 }
+
 .custom-dialog .v-dialog__content {
   background-color: rgba(
     0,
@@ -1054,9 +1257,11 @@ thead td {
     0.5
   ); /* Adjust the opacity here (0.5 for 50% opacity) */
 }
+
 .content {
   position: relative;
 }
+
 .edit-icon {
   position: absolute;
   top: 2px; /* Adjust the value to your preference */
@@ -1071,14 +1276,27 @@ thead td {
 .enabled-button {
   background-color: #1d6d0d !important;
 }
+
 .disabled-button {
   background-color: gray !important;
 }
+
 .red-driver {
   color: red;
 }
+
 .search-me {
   color: white;
   background-color: purple;
+}
+
+.rounded-plus-btn {
+  border-radius: 50%;
+  background-color: #054d25; /* Customize the color */
+  color: white;
+}
+
+.add-new-item-row {
+  text-align: center;
 }
 </style>
