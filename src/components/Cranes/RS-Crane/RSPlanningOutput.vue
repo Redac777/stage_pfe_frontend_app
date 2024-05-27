@@ -151,7 +151,7 @@
                 >
                   <span
                     class="edit-icon"
-                    v-if="editState"
+                    v-if="editState && !isDriver(key)"
                     @click="value !== null && openEditDialog(item, key)"
                   >
                     ✏️
@@ -175,6 +175,8 @@
                       v-model="itemToEdit.value"
                       :items="filteredEquipements"
                       label="Select Equipment"
+                      item-title="label"
+                      item-value="value"
                       dense
                     ></v-select>
                   </v-card-text>
@@ -212,10 +214,6 @@
                     item-value="id"
                     label="Select Driver"
                   ></v-select>
-                </v-col>
-                <v-col cols="6">
-                  <!-- Right part content goes here -->
-                  <p>Additional content or actions here</p>
                 </v-col>
               </v-row>
             </v-card-text>
@@ -478,6 +476,7 @@ export default {
         (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
       )
         this.selectedShift = this.getActualShift()[2];
+      this.selectedCreateShift = this.selectedShift;
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
@@ -876,18 +875,44 @@ export default {
       });
     },
     openEditDialog(item, key) {
+      // Reset old value
       this.oldValue = null;
-      this.filteredEquipements = this.equipments;
-      // console.log(this.filteredEquipements)
+
+      // Get the existing equipment matricules for the column, filtering out "B"
+      const existingEquipements = this.planningTable
+        .map((item) => item[key]?.matricule)
+        .filter((matricule) => matricule !== "B");
+
+      // Filter equipments, adding a "replace" option
+      this.filteredEquipements = this.equipments.filter(equ=>equ!=item[key].matricule)
+        .map((equipment) => {
+          // Check if the equipment is already in use in the column
+          const isExisting = existingEquipements.includes(equipment);
+
+          // If it's the current item being edited, keep it in the list with a "replace" tag
+          // if (isExisting && equipment !== item[key].matricule) {
+          //   return null; // Skip adding to the filtered list
+          // }
+
+          // Add the "replace" label if the equipment is existing
+          return {
+            value: equipment,
+            label: isExisting ? `${equipment} (replace)` : equipment,
+          };
+        })
+        .filter(Boolean);
+
+      console.log(this.filteredEquipements);
+      // Set up the item to edit
       this.itemToEdit.item = item;
-
-      this.oldValue = item[key].matricule;
-
+      this.oldValue = item[key]?.matricule;
       this.itemToEdit.key = key;
-      this.itemToEdit.value = item[key].matricule;
+      this.itemToEdit.value = item[key]?.matricule;
+
       // Open the edit dialog
       this.showEditDialog = true;
     },
+
     saveCell() {
       // this.itemsToEdit = [];
       // Check if this.editableCell is not null
@@ -911,7 +936,7 @@ export default {
             );
           })
           .map((it) => it[this.itemToEdit.key]);
-          console.log(sameColumnItem)
+        console.log(sameColumnItem);
         if (sameColumnItem && sameColumnItem.length > 0) {
           const equipement2 = this.getEquipements.find(
             (equ) => equ.matricule === this.oldValue
@@ -921,17 +946,24 @@ export default {
           const objectToReplace = {
             id: sameColumnItem[0].boxId,
             equipement_id: equipement2 ? equipement2.id : null,
-            break: sameColumnItem[0].matricule === "B" || sameColumnItem[0].matricule === "DB",
+            break:
+              sameColumnItem[0].matricule === "B" ||
+              sameColumnItem[0].matricule === "DB",
           };
           // console.log("object To Replace : " + JSON.stringify(objectToReplace));
           this.itemsToEdit.push(objectToReplace);
         }
 
-        if (equipement || this.itemToEdit.value === "B" || this.itemToEdit.value === "DB") {
+        if (
+          equipement ||
+          this.itemToEdit.value === "B" ||
+          this.itemToEdit.value === "DB"
+        ) {
           this.itemsToEdit.push({
             id: this.itemToEdit.item[this.itemToEdit.key].boxId,
             equipement_id: equipement ? equipement.id : null,
-            break: this.itemToEdit.value === "B" || this.itemToEdit.value === "DB",
+            break:
+              this.itemToEdit.value === "B" || this.itemToEdit.value === "DB",
           });
 
           // console.log(equipement.id)
@@ -1010,8 +1042,12 @@ export default {
             user_id: driver.id,
             equipement_id: null,
             break: true,
-            start_time: this.tableHeaders[index + 1].title.split(" - ")[0].split(":")[0], // Adjust index to skip the driver column
-            ends_time: this.tableHeaders[index + 1].title.split(" - ")[1].split(":")[0], // Same as start time
+            start_time: this.tableHeaders[index + 1].title
+              .split(" - ")[0]
+              .split(":")[0], // Adjust index to skip the driver column
+            ends_time: this.tableHeaders[index + 1].title
+              .split(" - ")[1]
+              .split(":")[0], // Same as start time
             role: null,
           };
 

@@ -137,6 +137,7 @@ export default {
       selectAllRSs: false,
       actualShift: null,
       todayDate: "",
+      planningId:-1
     };
   },
 
@@ -304,6 +305,7 @@ export default {
         };
       }
       this.createRSPlanningAction(this.planning).then((response) => {
+        this.planningId = response.id;  
         const addUserPromises = [];
         const addEquipementPromises = [];
         for (let driver in this.selectedDrivers) {
@@ -311,6 +313,7 @@ export default {
             user_id: this.selectedDrivers[driver].id,
             planning_id: response.id,
           };
+          this.drivers.push(this.selectedDrivers[driver]);
           addUserPromises.push(this.addUserToPlanning(userWPlanning));
         }
         console.log(this.selectedRSs);
@@ -319,6 +322,7 @@ export default {
             equipement_id: this.selectedRSs[equ].id,
             planning_id: response.id,
           };
+          this.rss.push(this.selectedRSs[equ]);
           addEquipementPromises.push(
             this.addEquipementToPlanning(equWPlanning)
           );
@@ -327,7 +331,7 @@ export default {
         Promise.all([...addUserPromises, ...addEquipementPromises])
           .then(() => {
             // All promises have resolved
-            this.setBoxesData();
+            this.rsPlanning();
           })
           .catch((error) => {
             this.setLoadingValueAction(false);
@@ -366,68 +370,7 @@ export default {
       this.showConfirmDialog = true;
     },
 
-    async setBoxesData() {
-      let currentDate = new Date();
-      // Get year, month, and day
-      let year = currentDate.getFullYear();
-      let month = (currentDate.getMonth() + 1).toString().padStart(2, "0"); // Months are zero indexed, so we add 1
-      let day = currentDate.getDate().toString().padStart(2, "0");
-      let formattedDate = year + "-" + month + "-" + day;
-      console.log(formattedDate);
-      const dateObject = {
-        date: formattedDate,
-        shift_id: this.shiftId,
-        profile_group_id: this.profileGroupId,
-        profileType: "rs",
-      };
-
-      try {
-        await this.setCurrentRSPlanning(dateObject);
-        this.allPlannings = this.getRSPlannings;
-        // console.log(this.allPlannings)
-        if (this.allPlannings && this.allPlannings.length != 0) {
-          this.planning = this.allPlannings[this.allPlannings.length - 1];
-          const planningId = {
-            planning_id: this.planning.id,
-          };
-
-          const driversPromise = this.setPlanningDrivers(planningId);
-          const equipementsPromise = this.setPlanningEquipements(planningId);
-
-          await Promise.all([driversPromise, equipementsPromise]);
-
-          const driversPlanning = this.getPlanningDrivers;
-          if (driversPlanning) {
-            for (let driverP in driversPlanning) {
-              const user = {
-                user_id: driversPlanning[driverP].user_id,
-              };
-              const response = await this.setUserById(user);
-              this.drivers.push(response);
-              console.log(this.drivers);
-            }
-          }
-
-          const equipementPlanning = this.getPlanningEquipements;
-          if (equipementPlanning) {
-            for (let equP in equipementPlanning) {
-              const equipement = {
-                equipement_id: equipementPlanning[equP].equipement_id,
-              };
-              const response = await this.setEquipementById(equipement);
-              this.rss.push(response);
-              console.log(this.rss);
-            }
-          }
-
-          this.rsPlanning(); // Call rsPlanning() after all promises have resolved
-        }
-      } catch (error) {
-        this.setLoadingValueAction(false);
-        console.error(error);
-        // Handle error
-      }
-    },
+   
 
     rsPlanning() {
       let nbrDrivers = this.drivers.length;
@@ -504,7 +447,7 @@ export default {
           parts = itemsPlanning[0][j].title.split("+")[0].split("-");
           console.log(parts);
           const boxObject = {
-            planning_id: this.planning.id,
+            planning_id: this.planningId,
             user_id: itemsPlanning[i][0].id,
             equipement_id: equipementId,
             break: itemsPlanning[i][j] == "P" ? true : false,

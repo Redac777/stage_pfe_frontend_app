@@ -3,6 +3,7 @@ const equipementToPlanningModule = {
   state: {
     plannings: [],
     rsPlannings:[],
+    stsPlannings:[],
     currentPlanning: null,
     currentSTSPlanning: null,
     currentRSPlanning: null,
@@ -26,11 +27,17 @@ const equipementToPlanningModule = {
     ADD_RS_PLANNING(state, payload) {
       state.rsPlannings.push(payload);
     },
+    ADD_STS_PLANNING(state, payload) {
+      state.stsPlannings.push(payload);
+    },
     SET_CURRENT_PLANNING(state, payload) {
       state.currentPlanning = payload;
     },
     SET_CURRENT_RS_PLANNING(state, payload) {
       state.currentRSPlanning = payload;
+    },
+    SET_CURRENT_STS_PLANNING(state, payload) {
+      state.currentSTSPlanning = payload;
     },
     SET_PLANNING_DRIVERS(state, payload) {
       state.planningDrivers = payload;
@@ -81,6 +88,18 @@ const equipementToPlanningModule = {
         CustomizedAxios.post("plannings/add", planning)
           .then((response) => {
             commit("ADD_RS_PLANNING", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    createSTSPlanningAction({ commit, state }, planning) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/add", planning)
+          .then((response) => {
+            commit("ADD_STS_PLANNING", response.data.payload);
             resolve(response.data.payload);
           })
           .catch((error) => {
@@ -234,11 +253,23 @@ const equipementToPlanningModule = {
     getRSPlannings(state){
       return state.rsPlannings;
     },
+    getSTSPlannings(state) {
+      return state.stsPlannings;
+    },
+    getAmPlannings(state) {
+      return state.amPlannings;
+    },
     getCurrentPlanning(state) {
       return state.currentPlanning;
     },
     getCurrentRSPlanning(state){
       return state.currentRSPlanning
+    },
+    getCurrentSTSPlanning(state) {
+      return state.currentSTSPlanning;
+    },
+    getCurrentAmPlanning(state) {
+      return state.currentAmPlanning;
     },
     getPlanningDrivers(state) {
       return state.planningDrivers;

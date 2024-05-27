@@ -151,7 +151,7 @@
                 >
                   <span
                     class="edit-icon"
-                    v-if="editState"
+                    v-if="editState && !isDriver(key)"
                     @click="value !== null && openEditDialog(item, key)"
                   >
                     ✏️
@@ -179,6 +179,8 @@
                       v-model="itemToEdit.value"
                       :items="filteredEquipements"
                       label="Select Equipment"
+                      item-title="label"
+                      item-value="value"
                       dense
                     ></v-select>
                   </v-card-text>
@@ -219,10 +221,6 @@
                     item-value="id"
                     label="Select Driver"
                   ></v-select>
-                </v-col>
-                <v-col cols="6">
-                  <!-- Right part content goes here -->
-                  <p>Additional content or actions here</p>
                 </v-col>
               </v-row>
             </v-card-text>
@@ -490,6 +488,7 @@ export default {
         (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
       )
         this.selectedShift = this.getActualShift()[2];
+      this.selectedCreateShift = this.selectedShift;
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
@@ -891,19 +890,44 @@ export default {
       });
     },
     openEditDialog(item, key) {
-      console.log(item[key]);
+      // Reset old value
       this.oldValue = null;
-      this.filteredEquipements = this.equipments;
-      // console.log(this.filteredEquipements)
+    
+      // Get the existing equipment matricules for the column, filtering out "B"
+      const existingEquipements = this.planningTable
+        .map((item) => item[key]?.matricule)
+        .filter((matricule) => matricule !== "B");
+
+      // Filter equipments, adding a "replace" option
+      this.filteredEquipements = this.equipments.filter(equ=>equ!=item[key].matricule)
+        .map((equipment) => {
+          // Check if the equipment is already in use in the column
+          const isExisting = existingEquipements.includes(equipment);
+
+          // If it's the current item being edited, keep it in the list with a "replace" tag
+          // if (isExisting && equipment !== item[key].matricule) {
+          //   return null; // Skip adding to the filtered list
+          // }
+
+          // Add the "replace" label if the equipment is existing
+          return {
+            value: equipment,
+            label: isExisting ? `${equipment} (replace)` : equipment
+        };
+        })
+        .filter(Boolean);
+
+      console.log(this.filteredEquipements);
+      // Set up the item to edit
       this.itemToEdit.item = item;
-
-      this.oldValue = item[key].matricule;
-
+      this.oldValue = item[key]?.matricule;
       this.itemToEdit.key = key;
-      this.itemToEdit.value = item[key].matricule;
+      this.itemToEdit.value = item[key]?.matricule;
+
       // Open the edit dialog
       this.showEditDialog = true;
     },
+
     saveCell() {
       // this.itemsToEdit = [];
       // Check if this.editableCell is not null

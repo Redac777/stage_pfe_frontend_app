@@ -204,8 +204,18 @@ export default {
       selectAll: false,
       selectAllSTSs: false,
       actualShift: null,
-      todayDate: '',
+      todayDate: "",
       inputs: null,
+      shift: [
+        "15:00-16:00",
+        "16:00-17:00",
+        "17:00-18:00",
+        "18:00-19:00",
+        "19:00-20:00",
+        "20:00-21:00",
+        "21:00-22:00",
+        "22:00-23:00",
+      ],
     };
   },
 
@@ -325,7 +335,7 @@ export default {
       "addUserToPlanning",
       "addEquipementToPlanning",
       "addEquipementWorkingHoursToPlanning",
-      "setShiftByCategory"
+      "setShiftByCategory",
     ]),
 
     toggleSelectAll() {
@@ -373,17 +383,17 @@ export default {
     //set drivers and equipements data
     async setData() {
       const today = new Date();
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      const options = { year: "numeric", month: "long", day: "numeric" };
       this.todayDate = today.toLocaleDateString(undefined, options);
       this.actualShift = this.getActualShift();
-        const response = await this.setShiftByCategory({
-          category: this.actualShift,
-        });
-        this.inputs = {
-          profile_group: "sts",
-          role: "driver",
-          shift_id: response[0].id,
-        };
+      const response = await this.setShiftByCategory({
+        category: this.actualShift,
+      });
+      this.inputs = {
+        profile_group: "sts",
+        role: "driver",
+        shift_id: response[0].id,
+      };
       this.setLoadingValueAction(true);
       this.setDriversAction(this.inputs).then((response) => {
         this.driversList = this.getDrivers;
@@ -439,7 +449,7 @@ export default {
       // Check if the end time of the last interval is before 15:00
       const isEndTimeBefore15 =
         currentIntervals.length === 0 ||
-        currentIntervals[currentIntervals.length - 1].endTime < "15:00";
+        currentIntervals[currentIntervals.length - 1].endTime < "23:00";
 
       // Check if all conditions are met
       if (
@@ -460,9 +470,9 @@ export default {
     startTimeRule(value, item, index) {
       // Reset respected to true at the beginning
       this.respectedStart = true;
-      if (value < "07:00" || value > "15:00") {
+      if (value < "15:00" || value > "23:00") {
         this.respectedStart = false;
-        return "07:00 <= interval <= 15:00";
+        return "15:00 <= interval <= 23:00";
       }
 
       if (index === 0) {
@@ -484,9 +494,9 @@ export default {
       // Reset respected to true at the beginning
       this.respectedEnd = true;
 
-      if (value > "15:00") {
+      if (value > "23:00") {
         this.respectedEnd = false;
-        return "interval <= 15:00";
+        return "interval <= 23:00";
       }
 
       if (value < this.intervals[item.matricule][index].startTime) {
@@ -516,7 +526,7 @@ export default {
         shift_id: this.shiftId,
         profile_group_id: this.profileGroupId,
       };
-      this.createPlanningAction(planning).then((response) => {
+      this.createSTSPlanningAction(planning).then((response) => {
         for (let driver in this.selectedDrivers) {
           let userWPlanning = {
             user_id: this.selectedDrivers[driver].id,
@@ -552,7 +562,6 @@ export default {
                 }
               );
             }
-
             equAddedSuccessfully.push(this.selectedSTSs[equ]);
           });
         }
@@ -644,6 +653,29 @@ export default {
       this.keysArray = Object.keys(this.intervals);
     },
 
+    generateIntervals(start, end) {
+      const intervals = [];
+      let [startHour, startMinute] = start.split(":").map(Number);
+      let [endHour, endMinute] = end.split(":").map(Number);
+
+      while (
+        startHour < endHour ||
+        (startHour === endHour && startMinute < endMinute)
+      ) {
+        const nextHour = startHour + 1;
+        intervals.push(
+          `${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(
+            2,
+            "0"
+          )}-${String(nextHour).padStart(2, "0")}:${String(
+            startMinute
+          ).padStart(2, "0")}`
+        );
+        startHour = nextHour;
+      }
+
+      return intervals;
+    },
     // open confirm dialog
     openConfirmDialog() {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => {
@@ -666,6 +698,28 @@ export default {
           this.intervals[key][0].startTime !== "" &&
           this.intervals[key][0].endTime !== ""
       );
+
+      const outputs = [];
+      Object.keys(this.intervals).forEach(key=>{
+        const keyIntervals = []
+        this.intervals[key].forEach(interval=>{
+          const intervalHourly = this.splitIntoHourlyIntervals(interval)
+          intervalHourly.forEach(interv=>{
+            keyIntervals.push(interv)
+          })
+        })
+        outputs.push({
+            matricule: key,
+            intervals: keyIntervals,
+            length:keyIntervals.length
+          })
+          outputs.sort((a, b) => b.length - a.length);
+          console.log(outputs)
+      })
+   
+      const output = this.setAllDriversPlanning(outputs).thePlanning;
+      output.unshift(this.shift);
+      console.table(output);
       this.showConfirmDialog = true;
     },
     getActualShift() {
@@ -695,6 +749,260 @@ export default {
 
       return array;
     },
+    getDriverinalWOrkingHours(driver,outputs) {
+      const totalHours = outputs.reduce((total, sts) => {
+        return (total += sts.intervals.length);
+      }, 0);
+      const T = this.selectedDrivers.length * 8 - totalHours;
+      const numberOfBreaks = Math.floor(T / this.selectedDrivers.length);
+      const numberOfDoubleBreaks =
+        (numberOfBreaks * this.selectedDrivers.length - T) * -1;
+      return 8 - numberOfBreaks - (driver <= numberOfDoubleBreaks ? 1 : 0);
+    },
+    moveToFirstByMatricule(arr, matricule) {
+      // Find the index of the object with the specified matricule
+      const index = arr.findIndex((item) => item.matricule === matricule);
+
+      // If the object is found and it's not already the first element
+      if (index > -1 && index !== 0) {
+        // Remove the object from its current position
+        const [item] = arr.splice(index, 1);
+        // Insert the object at the beginning of the array
+        arr.unshift(item);
+      }
+
+      return arr;
+    },
+    checkIntervalForSts(stsPlanning,matricule, interval) {
+      const sts = stsPlanning.find((sts) => sts.matricule == matricule);
+      if (sts) {
+        return sts.intervals.includes(interval);
+      }
+
+      return false;
+    },
+    IntervalIsExistedInTheSTSList(stsPlanning, interval) {
+      for (let sts of stsPlanning) {
+        if (sts.intervals.includes(interval)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    ItsABreak(
+      stsPlanning,
+      oneDriverPlanning,
+      oneDriverPlanningHourex,
+      driverIndex,
+      outputs
+    ) {
+      if (driverIndex == 6 && oneDriverPlanningHourex == 2) {
+        console.log("6 : ");
+        console.table("stsPlanning :", JSON.parse(JSON.stringify(stsPlanning)));
+        console.table("oneDriverPlanning :", oneDriverPlanning);
+        console.table("oneDriverPlanningHourex :", oneDriverPlanningHourex);
+        console.table("driverIndex :", driverIndex);
+      }
+      let countWorkingHours = oneDriverPlanning.filter((value) =>
+        value.startsWith("STS")
+      ).length;
+
+      if (this.getDriverinalWOrkingHours(driverIndex,outputs) <= countWorkingHours)
+        return true;
+
+      if (
+        oneDriverPlanningHourex == 0 ||
+        oneDriverPlanning[oneDriverPlanningHourex - 1] == "-"
+      ) {
+        return !this.IntervalIsExistedInTheSTSList(
+          stsPlanning,
+          this.shift[oneDriverPlanningHourex]
+        );
+      } else {
+        if (
+          this.IntervalIsExistedInTheSTSList(
+            stsPlanning,
+            this.shift[oneDriverPlanningHourex]
+          )
+        ) {
+          let occurence = oneDriverPlanning.filter(
+            (item) => item === oneDriverPlanning[oneDriverPlanningHourex - 1]
+          ).length;
+
+          if (occurence > 2) {
+            return true;
+          } else {
+            return !this.checkIntervalForSts(
+              stsPlanning,
+              oneDriverPlanning[oneDriverPlanningHourex - 1],
+              this.shift[oneDriverPlanningHourex],
+            );
+          }
+        } else {
+          return true;
+        }
+      }
+    },
+    setOneDriverPlanning(stsListtoBegin, driverIndex,outputs) {
+      let stsPlanning = [...stsListtoBegin];
+      let oneDriverPlanning = [...this.shift];
+
+      let countDouble = 0;
+      let tooked = false;
+      /* matricule: "STS4",
+  
+      intervals: [
+          */
+
+      oneDriverPlanning.forEach(
+        (oneDriverPlanningHour, oneDriverPlanningHourex) => {
+          if (oneDriverPlanningHourex > 0) {
+            stsPlanning = this.moveToFirstByMatricule(
+              stsPlanning,
+              oneDriverPlanning[oneDriverPlanningHourex - 1]
+            );
+          }
+
+          if (
+            !this.ItsABreak(
+              stsPlanning,
+              oneDriverPlanning,
+              oneDriverPlanningHourex,
+              driverIndex,
+              outputs
+            )
+          ) {
+            stsPlanning.forEach((sts, index) => {
+              countDouble = 0;
+
+              tooked = false;
+              sts.intervals.forEach((stsInterval, index) => {
+                let occurence = oneDriverPlanning.filter(
+                  (item) => item === sts.matricule
+                ).length;
+                if (occurence < 3)
+                  if (
+                    oneDriverPlanning[oneDriverPlanningHourex][0] != "S" &&
+                    oneDriverPlanningHour == stsInterval
+                  ) {
+                    if (
+                      oneDriverPlanningHourex == 0 ||
+                      occurence == 0 ||
+                      (oneDriverPlanningHourex > 0 &&
+                        oneDriverPlanning[oneDriverPlanningHourex - 1] ==
+                          sts.matricule)
+                    ) {
+                      oneDriverPlanning[oneDriverPlanningHourex] =
+                        sts.matricule;
+                      let stsCopy = stsPlanning.find(
+                        (sts1) => sts1.matricule === sts.matricule
+                      );
+                      stsCopy.intervals = [
+                        ...stsCopy.intervals.filter(
+                          (interval) => interval != stsInterval
+                        ),
+                      ];
+                      stsPlanning[
+                        stsPlanning.findIndex(
+                          (sts1) => sts1.matricule === stsCopy.matricule
+                        )
+                      ].intervals = [...stsCopy.intervals];
+                    }
+                  }
+              });
+            });
+          } else {
+            oneDriverPlanning[oneDriverPlanningHourex] = "-";
+          }
+        }
+      );
+      return {
+        oneDriverPlanning: oneDriverPlanning,
+        stsPlanning: stsPlanning,
+      };
+    },
+    bestEnhancement(thePlanning, stsListtoBegin) {
+      let stsListToReduce = [
+        ...stsListtoBegin.filter((e) => e.intervals.length > 0),
+      ];
+      let thePlanningToReduce = [...thePlanning];
+      console.log("from bestEnhancement :");
+      console.log(
+        "stsListToReduce.stsPlanning.filter((e)=>e.intervals.length>0).length :",
+        stsListToReduce.length
+      );
+      //while(stsListToReduce.stsPlanning.filter((e)=>e.intervals.length>0)){
+      if (stsListToReduce.length > 0) {
+        for (
+          let planningToEncanceIndex = 0;
+          planningToEncanceIndex < stsListToReduce.length;
+          planningToEncanceIndex++
+        ) {
+          const MissingStsIntervals = stsListToReduce[planningToEncanceIndex];
+          for (
+            let MissingStsIntervalsIndex = 0;
+            MissingStsIntervalsIndex < MissingStsIntervals.intervals.length;
+            MissingStsIntervalsIndex++
+          ) {
+            const stsInterval =
+              MissingStsIntervals.intervals[MissingStsIntervalsIndex];
+            console.log(MissingStsIntervals.matricule + "-" + stsInterval);
+            console.log(this.shift.indexOf(stsInterval));
+          }
+        }
+      }
+      //}
+    },
+    setAllDriversPlanning(outputs) {
+      console.log(outputs);
+      console.log(this.selectedDrivers.length);
+      let thePlanning = [];
+      let stsListtoBegin = [...outputs];
+      for (
+        let driverIndex = 0;
+        driverIndex < this.selectedDrivers.length;
+        driverIndex++
+      ) {
+        let res = this.setOneDriverPlanning(stsListtoBegin, driverIndex,outputs);
+        thePlanning.push(res.oneDriverPlanning);
+        stsListtoBegin = [...res.stsPlanning];
+        //stsListtoBegin = [...res.stsPlanning]
+        console.table(driverIndex, stsListtoBegin);
+        //console.table("stsPlanning :", JSON.parse(JSON.stringify(res.stsPlanning)))
+      }
+      //bestEnhancement(thePlanning, stsListtoBegin);
+      return {
+        thePlanning: thePlanning,
+        stsListtoBegin: stsListtoBegin,
+      };
+    },
+    splitIntoHourlyIntervals({ startTime, endTime }) {
+      const [startHour, startMin] = startTime.split(":").map(Number);
+      const [endHour, endMin] = endTime.split(":").map(Number);
+
+      const intervals = [];
+      let currentHour = startHour;
+      let currentMin = startMin;
+
+      while (
+        currentHour < endHour ||
+        (currentHour === endHour && currentMin < endMin)
+      ) {
+        const nextHour = currentHour + 1;
+        const formattedCurrentHour = currentHour.toString().padStart(2, "0");
+        const formattedCurrentMin = currentMin.toString().padStart(2, "0");
+        const formattedNextHour = nextHour.toString().padStart(2, "0");
+
+        intervals.push(
+          `${formattedCurrentHour}:${formattedCurrentMin}-${formattedNextHour}:${formattedCurrentMin}`
+        );
+
+        currentHour = nextHour;
+        currentMin = 0; // Since we are working with hourly intervals, minutes will always be 0
+      }
+
+      return intervals;
+    },
   },
 };
 </script>
@@ -706,7 +1014,7 @@ export default {
   flex-direction: column;
   max-height: 80vh; /* You can adjust this value as needed */
   gap: 0.3rem;
-  overflow-y: auto; 
+  overflow-y: auto;
 }
 
 .parent {
@@ -773,7 +1081,7 @@ export default {
 
 .drivername,
 .stsname {
-  font-size:0.5rem;
+  font-size: 0.5rem;
   font-weight: bold;
   width: fit-content;
 }
