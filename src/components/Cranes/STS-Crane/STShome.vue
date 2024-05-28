@@ -216,6 +216,7 @@ export default {
         "21:00-22:00",
         "22:00-23:00",
       ],
+      planningId:-1
     };
   },
 
@@ -336,6 +337,8 @@ export default {
       "addEquipementToPlanning",
       "addEquipementWorkingHoursToPlanning",
       "setShiftByCategory",
+      "createSTSPlanningAction",
+      "setBoxAction"
     ]),
 
     toggleSelectAll() {
@@ -518,23 +521,44 @@ export default {
 
     // returns selected drivers and stss
     createPlanning() {
-      let usersAddedSuccessfully = [];
-      let equAddedSuccessfully = [];
       this.showConfirmDialog = false;
       this.setLoadingValueAction(true);
+      const outputs = [];
+      Object.keys(this.intervals).forEach((key) => {
+        const keyIntervals = [];
+        this.intervals[key].forEach((interval) => {
+          const intervalHourly = this.splitIntoHourlyIntervals(interval);
+          intervalHourly.forEach((interv) => {
+            keyIntervals.push(interv);
+          });
+        });
+        outputs.push({
+          matricule: key,
+          intervals: keyIntervals,
+          length: keyIntervals.length,
+        });
+        outputs.sort((a, b) => b.length - a.length);
+      });
       const planning = {
         shift_id: this.shiftId,
         profile_group_id: this.profileGroupId,
       };
       this.createSTSPlanningAction(planning).then((response) => {
+        let userPromises = [];
+        let equipementPromises = [];
+        let usersAddedSuccessfully = [];
+        let equAddedSuccessfully = [];
+        this.planningId = response.id;
         for (let driver in this.selectedDrivers) {
           let userWPlanning = {
             user_id: this.selectedDrivers[driver].id,
             planning_id: response.id,
           };
-          this.addUserToPlanning(userWPlanning).then(() => {
-            usersAddedSuccessfully.push(this.selectedDrivers[driver]);
-          });
+          userPromises.push(
+            this.addUserToPlanning(userWPlanning).then(() => {
+              usersAddedSuccessfully.push(this.selectedDrivers[driver]);
+            })
+          );
         }
 
         for (let equ in this.keysArray) {
@@ -542,35 +566,41 @@ export default {
             equipement_id: this.selectedSTSs[equ].id,
             planning_id: response.id,
           };
-          this.addEquipementToPlanning(equWPlanning).then((response) => {
-            console.log("STS : " + this.selectedSTSs[equ].matricule);
-            for (let interval in this.intervals[
-              this.selectedSTSs[equ].matricule
-            ]) {
-              let intervalWPlanning = {
-                equipement_planning_id: response.id,
-                start_time:
-                  this.intervals[this.selectedSTSs[equ].matricule][interval]
-                    .startTime,
-                end_time:
-                  this.intervals[this.selectedSTSs[equ].matricule][interval]
-                    .endTime,
-              };
-              this.addEquipementWorkingHoursToPlanning(intervalWPlanning).then(
-                (response) => {
-                  console.log(response);
+          equipementPromises.push(
+            this.addEquipementToPlanning(equWPlanning).then((response) => {
+              console.log("STS : " + this.selectedSTSs[equ].matricule);
+
+              let intervalPromises = [];
+
+              this.intervals[this.selectedSTSs[equ].matricule].forEach(
+                (interval) => {
+                  let intervalWPlanning = {
+                    equipement_planning_id: response.id,
+                    start_time: interval.startTime,
+                    end_time: interval.endTime,
+                  };
+                  console.log(intervalWPlanning);
+                  intervalPromises.push(
+                    this.addEquipementWorkingHoursToPlanning(intervalWPlanning)
+                  );
                 }
               );
-            }
-            equAddedSuccessfully.push(this.selectedSTSs[equ]);
-          });
+
+              return Promise.all(intervalPromises).then(() => {
+                equAddedSuccessfully.push(this.selectedSTSs[equ]);
+              });
+            })
+          );
         }
 
-        this.setLoadingValueAction(false);
-        console.log(usersAddedSuccessfully);
-        console.log(equAddedSuccessfully);
+        Promise.all(userPromises.concat(equipementPromises)).then(() => {
+          
+          const output = this.setAllDriversPlanning(outputs).thePlanning;
+          // output.unshift(this.shift);
+          // console.table(output);
+          this.setBoxes(output);
+        });
       });
-      this.showConfirmDialog = false;
     },
 
     // switch on change state
@@ -689,6 +719,7 @@ export default {
               this.intervals[sts.matricule].length - 1
             ].endTime !== "")
         );
+        this.showConfirmDialog = true;
       });
       if (this.selectedSTSs.length !== this.chunkedSTSs.length)
         this.selectAllSTSs = false;
@@ -698,28 +729,6 @@ export default {
           this.intervals[key][0].startTime !== "" &&
           this.intervals[key][0].endTime !== ""
       );
-
-      const outputs = [];
-      Object.keys(this.intervals).forEach(key=>{
-        const keyIntervals = []
-        this.intervals[key].forEach(interval=>{
-          const intervalHourly = this.splitIntoHourlyIntervals(interval)
-          intervalHourly.forEach(interv=>{
-            keyIntervals.push(interv)
-          })
-        })
-        outputs.push({
-            matricule: key,
-            intervals: keyIntervals,
-            length:keyIntervals.length
-          })
-          outputs.sort((a, b) => b.length - a.length);
-          console.log(outputs)
-      })
-   
-      const output = this.setAllDriversPlanning(outputs).thePlanning;
-      output.unshift(this.shift);
-      console.table(output);
       this.showConfirmDialog = true;
     },
     getActualShift() {
@@ -749,7 +758,7 @@ export default {
 
       return array;
     },
-    getDriverinalWOrkingHours(driver,outputs) {
+    getDriverinalWOrkingHours(driver, outputs) {
       const totalHours = outputs.reduce((total, sts) => {
         return (total += sts.intervals.length);
       }, 0);
@@ -773,7 +782,7 @@ export default {
 
       return arr;
     },
-    checkIntervalForSts(stsPlanning,matricule, interval) {
+    checkIntervalForSts(stsPlanning, matricule, interval) {
       const sts = stsPlanning.find((sts) => sts.matricule == matricule);
       if (sts) {
         return sts.intervals.includes(interval);
@@ -807,7 +816,10 @@ export default {
         value.startsWith("STS")
       ).length;
 
-      if (this.getDriverinalWOrkingHours(driverIndex,outputs) <= countWorkingHours)
+      if (
+        this.getDriverinalWOrkingHours(driverIndex, outputs) <=
+        countWorkingHours
+      )
         return true;
 
       if (
@@ -835,7 +847,7 @@ export default {
             return !this.checkIntervalForSts(
               stsPlanning,
               oneDriverPlanning[oneDriverPlanningHourex - 1],
-              this.shift[oneDriverPlanningHourex],
+              this.shift[oneDriverPlanningHourex]
             );
           }
         } else {
@@ -843,7 +855,7 @@ export default {
         }
       }
     },
-    setOneDriverPlanning(stsListtoBegin, driverIndex,outputs) {
+    setOneDriverPlanning(stsListtoBegin, driverIndex, outputs) {
       let stsPlanning = [...stsListtoBegin];
       let oneDriverPlanning = [...this.shift];
 
@@ -963,7 +975,11 @@ export default {
         driverIndex < this.selectedDrivers.length;
         driverIndex++
       ) {
-        let res = this.setOneDriverPlanning(stsListtoBegin, driverIndex,outputs);
+        let res = this.setOneDriverPlanning(
+          stsListtoBegin,
+          driverIndex,
+          outputs
+        );
         thePlanning.push(res.oneDriverPlanning);
         stsListtoBegin = [...res.stsPlanning];
         //stsListtoBegin = [...res.stsPlanning]
@@ -1002,6 +1018,54 @@ export default {
       }
 
       return intervals;
+    },
+    setBoxes(output) {
+      const promises = [];
+      this.selectedDrivers.sort((a,b)=>b.workingHours>a.workingHours)
+  // Iterate over the selectedDrivers and output table rows, starting from the second row of output
+  for (let i = 0; i < this.selectedDrivers.length; i++) {
+    let driver = this.selectedDrivers[i];
+
+    // Adjust rowIndex to start from the second row (index 1)
+    let rowIndex = i;
+    if (output[rowIndex]) {
+      // Insert driver's ID at the beginning of the row
+      output[rowIndex].unshift(driver.id);
+    } else {
+      // If the row does not exist in the output, create a new row with just the driver's ID
+      output[rowIndex] = [driver.id];
+    }
+  }
+      output.push(["Drivers",...this.shift])
+
+      //output.unshift(...["Drivers",...this.shift])
+      console.table(output);
+
+      for(let i=0;i<this.selectedDrivers.length;i++){
+        for(let j=1;j<9;j++){
+          let sts = null
+          if(output[i][j]!='-')
+          {
+            sts = this.selectedSTSs.find(sts=>sts.matricule===output[i][j])
+          }
+          const parts = output[this.selectedDrivers.length][j].split("-");
+          const start = parts[0];
+          const end = parts[1];
+          const boxObject = {
+            planning_id: this.planningId,
+            user_id: output[i][0],
+            equipement_id: sts?sts.id:null,
+            break:output[i][j] == "-",
+            start_time: start,
+            ends_time: end,
+          };
+          promises.push(this.setBoxAction(boxObject));
+          Promise.all(promises).then(()=>{
+            this.setLoadingValueAction(false);
+          })
+          console.log(boxObject);
+        }
+      }
     },
   },
 };
