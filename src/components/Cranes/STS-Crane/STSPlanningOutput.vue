@@ -73,7 +73,6 @@
         </v-card>
       </v-dialog>
     </div>
-
     <!-- Planning table -->
     <div class="planning">
       <!-- Settings button -->
@@ -128,6 +127,7 @@
         >
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
+        <!-- Add other legend items here -->
       </div>
 
       <!-- Table -->
@@ -157,7 +157,11 @@
                     ✏️
                     <!-- Or use an icon from a library like Font Awesome -->
                   </span>
-                  {{ value.matricule || value }}
+                  {{
+                    isActiveUser(value)
+                      ? value + " (Me)"
+                      : value.matricule || value
+                  }}
                 </div>
               </td>
             </template>
@@ -182,7 +186,7 @@
                   </v-card-text>
                   <v-card-actions>
                     <!-- Save and Cancel buttons -->
-                    <v-btn color="primary" @click="saveCell">Save</v-btn>
+                    <v-btn color="primary" @click="saveCell()">Save</v-btn>
                     <v-btn @click="cancelEdit">Cancel</v-btn>
                   </v-card-actions>
                 </v-card>
@@ -200,6 +204,9 @@
           </tr>
         </template>
       </v-data-table>
+      <!-- Plus Button -->
+
+      <!-- Add Dialog -->
       <template>
         <v-dialog v-model="showAddDialog" max-width="500" class="custom-dialog">
           <v-card>
@@ -250,22 +257,23 @@
     </div>
   </div>
 </template>
-
 <script>
 import DashboardNavigation from "@/components/Dashboard/DashboardNavigation.vue";
+import { createWebHistory } from "vue-router";
 import { mapActions, mapGetters } from "vuex";
 import moment from "moment";
 export default {
   data() {
     return {
       planning: [],
+      planningId: -1,
       planningTable: [],
       tableHeaders: [],
       selectedDate: new Date(),
       selectedShift: "",
       shifts: ["A", "B", "C", "D"],
       showDatePicker: false,
-      activeProfileGroup: "rs",
+      activeProfileGroup: "sts",
       shiftId: -1,
       profileGroupId: -1,
       showSettingsDialog: false,
@@ -273,13 +281,12 @@ export default {
       selectedCreateDate: new Date(),
       selectedCreateShift: "",
       createdPlanningData: null,
+      dateCountChange: 0,
       userWorkingHours: {},
       usersWorkingHours: [],
       dialogDelete: false,
       dayTimes: ["Morning", "Evening", "Night"],
       selectedDayTime: "",
-      dateCountChange: 0,
-      // actualShift: null,
       todayDate: "",
       showEditDialog: false,
       editableCell: null,
@@ -304,6 +311,10 @@ export default {
         fullName: "",
       },
       formattedUnassignedDrivers: [],
+      unassignedIntervalSTS: [],
+      planningEquipments: [],
+      uncoveredIntervals: [],
+      transormedData: [],
     };
   },
   components: {
@@ -317,6 +328,11 @@ export default {
         else this.setPlanning();
       }
     },
+    selectedDate(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.dateCountChange += 1;
+      }
+    },
     selectedDayTime(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedCreateDate) {
@@ -327,7 +343,7 @@ export default {
           let formattedDate = `${year}-${month}-${day}`;
           let dateTime = `${formattedDate}`;
           this.shifts = this.getActualShift(dateTime);
-          console.log(this.shifts);
+          // console.log(this.shifts);
           this.shifts.pop();
           switch (this.selectedDayTime) {
             case "Morning":
@@ -373,21 +389,17 @@ export default {
         }
       }
     },
-    selectedDate(newVal, oldVal) {
-      if (newVal !== oldVal) {
-        this.dateCountChange += 1;
-      }
-    },
   },
 
   computed: {
     ...mapGetters([
-      "getCurrentRSPlanning",
+      "getCurrentSTSPlanning",
       "getPlanningBoxes",
       "getEquipements",
       "getUserRole",
       "getUserActive",
       "getDrivers",
+      "getPlanningEquipements",
     ]),
 
     // Returns the formatted date in yyyy-mm-dd format
@@ -410,30 +422,35 @@ export default {
       }
     },
   },
+
   mounted() {
     this.setEquipements();
   },
 
   methods: {
     ...mapActions([
-      "setCurrentRSPlanning",
+      "setCurrentSTSPlanning",
       "setLoadingValueAction",
       "setPlanningBoxes",
       "setShiftByCategory",
       "setShiftByTime",
       "setProfileGroupByType",
       "editUserAction",
-      "deleteRSPlanningAction",
+      "deleteRTGPlanningAction",
       "setEquipementsAction",
       "setBoxUpdateAction",
       "setDriversAction",
       "setPlanningDrivers",
       "setBoxAction",
       "addUserToPlanning",
+      "setPlanningEquipements",
     ]),
     // Settings
     openSettingsDialog() {
       this.showSettingsDialog = true;
+    },
+    openDeleteDialog() {
+      this.dialogDelete = true;
     },
     openCreateDialog() {
       this.showCreateDialog = true;
@@ -451,6 +468,10 @@ export default {
       this.closeSettingsDialog();
     },
 
+    // displayValue(value) {
+    //   console.log(this.userActive.firstname + " " + this.userActive.lastname);
+    //   console.log(value);
+    // },
     applyCreate() {
       this.createdPlanningData = {
         date: this.selectedCreateDate,
@@ -459,9 +480,6 @@ export default {
       // console.log(this.createdPlanningData)
       this.$emit("createPlanning", this.createdPlanningData);
       this.closeCreateDialog();
-    },
-    openDeleteDialog() {
-      this.dialogDelete = true;
     },
 
     // Set initial shift in dialog select shift
@@ -480,8 +498,9 @@ export default {
       this.setShiftByCategory({ category: this.selectedShift }).then(
         (response) => {
           this.shiftId = response[0].id;
+          // console.log(this.shiftId)
           const inputs = {
-            profile_group: "rs",
+            profile_group: "sts",
             role: "driver",
             shift_id: this.shiftId,
           };
@@ -495,6 +514,24 @@ export default {
       );
     },
 
+    // select profile group in navigation dashboard
+    updateActiveComponent(value) {
+      switch (value) {
+        case "RTGhome":
+          this.activeProfileGroup = "rtg";
+          break;
+        case "STShome":
+          this.activeProfileGroup = "sts";
+          break;
+        case "RShome":
+          this.activeProfileGroup = "rs";
+          break;
+        case "AMhome":
+          this.activeProfileGroup = "am";
+          break;
+      }
+    },
+
     isDriver(key) {
       return key === "driver";
     },
@@ -504,7 +541,7 @@ export default {
       );
     },
     isBreak(value) {
-      return value === "B";
+      return value === "B" || value === "DB";
     },
     setPlanning(value) {
       const today = new Date(this.formattedDate);
@@ -526,9 +563,9 @@ export default {
             date: formattedDate,
             shift_id: this.shiftId,
             profile_group_id: this.profileGroupId,
-            profileType: "rs",
+            profileType: "sts",
           };
-
+          // console.log(dateObject);
           this.DisplayPlanning(dateObject);
         });
       } else {
@@ -544,32 +581,83 @@ export default {
           };
           this.setProfileGroupByType(activeType).then((response) => {
             this.profileGroupId = response[0].id;
-            //   console.log(this.formattedDate);
+            // console.log(this.formattedDate);
             const dateObject = {
               date: this.formattedDate,
               shift_id: this.shiftId,
               profile_group_id: this.profileGroupId,
-              profileType: "rs",
+              profileType: "sts",
             };
-            console.log(dateObject);
+
             this.DisplayPlanning(dateObject);
           });
         });
       }
     },
+    transformPlanningBoxes() {
+      // Assuming this.planning is your array of boxes
+      let transformed = {};
+      let transformedMatricule = {};
+
+      this.planning.forEach((box) => {
+        // Create the time interval key
+        const timeInterval = `${box.start_time}-${box.ends_time}`;
+
+        // If the key doesn't exist in the transformed object, create it
+        if (!transformed[timeInterval]) {
+          transformed[timeInterval] = [];
+          transformedMatricule[timeInterval] = [];
+        }
+
+        // Push the equipment_id into the array for this time interval
+        if (box.equipement_id) {
+          transformed[timeInterval].push(box.equipement_id);
+          transformedMatricule[timeInterval].push(box.equipement.matricule);
+        }
+      });
+
+      // If you need the transformed object as an array of key-value pairs
+      const transformedArray = Object.keys(transformed).map((timeInterval) => ({
+        timeInterval,
+        equipment_ids: transformed[timeInterval],
+        matricules: transformedMatricule[timeInterval],
+      }));
+
+      return transformedArray;
+    },
 
     async DisplayPlanning(dateObject) {
       try {
-        await this.setCurrentRSPlanning(dateObject);
-        this.planning = this.getCurrentRSPlanning;
+        await this.setCurrentSTSPlanning(dateObject);
+        this.planning = this.getCurrentSTSPlanning;
         if (this.planning) {
+          // console.log(JSON.stringify(this.planning))
           this.planningId = this.planning.id;
           const planningId = {
             planning_id: this.planning.id,
           };
+          this.setPlanningEquipements(planningId).then(() => {
+            this.planningEquipments = this.getPlanningEquipements.map(
+              (pEquip) => {
+                const workingHours =
+                  pEquip.equipement_planning_working_hours.map((it) => {
+                    return {
+                      start_time: it.start_time,
+                      end_time: it.end_time,
+                    };
+                  });
+                return {
+                  id: pEquip.equipement_id,
+                  matricule: pEquip.equipement.matricule,
+                  workingHours: workingHours,
+                };
+              }
+            );
+            // console.log(this.planningEquipments);
+          });
           this.setPlanningDrivers(planningId).then((response) => {
-            console.log(response);
-            console.log(this.unassignedDrivers);
+            // console.log(response);
+            // console.log(this.unassignedDrivers);
             this.unassignedDrivers = this.unassignedDrivers.filter(
               (driver) =>
                 !response.some(
@@ -582,11 +670,30 @@ export default {
                 fullName: `${driver.firstname} ${driver.lastname}`,
               })
             );
-            console.log(this.formattedUnassignedDrivers);
+            // console.log(this.formattedUnassignedDrivers);
           });
           this.setPlanningBoxes(planningId).then(() => {
             this.planning = this.getPlanningBoxes;
-            // console.log(this.planning)
+            const transformed = this.transformPlanningBoxes();
+            console.log(transformed);
+            this.transormedData = transformed;
+            // console.log(transformed)
+            this.uncoveredIntervals = this.getUncoveredIntervals(
+              this.planningEquipments,
+              transformed
+            );
+            this.transormedData.forEach((item) => {
+              const transData = this.uncoveredIntervals.find((uncovInt) => {
+                return uncovInt.interval === item.timeInterval;
+              });
+              if (transData) {
+                transData.sts.forEach((tData) => {
+                  item.matricules.push(tData);
+                });
+              }
+            });
+            console.log(this.transormedData);
+            // console.log(this.uncoveredIntervals);
             // Extract unique time intervals
             // Initialize an empty array to store unique time intervals
             const timeIntervals = [];
@@ -596,8 +703,7 @@ export default {
               const existingIntervalIndex = timeIntervalsTable.findIndex(
                 (interval) => {
                   return (
-                    interval.title ===
-                    `${box.start_time}:00 - ${box.ends_time}:00`
+                    interval.title === `${box.start_time}-${box.ends_time}`
                   );
                 }
               );
@@ -605,7 +711,7 @@ export default {
               // If the current time interval doesn't exist in the array, add it
               if (existingIntervalIndex === -1) {
                 timeIntervalsTable.push({
-                  title: `${box.start_time}:00 - ${box.ends_time}:00`,
+                  title: `${box.start_time}-${box.ends_time}`,
                   sortable: false,
                   key: `timeInterval_${timeIntervalsTable.length}`,
                 });
@@ -634,73 +740,68 @@ export default {
 
             // Initialize the planning table data
             this.planningTable = [];
+
+            // Iterate over each unique user
             this.userWorkingHours = {};
             this.usersWorkingHours = [];
-            // Iterate over each unique user
             uniqueUsers.forEach((userId) => {
               // Find the boxes for the current user
               const userBoxes = this.planning.filter(
                 (box) => box.user.id === userId
               );
+
               userBoxes.forEach((box) => {
-                const {
-                  user,
-                  start_time,
-                  ends_time,
-                  break: isBreak,
-                  equipement,
-                } = box;
-                // console.log(equipement)
+                // console.log(box)
+                const { user, start_time, ends_time, break: isBreak, id } = box;
+                // this.boxesObjects.push({
+                //   user_id:user_id,
+                //   start_time:start_time,
+                //   ends_time:ends_time,
+                // })
                 // console.log(user.firstname+ " "+user.workingHours)
                 // this.userWorkingHours = {}
                 // Check if break is false
-
                 if (!isBreak) {
-                  // Calculate working hours
-                  const startTimeMinutes = start_time * 60;
-                  const endTimeMinutes = ends_time * 60;
-                  const workingMinutes = endTimeMinutes - startTimeMinutes;
+                  // Convert start_time and ends_time to minutes
+                  const [startHours, startMinutes] = start_time
+                    .split(":")
+                    .map(Number);
+                  const [endHours, endMinutes] = ends_time
+                    .split(":")
+                    .map(Number);
 
+                  // Calculate working hours
+                  const startTimeMinutes = startHours * 60 + startMinutes;
+                  const endTimeMinutes = endHours * 60 + endMinutes;
+                  const workingMinutes = endTimeMinutes - startTimeMinutes;
+                  // console.log(workingMinutes);
                   if (!this.userWorkingHours[user.id]) {
                     // If this.userWorkingHours[user.id] doesn't exist, initialize it as an object with oldValue and totalWorkingHours properties
-                    if (equipement.matricule === "SBY") {
-                      this.userWorkingHours[user.id] = {
-                        oldValue: user.workingHours,
-                        totalWorkingHours: user.workingHours,
-                        oldSBYValue: user.sby_workingHours,
-                        totalSBYWorkingHours:
-                          user.sby_workingHours + workingMinutes,
-                      };
-                    } else {
-                      this.userWorkingHours[user.id] = {
-                        oldValue: user.workingHours,
-                        totalWorkingHours: user.workingHours + workingMinutes,
-                        oldSBYValue: user.sby_workingHours,
-                        totalSBYWorkingHours: user.sby_workingHours,
-                      };
-                    }
+                    this.userWorkingHours[user.id] = {
+                      oldValue: user.workingHours,
+                      totalWorkingHours: user.workingHours + workingMinutes,
+                    };
                   } else {
                     // If this.userWorkingHours[user.id] already exists, update its properties
-                    if (equipement.matricule === "SBY") {
-                      this.userWorkingHours[user.id].totalSBYWorkingHours +=
-                        workingMinutes;
-                    } else {
-                      this.userWorkingHours[user.id].totalWorkingHours +=
-                        workingMinutes;
-                    }
+                    this.userWorkingHours[user.id].oldValue = user.workingHours;
+                    this.userWorkingHours[user.id].totalWorkingHours +=
+                      workingMinutes;
                   }
                 }
               });
 
-              console.log(this.userWorkingHours);
+              // console.log(this.userWorkingHours);
               const userToUpdate = {
                 id: userId,
                 workingHours:
                   this.userWorkingHours[userId]?.totalWorkingHours || 0,
-                sby_workingHours:
-                  this.userWorkingHours[userId]?.totalSBYWorkingHours || 0,
               };
+              //console.log(userToUpdate)
               this.usersWorkingHours.push(userToUpdate);
+              // this.editUserAction(userToUpdate),then((response)=>{
+              //   console.log(response)
+              // })
+
               // Create a new row for the current user
               const row = {
                 driver: `${userBoxes[0].user.firstname} ${userBoxes[0].user.lastname} (${userBoxes[0].user.workingHours})`, // Driver's full name from the first box
@@ -745,16 +846,17 @@ export default {
               // Iterate over each key in the row object
               for (let key in row) {
                 // Check if the value is "P" and if it's the second occurrence
-                if (row[key] === "B" && hasEncounteredP) {
+                if (row[key].matricule === "B" && hasEncounteredP) {
                   // Replace "P" with "DP"
-                  row[key] = "DB";
-                } else if (row[key] === "B") {
+                  row[key].matricule = "DB";
+                } else if (row[key].matricule === "B") {
                   // Set the flag to true if "P" is encountered for the first time
                   hasEncounteredP = true;
                 }
               }
 
               this.planningTable.push(row);
+              // console.log(row)
               this.setLoadingValueAction(false);
             });
           });
@@ -773,39 +875,25 @@ export default {
     },
 
     finishPlanning() {
-      console.log(this.usersWorkingHours);
-      //   this.usersWorkingHours.forEach((user)=>{
-      //     console.log(user)
-      //     if(user.workingHours===0){
-      //       delete user.workingHours
-      //       console.log("delete workinghours"+ JSON.stringify(user))
-      //     }
-      //     else if(user.sby_workingHours===0){
-      //       delete user.sby_workingHours
-      //       console.log("delete sby_workinghours"+ JSON.stringify(user))
-      //     }
-      // })
-      // this.setLoadingValueAction(true);
-      // this.usersWorkingHours.forEach((user) => {
-      //   if (user.workingHours === 0) {
-      //     delete user.workingHours;
-      //     // console.log("delete workinghours"+ JSON.stringify(user))
-      //   } else if (user.sby_workingHours === 0) {
-      //     delete user.sby_workingHours;
-      //     // console.log("delete sby_workinghours"+ JSON.stringify(user))
-      //   }
-      //   this.editUserAction(user).then(() => {
-      //     this.setLoadingValueAction(false);
-      //     console.log("updated successfully");
-      //   });
-      // });
+      this.usersWorkingHours = this.usersWorkingHours.filter(
+        (usWh) => usWh.workingHours != 0
+      );
+      // console.log(this.usersWorkingHours)
+      this.setLoadingValueAction(true);
+      this.usersWorkingHours.forEach((user) => {
+        this.editUserAction(user).then(() => {
+          this.setLoadingValueAction(false);
+          console.log("updated successfully");
+        });
+      });
     },
+
     closeDelete() {
       this.dialogDelete = false;
     },
     deleteItemConfirm() {
       this.setLoadingValueAction(true);
-      this.deleteRSPlanningAction({ id: this.planning[0].planning_id }).then(
+      this.deleteRTGPlanningAction({ id: this.planning[0].planning_id }).then(
         () => {
           this.dialogDelete = false;
           this.setLoadingValueAction(false);
@@ -863,15 +951,18 @@ export default {
     },
     setEquipements() {
       this.setLoadingValueAction(true);
+      this.search = "";
       this.userRole = this.getUserRole;
       this.userActive = this.getUserActive;
+      //   console.log(this.userRole);
       this.setEquipementsAction().then(() => {
         this.equipments = this.getEquipements
-          .filter((equipement) => equipement.profile_group.type === "rs")
+          .filter((equipement) => equipement.profile_group.type === "sts")
           .map((equip) => equip.matricule);
         this.equipments.push("B");
-        console.log(this.equipments);
+        // console.log(this.equipments)
         this.setInitialShift();
+        console.log("shift : " + this.shiftId);
       });
     },
     openEditDialog(item, key) {
@@ -884,23 +975,34 @@ export default {
         .filter((matricule) => matricule !== "B");
 
       // Filter equipments, adding a "replace" option
-      this.filteredEquipements = this.equipments.filter(equ=>equ!=item[key].matricule)
-        .map((equipment) => {
-          // Check if the equipment is already in use in the column
-          const isExisting = existingEquipements.includes(equipment);
+      const index = parseInt(key.match(/\d+/)[0]);
+      //   console.log(this.tableHeaders[index+1].title)
+      //   console.log(this.uncoveredIntervals)
+      const wantedItem = this.transormedData.find(
+        (uncocInt) =>
+          uncocInt.timeInterval === this.tableHeaders[index + 1].title
+      );
+      //   console.log(wantedItem)
+      if (wantedItem) {
+        this.filteredEquipements = wantedItem.matricules
+          .filter((sts) => sts != item[key].sts)
+          .map((sts) => {
+            // Check if the equipment is already in use in the column
+            const isExisting = existingEquipements.includes(sts);
 
-          // If it's the current item being edited, keep it in the list with a "replace" tag
-          // if (isExisting && equipment !== item[key].matricule) {
-          //   return null; // Skip adding to the filtered list
-          // }
+            // If it's the current item being edited, keep it in the list with a "replace" tag
+            // if (isExisting && equipment !== item[key].matricule) {
+            //   return null; // Skip adding to the filtered list
+            // }
 
-          // Add the "replace" label if the equipment is existing
-          return {
-            value: equipment,
-            label: isExisting ? `${equipment} (replace)` : equipment,
-          };
-        })
-        .filter(Boolean);
+            // Add the "replace" label if the equipment is existing
+            return {
+              value: sts,
+              label: isExisting ? `${sts} (replace)` : sts,
+            };
+          })
+          .filter(Boolean);
+      }
 
       console.log(this.filteredEquipements);
       // Set up the item to edit
@@ -989,7 +1091,7 @@ export default {
       this.editState = !this.editState;
     },
     saveEdits() {
-      // console.log(this.itemsToEdit)
+      // console.log(this.itemsToEdit);
       if (this.itemsToEdit && this.itemsToEdit.length > 0) {
         this.setLoadingValueAction(true);
         this.itemsToEdit.forEach((item) => {
@@ -998,6 +1100,7 @@ export default {
           });
           this.itemsToEdit = [];
         });
+        // console.log(this.itemsToEdit)
       }
       this.editState = false;
       this.itemsToEdit = [];
@@ -1042,12 +1145,8 @@ export default {
             user_id: driver.id,
             equipement_id: null,
             break: true,
-            start_time: this.tableHeaders[index + 1].title
-              .split(" - ")[0]
-              .split(":")[0], // Adjust index to skip the driver column
-            ends_time: this.tableHeaders[index + 1].title
-              .split(" - ")[1]
-              .split(":")[0], // Same as start time
+            start_time: this.tableHeaders[index + 1].title.split(" - ")[0], // Adjust index to skip the driver column
+            ends_time: this.tableHeaders[index + 1].title.split(" - ")[1], // Same as start time
             role: null,
           };
 
@@ -1096,7 +1195,6 @@ export default {
           this.setLoadingValueAction(false);
         });
     },
-
     handleAddDriver() {
       // Add the driver to the planningTable
       // this.addDriverToPlanningTable(this.selectedDriver);
@@ -1110,11 +1208,66 @@ export default {
       // console.log(driver);
       this.cancelAdd();
     },
+    timeToMinutes(time) {
+      const [hours, minutes] = time.split(":").map(Number);
+      return hours * 60 + minutes;
+    },
+    getUncoveredIntervals(equipmentArray, intervalsArray) {
+      const uncoveredIntervals = [];
+
+      for (const intervalObj of intervalsArray) {
+        const [intervalStart, intervalEnd] =
+          intervalObj.timeInterval.split("-");
+        const uncoveredSts = [];
+
+        for (const equipment of equipmentArray) {
+          for (const workingInterval of equipment.workingHours) {
+            const workingStart = this.timeToMinutes(workingInterval.start_time);
+            const workingEnd = this.timeToMinutes(workingInterval.end_time);
+
+            const start = this.timeToMinutes(intervalStart);
+            const end = this.timeToMinutes(intervalEnd);
+
+            if (
+              start >= workingStart &&
+              end <= workingEnd &&
+              !intervalObj.equipment_ids.includes(equipment.id)
+            ) {
+              uncoveredSts.push(equipment.matricule);
+            }
+          }
+        }
+
+        if (uncoveredSts.length > 0) {
+          uncoveredIntervals.push({
+            interval: intervalObj.timeInterval,
+            sts: uncoveredSts,
+          });
+        }
+      }
+
+      console.log(uncoveredIntervals);
+      return uncoveredIntervals;
+    },
+    minutesToTime(minutes) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${String(hours).padStart(2, "0")}:${String(mins).padStart(
+        2,
+        "0"
+      )}`;
+    },
   },
 };
 </script>
 
 <style scoped>
+.select-container {
+  /* Ensure the select container takes the full width of the cell */
+  width: fit-content;
+  height: fit-content; /* Set a max width for the select container */
+}
+
 .break {
   display: flex;
   justify-content: center;
@@ -1134,14 +1287,27 @@ export default {
   padding: 5px;
   background-color: #79997e;
 }
+
+.dialogCancel {
+  background-color: red;
+  color: white;
+}
+
+.dialogOk {
+  background-color: blue;
+  color: white;
+}
+
 td {
   font-weight: bold;
   font-size: 0.75rem;
 }
+
 thead td {
   font-weight: bolder;
   font-size: 0.75rem;
 }
+
 .legend {
   display: flex;
   justify-content: center;
@@ -1149,6 +1315,7 @@ thead td {
   gap: 2rem;
   margin: 0 8px;
 }
+
 .legend-item {
   display: inline-block;
   padding: 5px 10px;
@@ -1156,6 +1323,7 @@ thead td {
   font-size: 14px;
   font-weight: bolder;
 }
+
 .selects-container {
   display: flex;
   justify-content: center;
@@ -1166,6 +1334,7 @@ thead td {
 .shift-select {
   width: 200px;
 }
+
 .shift-select-container {
   display: flex;
   justify-content: center;
@@ -1184,9 +1353,19 @@ thead td {
   color: white;
 }
 
+.delete-btn {
+  background-color: rgb(205, 48, 48);
+  color: white;
+}
+
+.edit-btn {
+  background-color: #1d6d0d;
+  color: white;
+}
+
 .planning {
   margin-top: 1rem;
-  height: 50vh;
+  height: 60vh;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1196,9 +1375,10 @@ thead td {
 .parent {
   width: 100%;
 }
+
 .v-data-table {
   position: relative;
-  max-height: 50vh;
+  max-height: 60vh;
   /* max-width: 60vw; */
   overflow-y: auto;
   margin: 0 8px;
@@ -1208,37 +1388,16 @@ thead td {
   background-color: #1177b3;
   color: white;
 }
-.finish-button {
+
+.buttons {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 2rem;
   height: fit-content;
 }
-.delete-btn {
-  background-color: rgb(205, 48, 48);
-  color: white;
-}
-.edit-btn {
-  background-color: #1d6d0d;
-  color: white;
-}
-.dialogCancel {
-  background-color: red;
-  color: white;
-}
-.dialogOk {
-  background-color: blue;
-  color: white;
-}
-.custom-dialog .v-dialog__content {
-  background-color: rgba(
-    0,
-    0,
-    0,
-    0.5
-  ); /* Adjust the opacity here (0.5 for 50% opacity) */
-}
+
 .header {
   background-color: #f5f5f5; /* Light gray background */
   border-bottom: 2px solid #ccc; /* Bottom border */
@@ -1248,17 +1407,20 @@ thead td {
   font-weight: bold; /* Bold text */
   margin-bottom: 0.2rem; /* Space below the header */
 }
+
+.custom-dialog .v-dialog__content {
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.5
+  ); /* Adjust the opacity here (0.5 for 50% opacity) */
+}
+
 .content {
   position: relative;
 }
-.buttons {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 2rem;
-  height: fit-content;
-}
+
 .edit-icon {
   position: absolute;
   top: 2px; /* Adjust the value to your preference */
@@ -1269,24 +1431,30 @@ thead td {
   border-radius: 50%; /* Optional: make it a circle */
   padding: 2px; /* Optional: padding for better click area */
 }
+
 .enabled-button {
   background-color: #1d6d0d !important;
 }
+
 .disabled-button {
   background-color: gray !important;
 }
+
 .red-driver {
   color: red;
 }
+
 .search-me {
   color: white;
   background-color: purple;
 }
+
 .rounded-plus-btn {
-  border-radius: 100% !important;
+  border-radius: 50%;
   background-color: #054d25; /* Customize the color */
   color: white;
 }
+
 .add-new-item-row {
   text-align: center;
 }

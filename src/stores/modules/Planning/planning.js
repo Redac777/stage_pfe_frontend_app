@@ -200,6 +200,19 @@ const equipementToPlanningModule = {
           });
       });
     },
+    setCurrentSTSPlanning({ commit, state }, date) {
+      return new Promise((resolve, reject) => {
+        delete date.profileType;
+        CustomizedAxios.post("plannings/getByDate", date)
+          .then((response) => {
+              commit("SET_CURRENT_STS_PLANNING", response.data.payload);
+              resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
     setPlanningDrivers({ commit, state }, planning) {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("usersplannings/getByPlanning", planning)
@@ -233,7 +246,7 @@ const equipementToPlanningModule = {
         localStorage.removeItem('plannings');
         localStorage.removeItem('rsPlannings')
         localStorage.removeItem('currentPlanning');
-        localStorage.removeItem('currentStsPlanning');
+        localStorage.removeItem('currentSTSPlanning');
         localStorage.removeItem('currentRsPlanning');
         localStorage.removeItem('currentAmPlanning');
         localStorage.removeItem('planningDrivers');

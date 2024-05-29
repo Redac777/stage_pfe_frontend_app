@@ -21,7 +21,24 @@
         "
         @createPlanning="handleCreatePlanning"
       />
-      <STShome v-if="activeComponent == 'STShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am')" />
+      <STShome  v-if="
+          (activeComponent == 'STShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
+            (!this.stsPlannings ||
+              (this.stsPlannings && this.stsPlannings.length === 0))) ||
+          this.createdSTSPlanningData
+        "
+        :stsplanningData="createdSTSPlanningData"
+      
+      />
+      <STSPlanningOutput
+        v-if="
+          activeComponent == 'STShome' &&
+          this.stsPlannings &&
+          this.stsPlannings.length !== 0 &&
+          !this.createdSTSPlanningData
+        "
+        @createPlanning="handleCreateSTSPlanning"
+      />
       <RShome
         v-if="
           (activeComponent == 'RShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
@@ -49,6 +66,7 @@
 import { mapActions, mapGetters } from "vuex";
 import RTGPlanningOutput from "../Cranes/RTG-Crane/RTGPlanningOutput.vue";
 import RSPlanningOutput from "../Cranes/RS-Crane/RSPlanningOutput.vue";
+import STSPlanningOutput from "../Cranes/STS-Crane/STSPlanningOutput.vue";
 
 export default {
   data() {
@@ -56,13 +74,15 @@ export default {
       activeComponent: "RTGhome",
       plannings: null,
       rsPlannings: null,
+      stsPlannings:null,
       createdPlanningData: null,
       createdRSPlanningData: null,
+      createdSTSPlanningData: null,
       role:null
     };
   },
   computed: {
-    ...mapGetters(["getPlannings", "getRSPlannings","getUserRole"]),
+    ...mapGetters(["getPlannings", "getRSPlannings","getSTSPlannings","getUserRole"]),
     // includePlanning(){
     //     return this.plannings && this.plannings.length!==0 && this.plannings.find(planning=>planning)
     // }
@@ -83,12 +103,17 @@ export default {
           break;
         case "RShome":
           this.createdPlanningData = null;
+          break;
+        case "STShome":
+          this.createdSTSPlanningData = null;
+          break;
           // this.plannings = null;
       }
     },
     getCurrentPlanningMethod() {
       this.plannings = this.getPlannings;
       this.rsPlannings = this.getRSPlannings;
+      this.stsPlannings = this.getSTSPlannings;
       this.role = this.getUserRole
     
       // console.log(this.createdPlanningData)
@@ -106,6 +131,12 @@ export default {
     handleCreateRSPlanning(data) {
       // console.log(data)
       this.createdRSPlanningData = data;
+
+      // console.log(JSON.stringify(this.createdRSPlanningData))
+    },
+    handleCreateSTSPlanning(data) {
+      // console.log(data)
+      this.createdSTSPlanningData = data;
 
       // console.log(JSON.stringify(this.createdRSPlanningData))
     },

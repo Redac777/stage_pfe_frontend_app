@@ -728,7 +728,7 @@ export default {
 
               // Create a new row for the current user
               const row = {
-                driver: `${userBoxes[0].user.firstname} ${userBoxes[0].user.lastname}`, // Driver's full name from the first box
+                driver: `${userBoxes[0].user.firstname} ${userBoxes[0].user.lastname} (${userBoxes[0].user.workingHours})`, // Driver's full name from the first box
                 id: userBoxes[0].user.id,
               };
 
@@ -899,7 +899,7 @@ export default {
         .filter((matricule) => matricule !== "B");
 
       // Filter equipments, adding a "replace" option
-      this.filteredEquipements = this.equipments.filter(equ=>equ!=item[key].matricule)
+      this.filteredEquipements = this.equipments.filter(equ=>equ!=item[key].label)
         .map((equipment) => {
           // Check if the equipment is already in use in the column
           const isExisting = existingEquipements.includes(equipment);

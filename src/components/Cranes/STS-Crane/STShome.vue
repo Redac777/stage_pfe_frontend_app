@@ -180,6 +180,12 @@ export default {
   components: {
     ConfirmDialog,
   },
+  props: {
+    stsplanningData: {
+      type: Object,
+      default: null,
+    },
+  },
 
   //data
   data() {
@@ -216,9 +222,10 @@ export default {
         "21:00-22:00",
         "22:00-23:00",
       ],
-      planningId:-1
+      planningId: -1,
     };
   },
+  
 
   //computed
   computed: {
@@ -338,7 +345,7 @@ export default {
       "addEquipementWorkingHoursToPlanning",
       "setShiftByCategory",
       "createSTSPlanningAction",
-      "setBoxAction"
+      "setBoxAction",
     ]),
 
     toggleSelectAll() {
@@ -388,27 +395,48 @@ export default {
       const today = new Date();
       const options = { year: "numeric", month: "long", day: "numeric" };
       this.todayDate = today.toLocaleDateString(undefined, options);
-      this.actualShift = this.getActualShift();
-      const response = await this.setShiftByCategory({
-        category: this.actualShift,
-      });
-      this.inputs = {
-        profile_group: "sts",
-        role: "driver",
-        shift_id: response[0].id,
-      };
       this.setLoadingValueAction(true);
-      this.setDriversAction(this.inputs).then((response) => {
+      if (this.stsplanningData) {
+        console.log(JSON.stringify(this.stsplanningData));
+        this.actualShift = this.stsplanningData.shift;
+        const dateToPlan = new Date(this.stsplanningData.date);
+        this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
+        const response = await this.setShiftByCategory({
+          category: this.stsplanningData.shift,
+        });
+        // console.log(this.stsplanningData);
+        this.inputs = {
+          profile_group: "sts",
+          role: "driver",
+          shift_id: response[0].id,
+        };
+      } else {
+        this.actualShift = this.getActualShift();
+        console.log(this.getActualShift());
+        const response = await this.setShiftByCategory({
+          category: this.actualShift,
+        });
+        this.inputs = {
+          profile_group: "sts",
+          role: "driver",
+          shift_id: response[0].id,
+        };
+      }
+
+      // console.log(this.inputs);
+
+      this.setDriversAction(this.inputs).then(() => {
         this.driversList = this.getDrivers;
         if (this.driversList.length > 0) {
           this.shiftId = this.driversList[0].shift_id;
         }
       });
       this.setEquipementsAction().then(() => {
-        this.setLoadingValueAction(false);
+        
         this.stssList = this.getEquipements.filter(
           (equipement) => equipement.profile_group.type === "sts"
         );
+        this.setLoadingValueAction(false);
         if (this.stssList.length > 0) {
           this.profileGroupId = this.stssList[0].profile_group.id;
         }
@@ -594,7 +622,6 @@ export default {
         }
 
         Promise.all(userPromises.concat(equipementPromises)).then(() => {
-          
           const output = this.setAllDriversPlanning(outputs).thePlanning;
           // output.unshift(this.shift);
           // console.table(output);
@@ -1021,32 +1048,33 @@ export default {
     },
     setBoxes(output) {
       const promises = [];
-      this.selectedDrivers.sort((a,b)=>b.workingHours>a.workingHours)
-  // Iterate over the selectedDrivers and output table rows, starting from the second row of output
-  for (let i = 0; i < this.selectedDrivers.length; i++) {
-    let driver = this.selectedDrivers[i];
+      this.selectedDrivers.sort((a, b) => b.workingHours > a.workingHours);
+      // Iterate over the selectedDrivers and output table rows, starting from the second row of output
+      for (let i = 0; i < this.selectedDrivers.length; i++) {
+        let driver = this.selectedDrivers[i];
 
-    // Adjust rowIndex to start from the second row (index 1)
-    let rowIndex = i;
-    if (output[rowIndex]) {
-      // Insert driver's ID at the beginning of the row
-      output[rowIndex].unshift(driver.id);
-    } else {
-      // If the row does not exist in the output, create a new row with just the driver's ID
-      output[rowIndex] = [driver.id];
-    }
-  }
-      output.push(["Drivers",...this.shift])
+        // Adjust rowIndex to start from the second row (index 1)
+        let rowIndex = i;
+        if (output[rowIndex]) {
+          // Insert driver's ID at the beginning of the row
+          output[rowIndex].unshift(driver.id);
+        } else {
+          // If the row does not exist in the output, create a new row with just the driver's ID
+          output[rowIndex] = [driver.id];
+        }
+      }
+      output.push(["Drivers", ...this.shift]);
 
       //output.unshift(...["Drivers",...this.shift])
       console.table(output);
 
-      for(let i=0;i<this.selectedDrivers.length;i++){
-        for(let j=1;j<9;j++){
-          let sts = null
-          if(output[i][j]!='-')
-          {
-            sts = this.selectedSTSs.find(sts=>sts.matricule===output[i][j])
+      for (let i = 0; i < this.selectedDrivers.length; i++) {
+        for (let j = 1; j < 9; j++) {
+          let sts = null;
+          if (output[i][j] != "-") {
+            sts = this.selectedSTSs.find(
+              (sts) => sts.matricule === output[i][j]
+            );
           }
           const parts = output[this.selectedDrivers.length][j].split("-");
           const start = parts[0];
@@ -1054,15 +1082,16 @@ export default {
           const boxObject = {
             planning_id: this.planningId,
             user_id: output[i][0],
-            equipement_id: sts?sts.id:null,
-            break:output[i][j] == "-",
+            equipement_id: sts ? sts.id : null,
+            break: output[i][j] == "-",
             start_time: start,
             ends_time: end,
           };
           promises.push(this.setBoxAction(boxObject));
-          Promise.all(promises).then(()=>{
+          Promise.all(promises).then(() => {
             this.setLoadingValueAction(false);
-          })
+            window.location.reload();
+          });
           console.log(boxObject);
         }
       }
