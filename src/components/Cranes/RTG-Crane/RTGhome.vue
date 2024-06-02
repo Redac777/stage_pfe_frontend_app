@@ -300,66 +300,66 @@ export default {
 
     // returns selected drivers and rtgs
     createPlanning() {
-      // if (this.selectedDrivers.length !== 0 && this.selectedRTGs !== 0) {
-      //   this.drivers = [];
-      //   this.rtgs = [];
-      //   this.tableHeaders = [];
-      //   this.itemsPlanning = [];
-      //   this.showConfirmDialog = false;
-      //   this.setLoadingValueAction(true);
-      //   if (this.planningData) {
-      //     const date = new Date(this.planningData.date);
-      //     // Get the year, month, and day components
-      //     const year = date.getFullYear();
-      //     const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
-      //     const day = String(date.getDate()).padStart(2, "0");
-      //     // Construct the formatted date string in "YYYY-mm-dd" format
-      //     const formattedDate = `${year}-${month}-${day}`;
-      //     this.planning = {
-      //       shift_id: this.shiftId,
-      //       profile_group_id: this.profileGroupId,
-      //       planned_at: formattedDate,
-      //     };
-      //   } else {
-      //     this.planning = {
-      //       shift_id: this.shiftId,
-      //       profile_group_id: this.profileGroupId,
-      //     };
-      //   }
-      //   this.createPlanningAction(this.planning).then((response) => {
-      //     this.planningId = response.id;
-      //     const addUserPromises = [];
-      //     const addEquipementPromises = [];
-      //     for (let driver in this.selectedDrivers) {
-      //       let userWPlanning = {
-      //         user_id: this.selectedDrivers[driver].id,
-      //         planning_id: response.id,
-      //       };
-      //       this.drivers.push(this.selectedDrivers[driver]);
-      //       addUserPromises.push(this.addUserToPlanning(userWPlanning));
-      //     }
-      //     for (let equ in this.selectedRTGs) {
-      //       let equWPlanning = {
-      //         equipement_id: this.selectedRTGs[equ].id,
-      //         planning_id: response.id,
-      //       };
-      //       this.rtgs.push(this.selectedRTGs[equ]);
-      //       addEquipementPromises.push(
-      //         this.addEquipementToPlanning(equWPlanning)
-      //       );
-      //     }
-      //     Promise.all([...addUserPromises, ...addEquipementPromises])
-      //       .then(() => {
-      //         // All promises have resolved
-      //         this.rtgPlanning();
-      //       })
-      //       .catch((error) => {
-      //         this.setLoadingValueAction(false);
-      //         // Handle error if any of the promises fail
-      //         console.error(error);
-      //       });
-      //   });
-      // }
+      if (this.selectedDrivers.length !== 0 && this.selectedRTGs !== 0) {
+        this.drivers = [];
+        this.rtgs = [];
+        this.tableHeaders = [];
+        this.itemsPlanning = [];
+        this.showConfirmDialog = false;
+        this.setLoadingValueAction(true);
+        if (this.planningData) {
+          const date = new Date(this.planningData.date);
+          // Get the year, month, and day components
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
+          const day = String(date.getDate()).padStart(2, "0");
+          // Construct the formatted date string in "YYYY-mm-dd" format
+          const formattedDate = `${year}-${month}-${day}`;
+          this.planning = {
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
+            planned_at: formattedDate,
+          };
+        } else {
+          this.planning = {
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
+          };
+        }
+        this.createPlanningAction(this.planning).then((response) => {
+          this.planningId = response.id;
+          const addUserPromises = [];
+          const addEquipementPromises = [];
+          for (let driver in this.selectedDrivers) {
+            let userWPlanning = {
+              user_id: this.selectedDrivers[driver].id,
+              planning_id: response.id,
+            };
+            this.drivers.push(this.selectedDrivers[driver]);
+            addUserPromises.push(this.addUserToPlanning(userWPlanning));
+          }
+          for (let equ in this.selectedRTGs) {
+            let equWPlanning = {
+              equipement_id: this.selectedRTGs[equ].id,
+              planning_id: response.id,
+            };
+            this.rtgs.push(this.selectedRTGs[equ]);
+            addEquipementPromises.push(
+              this.addEquipementToPlanning(equWPlanning)
+            );
+          }
+          Promise.all([...addUserPromises, ...addEquipementPromises])
+            .then(() => {
+              // All promises have resolved
+              this.rtgPlanning();
+            })
+            .catch((error) => {
+              this.setLoadingValueAction(false);
+              // Handle error if any of the promises fail
+              console.error(error);
+            });
+        });
+      }
     },
 
     //remove driver from confirm dialog

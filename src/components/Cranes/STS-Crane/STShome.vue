@@ -225,7 +225,6 @@ export default {
       planningId: -1,
     };
   },
-  
 
   //computed
   computed: {
@@ -432,7 +431,6 @@ export default {
         }
       });
       this.setEquipementsAction().then(() => {
-        
         this.stssList = this.getEquipements.filter(
           (equipement) => equipement.profile_group.type === "sts"
         );
@@ -588,12 +586,14 @@ export default {
             })
           );
         }
-
+        console.log("this.keysArray : " , this.keysArray)
+        console.log("this.selectedSTS : " , this.selectedSTSs)
         for (let equ in this.keysArray) {
           let equWPlanning = {
             equipement_id: this.selectedSTSs[equ].id,
             planning_id: response.id,
           };
+          console.log("this.equWPlanning : " , this.equWPlanning)
           equipementPromises.push(
             this.addEquipementToPlanning(equWPlanning).then((response) => {
               console.log("STS : " + this.selectedSTSs[equ].matricule);
@@ -607,7 +607,7 @@ export default {
                     start_time: interval.startTime,
                     end_time: interval.endTime,
                   };
-                  console.log(intervalWPlanning);
+                  // console.log(intervalWPlanning);
                   intervalPromises.push(
                     this.addEquipementWorkingHoursToPlanning(intervalWPlanning)
                   );
@@ -748,6 +748,8 @@ export default {
         );
         this.showConfirmDialog = true;
       });
+      this.selectedSTSs = Array.from(new Set(this.selectedSTSs))
+      console.log(this.selectedSTSs);
       if (this.selectedSTSs.length !== this.chunkedSTSs.length)
         this.selectAllSTSs = false;
       this.keysArray = Object.keys(this.intervals).filter(
@@ -1088,13 +1090,13 @@ export default {
             ends_time: end,
           };
           promises.push(this.setBoxAction(boxObject));
-          Promise.all(promises).then(() => {
-            this.setLoadingValueAction(false);
-            window.location.reload();
-          });
           console.log(boxObject);
         }
       }
+      Promise.all(promises).then(() => {
+        this.setLoadingValueAction(false);
+        window.location.reload();
+      });
     },
   },
 };

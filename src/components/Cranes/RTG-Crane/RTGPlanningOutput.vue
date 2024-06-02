@@ -195,7 +195,7 @@
           </tr>
         </template>
         <template v-slot:body.append>
-          <tr>
+          <tr v-if="editState">
             <td :colspan="tableHeaders.length" class="add-new-item-row">
               <v-btn @click="openAddDialog" class="rounded-plus-btn" fab small>
                 <v-icon>mdi-plus</v-icon>
@@ -531,7 +531,7 @@ export default {
     },
     isActiveUser(value) {
       return (
-        value === this.userActive.firstname + " " + this.userActive.lastname
+        value === this.userActive.firstname + " " + this.userActive.lastname + " (" + this.userActive.workingHours + ")"
       );
     },
     isBreak(value) {
@@ -799,16 +799,18 @@ export default {
     },
 
     finishPlanning() {
+      const promises=[];
       this.usersWorkingHours = this.usersWorkingHours.filter(
         (usWh) => usWh.workingHours != 0
       );
       // console.log(this.usersWorkingHours)
       this.setLoadingValueAction(true);
       this.usersWorkingHours.forEach((user) => {
-        this.editUserAction(user).then(() => {
-          this.setLoadingValueAction(false);
-          console.log("updated successfully");
-        });
+        promises.push(this.editUserAction(user));
+      });
+
+      Promise.all(promises).then(() => {
+        this.setLoadingValueAction(false);
       });
     },
 

@@ -19,7 +19,7 @@ const usersModule = {
     },
     LOGOUT_USER(state, message) {
       state.activeUser = null;
-      console.log(state.activeUser);
+      // console.log(state.activeUser);
       state.token = null;
       state.messages.logout = message;
     },

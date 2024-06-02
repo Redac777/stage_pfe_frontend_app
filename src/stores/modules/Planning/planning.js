@@ -48,6 +48,7 @@ const equipementToPlanningModule = {
     CLEAR_PLANNINGS(state) {
       state.plannings = [];
       state.rsPlannings = [];
+      state.stsPlannings = [];
       state.currentPlanning = null;
       state.currentSTSPlanning = null;
       state.currentRSPlanning = null;
@@ -244,7 +245,8 @@ const equipementToPlanningModule = {
         commit('CLEAR_PLANNINGS');
         // Clear data stored in localStorage
         localStorage.removeItem('plannings');
-        localStorage.removeItem('rsPlannings')
+        localStorage.removeItem('rsPlannings');
+        localStorage.removeItem('stsPlannings');
         localStorage.removeItem('currentPlanning');
         localStorage.removeItem('currentSTSPlanning');
         localStorage.removeItem('currentRsPlanning');

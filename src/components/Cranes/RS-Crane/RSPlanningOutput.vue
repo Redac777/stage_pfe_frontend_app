@@ -191,7 +191,7 @@
           </tr>
         </template>
         <template v-slot:body.append>
-          <tr>
+          <tr v-if="editState">
             <td :colspan="tableHeaders.length" class="add-new-item-row">
               <v-btn @click="openAddDialog" class="rounded-plus-btn" fab small>
                 <v-icon>mdi-plus</v-icon>
@@ -500,7 +500,7 @@ export default {
     },
     isActiveUser(value) {
       return (
-        value === this.userActive.firstname + " " + this.userActive.lastname
+        value === this.userActive.firstname + " " + this.userActive.lastname + " (" + this.userActive.workingHours + ")"
       );
     },
     isBreak(value) {
@@ -773,32 +773,21 @@ export default {
     },
 
     finishPlanning() {
-      console.log(this.usersWorkingHours);
-      //   this.usersWorkingHours.forEach((user)=>{
-      //     console.log(user)
-      //     if(user.workingHours===0){
-      //       delete user.workingHours
-      //       console.log("delete workinghours"+ JSON.stringify(user))
-      //     }
-      //     else if(user.sby_workingHours===0){
-      //       delete user.sby_workingHours
-      //       console.log("delete sby_workinghours"+ JSON.stringify(user))
-      //     }
-      // })
-      // this.setLoadingValueAction(true);
-      // this.usersWorkingHours.forEach((user) => {
-      //   if (user.workingHours === 0) {
-      //     delete user.workingHours;
-      //     // console.log("delete workinghours"+ JSON.stringify(user))
-      //   } else if (user.sby_workingHours === 0) {
-      //     delete user.sby_workingHours;
-      //     // console.log("delete sby_workinghours"+ JSON.stringify(user))
-      //   }
-      //   this.editUserAction(user).then(() => {
-      //     this.setLoadingValueAction(false);
-      //     console.log("updated successfully");
-      //   });
-      // });
+      
+      this.setLoadingValueAction(true);
+      this.usersWorkingHours.forEach((user) => {
+        if (user.workingHours === 0) {
+          delete user.workingHours;
+          // console.log("delete workinghours"+ JSON.stringify(user))
+        } else if (user.sby_workingHours === 0) {
+          delete user.sby_workingHours;
+          // console.log("delete sby_workinghours"+ JSON.stringify(user))
+        }
+        this.editUserAction(user).then(() => {
+          this.setLoadingValueAction(false);
+          console.log("updated successfully");
+        });
+      });
     },
     closeDelete() {
       this.dialogDelete = false;

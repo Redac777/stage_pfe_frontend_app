@@ -132,10 +132,23 @@
 
       <!-- Table -->
       <v-data-table
-        :headers="tableHeaders"
+        :headers="header"
         :items="planningTable"
         :search="search"
       >
+        <template v-slot:thead>
+          <thead>
+            <tr>
+              <th
+                v-for="header in tableHeaders"
+                :key="header.key"
+                :style="{ color: header.color }"
+              >
+                {{ header.title }}
+              </th>
+            </tr>
+          </thead>
+        </template>
         <template v-slot:item="{ item }">
           <tr>
             <template v-for="(value, key) in item" :key="key">
@@ -195,7 +208,7 @@
           </tr>
         </template>
         <template v-slot:body.append>
-          <tr>
+          <tr v-if="editState">
             <td :colspan="tableHeaders.length" class="add-new-item-row">
               <v-btn @click="openAddDialog" class="rounded-plus-btn" fab small>
                 <v-icon>mdi-plus</v-icon>
@@ -269,6 +282,7 @@ export default {
       planningId: -1,
       planningTable: [],
       tableHeaders: [],
+      header:[],
       selectedDate: new Date(),
       selectedShift: "",
       shifts: ["A", "B", "C", "D"],
@@ -315,6 +329,7 @@ export default {
       planningEquipments: [],
       uncoveredIntervals: [],
       transormedData: [],
+      neededSTSIntervals: [],
     };
   },
   components: {
@@ -467,7 +482,6 @@ export default {
       this.setPlanning(true);
       this.closeSettingsDialog();
     },
-
     // displayValue(value) {
     //   console.log(this.userActive.firstname + " " + this.userActive.lastname);
     //   console.log(value);
@@ -481,7 +495,6 @@ export default {
       this.$emit("createPlanning", this.createdPlanningData);
       this.closeCreateDialog();
     },
-
     // Set initial shift in dialog select shift
     setInitialShift() {
       const nowDate = new Date();
@@ -513,7 +526,6 @@ export default {
         }
       );
     },
-
     // select profile group in navigation dashboard
     updateActiveComponent(value) {
       switch (value) {
@@ -531,13 +543,18 @@ export default {
           break;
       }
     },
-
     isDriver(key) {
       return key === "driver";
     },
     isActiveUser(value) {
       return (
-        value === this.userActive.firstname + " " + this.userActive.lastname
+        value ===
+        this.userActive.firstname +
+          " " +
+          this.userActive.lastname +
+          " (" +
+          this.userActive.workingHours +
+          ")"
       );
     },
     isBreak(value) {
@@ -625,7 +642,6 @@ export default {
 
       return transformedArray;
     },
-
     async DisplayPlanning(dateObject) {
       try {
         await this.setCurrentSTSPlanning(dateObject);
@@ -682,6 +698,12 @@ export default {
               this.planningEquipments,
               transformed
             );
+            // console.log(this.uncoveredIntervals)
+            this.neededSTSIntervals = this.uncoveredIntervals.map((item) => {
+              return item.interval;
+            });
+
+            // console.log(this.neededSTSIntervals);
             this.transormedData.forEach((item) => {
               const transData = this.uncoveredIntervals.find((uncovInt) => {
                 return uncovInt.interval === item.timeInterval;
@@ -714,6 +736,7 @@ export default {
                   title: `${box.start_time}-${box.ends_time}`,
                   sortable: false,
                   key: `timeInterval_${timeIntervalsTable.length}`,
+                  class: "section-dessert",
                 });
                 timeIntervals.push({
                   start_time: box.start_time,
@@ -732,6 +755,19 @@ export default {
               },
               ...timeIntervalsTable,
             ];
+            // console.log("this.needed : ", this.neededSTSIntervals);
+            // console.log("this.tableheaders : ", this.tableHeaders);
+
+            this.tableHeaders.forEach((header) => {
+              if (header.title !== "Driver") {
+                // Assuming the first item doesn't represent a time interval
+                const existsInNeeded = this.neededSTSIntervals.includes(
+                  header.title
+                );
+                header.title = existsInNeeded ? header.title : header.title;
+                header.color = existsInNeeded ? "red" : "black";
+              }
+            });
 
             // Extract unique users from the planning array
             const uniqueUsers = Array.from(
@@ -859,6 +895,7 @@ export default {
               // console.log(row)
               this.setLoadingValueAction(false);
             });
+            // console.log(this.planningTable)
           });
         } else {
           console.log("Planning not found");
@@ -869,16 +906,14 @@ export default {
         console.error(error);
       }
     },
-
     toggleDatePicker() {
       this.showDatePicker = !this.showDatePicker; // Toggle the visibility
     },
-
     finishPlanning() {
       this.usersWorkingHours = this.usersWorkingHours.filter(
         (usWh) => usWh.workingHours != 0
       );
-      // console.log(this.usersWorkingHours)
+      console.log(this.usersWorkingHours);
       this.setLoadingValueAction(true);
       this.usersWorkingHours.forEach((user) => {
         this.editUserAction(user).then(() => {
@@ -886,8 +921,8 @@ export default {
           console.log("updated successfully");
         });
       });
+      // console.log(this.userWorkingHours);
     },
-
     closeDelete() {
       this.dialogDelete = false;
     },
@@ -1014,7 +1049,6 @@ export default {
       // Open the edit dialog
       this.showEditDialog = true;
     },
-
     saveCell() {
       // this.itemsToEdit = [];
       // Check if this.editableCell is not null
@@ -1145,8 +1179,8 @@ export default {
             user_id: driver.id,
             equipement_id: null,
             break: true,
-            start_time: this.tableHeaders[index + 1].title.split(" - ")[0], // Adjust index to skip the driver column
-            ends_time: this.tableHeaders[index + 1].title.split(" - ")[1], // Same as start time
+            start_time: this.tableHeaders[index + 1].title.split("-")[0], // Adjust index to skip the driver column
+            ends_time: this.tableHeaders[index + 1].title.split("-")[1], // Same as start time
             role: null,
           };
 
@@ -1457,5 +1491,8 @@ thead td {
 
 .add-new-item-row {
   text-align: center;
+}
+.red-header {
+  color: red !important; /* Set color to red for headers with the 'red-header' class */
 }
 </style>
