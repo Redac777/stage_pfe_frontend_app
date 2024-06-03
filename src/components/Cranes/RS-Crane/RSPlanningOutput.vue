@@ -73,24 +73,31 @@
         </v-card>
       </v-dialog>
     </div>
-
+    <template>
+      <div>
+        <v-dialog id="printDialog" v-model="printPlanning" max-width="1500">
+          <v-card>
+            <v-card-title
+              >RS Planning for : {{ formattedDate }} \\ Shift
+              {{ selectedShift }}</v-card-title
+            >
+            <v-card-text>
+              <PrintableTable :headers="tableHeaders" :items="planningTable" />
+            </v-card-text>
+            <v-card-actions>
+              <v-btn @click="generatePdf" class="dialogOk">Print as PDF</v-btn>
+              <v-btn @click="printPlanning = false" class="dialogCancel">Close</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </div>
+    </template>
     <!-- Planning table -->
     <div class="planning">
       <!-- Settings button -->
 
       <!-- Legend -->
       <div class="legend">
-        <!-- Create Planning-->
-        <v-btn
-          @click="openCreateDialog"
-          class="add-btn"
-          v-if="
-            userRole && userRole.name !== 'driver' && userRole.name !== 'am'
-          "
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-
         <!-- Search me -->
         <v-btn
           v-if="
@@ -105,6 +112,16 @@
         <!-- Search Planning -->
         <v-btn @click="openSettingsDialog" class="settings-btn">
           <v-icon>mdi-magnify</v-icon>
+        </v-btn>
+        <!-- Create Planning-->
+        <v-btn
+          @click="openCreateDialog"
+          class="add-btn"
+          v-if="
+            userRole && userRole.name !== 'driver' && userRole.name !== 'am'
+          "
+        >
+          <v-icon>mdi-plus</v-icon>
         </v-btn>
 
         <!-- Delete Planning -->
@@ -128,6 +145,12 @@
         >
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
+
+        <!-- Print Planning  -->
+        <v-btn @click="openPrintDialog" class="print-button">
+          <v-icon>mdi-printer</v-icon>
+        </v-btn>
+        <!-- Add other legend items here -->
       </div>
 
       <!-- Table -->
@@ -255,6 +278,8 @@
 import DashboardNavigation from "@/components/Dashboard/DashboardNavigation.vue";
 import { mapActions, mapGetters } from "vuex";
 import moment from "moment";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 export default {
   data() {
     return {
@@ -304,6 +329,7 @@ export default {
         fullName: "",
       },
       formattedUnassignedDrivers: [],
+      printPlanning: false,
     };
   },
   components: {
@@ -607,7 +633,7 @@ export default {
                 timeIntervalsTable.push({
                   title: `${box.start_time}:00 - ${box.ends_time}:00`,
                   sortable: false,
-                  key: `timeInterval_${timeIntervalsTable.length}`,
+                  key: `interval_${timeIntervalsTable.length}`,
                 });
                 timeIntervals.push({
                   start_time: box.start_time,
@@ -1099,6 +1125,50 @@ export default {
       // console.log(driver);
       this.cancelAdd();
     },
+    openPrintDialog() {
+      this.printPlanning = true;
+    },
+    generatePdf() {
+      const dialogContent = document.querySelector("#printDialog");
+
+      // Hide the buttons temporarily
+      const buttons = dialogContent.querySelectorAll(".v-card-actions");
+      buttons.forEach((button) => {
+        button.style.display = "none";
+      });
+
+      html2canvas(dialogContent, { height: dialogContent.scrollHeight }).then(
+        (canvas) => {
+          const pdf = new jsPDF("landscape", "mm", "a4");
+          const imgData = canvas.toDataURL("image/png");
+          const imgWidth = 297; // A4 width in mm
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          const header = "Tanger Alliance";
+          const fontSize = 24;
+          const textColor = "#15263f"; // Blue color (you can change this to any valid CSS color)
+          const fontWeight = "bold";
+          const textX =
+            (pdf.internal.pageSize.getWidth() -
+              (pdf.getStringUnitWidth(header) * fontSize) /
+                pdf.internal.scaleFactor) /
+            2; // X coordinate for text (centered horizontally)
+          const textY = 20; // Y coordinate for text
+          const imageX = 10; // X coordinate for image
+          const imageY = 50; // Y coordinate for image
+          pdf.setFontSize(fontSize);
+          pdf.setTextColor(textColor);
+          pdf.setFont("helvetica", fontWeight);
+          pdf.text(header, textX, textY);
+          pdf.addImage(imgData, "PNG", 0, imageY, imgWidth, imgHeight);
+          buttons.forEach((button) => {
+            button.style.display = "flex";
+          });
+          const fileName = `rs-planning-${this.formattedDate}-${this.selectedShift}`;
+          pdf.save(`${fileName}.pdf`);
+        }
+      );
+    },
   },
 };
 </script>
@@ -1187,7 +1257,7 @@ thead td {
 }
 .v-data-table {
   position: relative;
-  max-height: 50vh;
+  max-height: 55vh;
   /* max-width: 60vw; */
   overflow-y: auto;
   margin: 0 8px;
@@ -1195,6 +1265,10 @@ thead td {
 
 .add-btn {
   background-color: #1177b3;
+  color: white;
+}
+.print-button {
+  background-color: #c37125;
   color: white;
 }
 .finish-button {
@@ -1278,5 +1352,15 @@ thead td {
 }
 .add-new-item-row {
   text-align: center;
+}
+
+.dialogOk {
+    background-color: blue;
+    color: white;
+}
+
+.dialogCancel {
+    background-color: red;
+    color: white;
 }
 </style>

@@ -1051,6 +1051,7 @@ export default {
     setBoxes(output) {
       const promises = [];
       this.selectedDrivers.sort((a, b) => b.workingHours > a.workingHours);
+      console.log("selected Drivers ",this.selectedDrivers)
       // Iterate over the selectedDrivers and output table rows, starting from the second row of output
       for (let i = 0; i < this.selectedDrivers.length; i++) {
         let driver = this.selectedDrivers[i];

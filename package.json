@@ -9,14 +9,20 @@
   "dependencies": {
     "@mdi/font": "7.0.96",
     "axios": "^1.6.8",
+    "har-validator": "^5.1.5",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "moment": "^2.30.1",
     "roboto-fontface": "*",
+    "uuid": "^9.0.1",
     "vue": "^3.3.0",
+    "vue-html2pdf": "^1.8.0",
     "vue-router": "^4.3.0",
     "vuetify": "^3.0.0",
     "vuex": "^4.0.2",
     "vuex-persist": "^3.1.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xmldom": "^0.6.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.0",
