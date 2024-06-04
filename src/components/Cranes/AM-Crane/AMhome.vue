@@ -285,8 +285,13 @@ export default {
   components: {
     ConfirmDialog,
   },
+  props: {
+    amplanningData: {
+      type: Object,
+      default: null,
+    },
+  },
 
-  //data
   data() {
     return {
       minTimeIndex: -1,
@@ -320,9 +325,14 @@ export default {
       selectAll: false,
       selectAllSTSs: false,
       selectAllRoles: false,
-      inputs:null,
+      inputs: null,
       actualShift: null,
       todayDate: "",
+      inputs: null,
+      shift: [],
+      planningId: -1,
+      startTime: "",
+      endTime: "",
     };
   },
 
@@ -431,7 +441,7 @@ export default {
             !isValidIntervals ||
             this.intervals[item.matricule][
               this.intervals[item.matricule].length - 1
-            ].endTime == "15:00"
+            ].endTime == this.endTime
           );
         }
         return true; // Disable if intervals are not defined
@@ -470,7 +480,9 @@ export default {
       "addUserToPlanning",
       "addEquipementToPlanning",
       "addEquipementWorkingHoursToPlanning",
-      "setShiftByCategory"
+      "setShiftByCategory",
+      "createAMPlanningAction",
+      "setBoxAction",
     ]),
     toggleSelectAll() {
       if (this.selectAll) {
@@ -540,18 +552,90 @@ export default {
       const today = new Date();
       const options = { year: "numeric", month: "long", day: "numeric" };
       this.todayDate = today.toLocaleDateString(undefined, options);
-      this.actualShift = this.getActualShift();
-      const response = await this.setShiftByCategory({
-        category: this.actualShift,
-      });
-      this.inputs = {
-        profile_group: "am",
-        role: "am",
-        shift_id: response[0].id,
-      };
       this.setLoadingValueAction(true);
+      if (this.amplanningData) {
+        this.actualShift = this.amplanningData.shift;
+        const dateToPlan = new Date(this.amplanningData.date);
+        let year = dateToPlan.getFullYear();
+        let month = ("0" + (dateToPlan.getMonth() + 1)).slice(-2);
+        let day = ("0" + dateToPlan.getDate()).slice(-2);
+        let formattedDate = `${year}-${month}-${day}`;
+        let dateTime = `${formattedDate}`;
+        const shift = this.getDayShifts(dateTime);
+        console.log(shift);
+        const dayIndex = shift.indexOf(this.actualShift);
+        switch (dayIndex) {
+          case 0:
+            this.startTime = "07:00";
+            this.endTime = "15:00";
+            this.shift = [
+              "07:00-08:00",
+              "08:00-09:00",
+              "09:00-10:00",
+              "10:00-11:00",
+              "11:00-12:00",
+              "12:00-13:00",
+              "13:00-14:00",
+              "14:00-15:00",
+            ];
+            break;
+          case 1:
+            this.startTime = "15:00";
+            this.endTime = "23:00";
+            this.shift = [
+              "15:00-16:00",
+              "16:00-17:00",
+              "17:00-18:00",
+              "18:00-19:00",
+              "19:00-20:00",
+              "20:00-21:00",
+              "21:00-22:00",
+              "22:00-23:00",
+            ];
+            break;
+          case 2:
+            this.startTime = "23:00";
+            this.endTime = "07:00";
+            this.shift = [
+              "23:00-00:00",
+              "00:00-01:00",
+              "01:00-02:00",
+              "02:00-03:00",
+              "03:00-04:00",
+              "04:00-05:00",
+              "05:00-06:00",
+              "06:00-07:00",
+            ];
+            break;
+          default:
+            this.startTime = "";
+            this.endTime = "";
+            break;
+        }
+      } else {
+        const hours = today.getHours();
+        if (hours >= 7 && hours < 15) {
+          this.startTime = "07:00";
+          this.endTime = "15:00";
+        } else if (hours >= 15 && hours < 23) {
+          this.startTime = "15:00";
+          this.endTime = "23:00";
+        } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
+          this.startTime = "23:00";
+          this.endTime = "07:00";
+        }
+        this.actualShift = this.getActualShift();
+        // console.log(this.getActualShift());
+        const response = await this.setShiftByCategory({
+          category: this.actualShift,
+        });
+        this.inputs = {
+          profile_group: "am",
+          role: "am",
+          shift_id: response[0].id,
+        };
+      }
       this.setDriversAction(this.inputs).then((response) => {
-        this.setLoadingValueAction(false);
         this.amsList = this.getDrivers;
         if (this.amsList.length > 0) {
           this.shiftId = this.amsList[0].shift_id;
@@ -605,7 +689,7 @@ export default {
       // Check if the end time of the last interval is before 15:00
       const isEndTimeBefore15 =
         currentIntervals.length === 0 ||
-        currentIntervals[currentIntervals.length - 1].endTime < "15:00";
+        currentIntervals[currentIntervals.length - 1].endTime < this.endTime;
 
       // Check if all conditions are met
       if (
@@ -626,9 +710,16 @@ export default {
     startTimeRule(value, item, index) {
       // Reset respected to true at the beginning
       this.respectedStart = true;
-      if (value < "07:00") {
-        this.respectedStart = false;
-        return "07:00 <= interval";
+      if (this.startTime === "23:00") {
+        if (value < "23:00" && value > "06:00") {
+          this.respectedStart = false;
+          return `${this.startTime} <= interval <= ${this.endTime}`;
+        }
+      } else {
+        if (value < this.startTime || value > this.endTime) {
+          this.respectedStart = false;
+          return `${this.startTime} <= interval <= ${this.endTime}`;
+        }
       }
 
       if (index === 0) {
@@ -638,7 +729,7 @@ export default {
       const keys = Object.keys(this.intervals);
       const indexX = keys.indexOf(item.matricule);
       const previousItem = this.intervals[keys[indexX]][index - 1];
-      if (value < previousItem.endTime) {
+      if (previousItem.endTime != "23:00" && value < previousItem.endTime) {
         this.respectedStart = false;
         return "Start time > Previous end time !!";
       }
@@ -650,12 +741,15 @@ export default {
       // Reset respected to true at the beginning
       this.respectedEnd = true;
 
-      if (value > "15:00") {
+      if (value > this.endTime) {
         this.respectedEnd = false;
-        return "interval <= 15:00";
+        return `interval <= ${this.endTime}`;
       }
 
-      if (value < this.intervals[item.matricule][index].startTime) {
+      if (
+        this.intervals[item.matricule][index].startTime != "23:00" &&
+        value < this.intervals[item.matricule][index].startTime
+      ) {
         this.respectedEnd = false;
         return "Ends Time > Start Time !!";
       }
@@ -674,10 +768,24 @@ export default {
 
     // returns selected ams and stss
     createPlanning() {
-      let usersAddedSuccessfully = [];
-      let equAddedSuccessfully = [];
       this.showConfirmDialog = false;
       this.setLoadingValueAction(true);
+      const outputs = [];
+      Object.keys(this.intervals).forEach((key) => {
+        const keyIntervals = [];
+        this.intervals[key].forEach((interval) => {
+          const intervalHourly = this.splitIntoHourlyIntervals(interval);
+          intervalHourly.forEach((interv) => {
+            keyIntervals.push(interv);
+          });
+        });
+        outputs.push({
+          matricule: key,
+          intervals: keyIntervals,
+          length: keyIntervals.length,
+        });
+        outputs.sort((a, b) => b.length - a.length);
+      });
       const planning = {
         shift_id: this.shiftId,
         profile_group_id: this.profileGroupId,
@@ -685,48 +793,50 @@ export default {
         deckman_number: this.numWorkers["deckman"],
         assistant: this.selectedRoles.includes("assistant") ? 1 : 0,
       };
-      this.createPlanningAction(planning).then((response) => {
+      this.createAMPlanningAction(planning).then((response) => {
+        let userPromises = [];
+        let equipementPromises = [];
+        let usersAddedSuccessfully = [];
+        let equAddedSuccessfully = [];
         for (let am in this.selectedAMs) {
           let userWPlanning = {
             user_id: this.selectedAMs[am].id,
             planning_id: response.id,
           };
-          this.addUserToPlanning(userWPlanning).then(() => {
-            usersAddedSuccessfully.push(this.selectedAMs[am]);
-          });
+          userPromises.push(
+            this.addUserToPlanning(userWPlanning).then(() => {
+              usersAddedSuccessfully.push(this.selectedAMs[am]);
+            })
+          );
         }
-        const mapKeys = Array.from(new Set(this.selectedSTSs)).map(
-          (sts) => sts.matricule
-        );
-        for (let equ in mapKeys) {
+        for (let equ in this.keysArray) {
           if (this.intervals[this.selectedSTSs[equ].matricule]) {
             let equWPlanning = {
               equipement_id: this.selectedSTSs[equ].id,
               planning_id: response.id,
             };
-            this.addEquipementToPlanning(equWPlanning).then((response) => {
-              for (let interval in this.intervals[
-                this.selectedSTSs[equ].matricule
-              ]) {
-                let intervalWPlanning = {
-                  equipement_planning_id: response.id,
-                  start_time:
-                    this.intervals[this.selectedSTSs[equ].matricule][interval]
-                      .startTime,
-                  end_time:
-                    this.intervals[this.selectedSTSs[equ].matricule][interval]
-                      .endTime,
-                };
-
-                this.addEquipementWorkingHoursToPlanning(
-                  intervalWPlanning
-                ).then((response) => {
-                  console.log(response);
+            equipementPromises.push(
+              this.addEquipementToPlanning(equWPlanning).then((response) => {
+                let intervalPromises = [];
+                this.intervals[this.selectedSTSs[equ].matricule].forEach(
+                  (interval) => {
+                    let intervalWPlanning = {
+                      equipement_planning_id: response.id,
+                      start_time: interval.startTime,
+                      end_time: interval.endTime,
+                    };
+                    intervalPromises.push(
+                      this.addEquipementWorkingHoursToPlanning(
+                        intervalWPlanning
+                      )
+                    );
+                  }
+                );
+                return Promise.all(intervalPromises).then(() => {
+                  equAddedSuccessfully.push(this.selectedSTSs[equ]);
                 });
-              }
-
-              equAddedSuccessfully.push(this.selectedSTSs[equ]);
-            });
+              })
+            );
           } else {
             let equWPlanning = {
               equipement_id: this.selectedSTSs[equ].id,
@@ -735,18 +845,19 @@ export default {
                 (worker) => worker.STS === this.selectedSTSs[equ].matricule
               ).worker,
             };
-            this.addEquipementToPlanning(equWPlanning).then((response) => {
-              console.log(response);
-              equAddedSuccessfully.push(this.selectedSTSs[equ]);
-            });
+            equipementPromises.push(
+              this.addEquipementToPlanning(equWPlanning).then((response) => {
+                equAddedSuccessfully.push(this.selectedSTSs[equ]);
+              })
+            );
           }
         }
-
-        this.setLoadingValueAction(false);
-        console.log(usersAddedSuccessfully);
-        console.log(equAddedSuccessfully);
+        Promise.all(userPromises.concat(equipementPromises)).then(() => {
+          // console.log(usersAddedSuccessfully);
+          // console.log(equAddedSuccessfully);
+          this.setBoxes(outputs);
+        });
       });
-      this.showConfirmDialog = false;
     },
 
     // switch on change state
@@ -898,7 +1009,7 @@ export default {
       this.selectedSTSs = this.selectedSTSs.filter(
         (sts) => sts.matricule !== equ
       );
-      delete this.intervals[equ.matricule];
+      delete this.intervals[keysArrayequ.matricule];
       this.keysArray = Object.keys(this.intervals);
     },
 
@@ -912,7 +1023,29 @@ export default {
       );
       this.isSaved[sts.matricule] = false;
     },
+    generateIntervals(start, end) {
+      const intervals = [];
+      let [startHour, startMinute] = start.split(":").map(Number);
+      let [endHour, endMinute] = end.split(":").map(Number);
 
+      while (
+        startHour < endHour ||
+        (startHour === endHour && startMinute < endMinute)
+      ) {
+        const nextHour = startHour + 1;
+        intervals.push(
+          `${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(
+            2,
+            "0"
+          )}-${String(nextHour).padStart(2, "0")}:${String(
+            startMinute
+          ).padStart(2, "0")}`
+        );
+        startHour = nextHour;
+      }
+
+      return intervals;
+    },
     // open confirm dialog
     openConfirmDialog() {
       this.selectedSTSs = this.selectedSTSs.filter((sts) => {
@@ -928,6 +1061,10 @@ export default {
           this.workers.find((worker) => worker.STS === sts.matricule)
         );
       });
+      this.selectedSTSs = Array.from(new Set(this.selectedSTSs));
+      console.log(this.selectedSTSs);
+      if (this.selectedSTSs.length !== this.chunkedSTSs.length)
+        this.selectAllSTSs = false;
       this.keysArray = Object.keys(this.intervals).filter(
         (key) =>
           this.intervals[key].length !== 0 &&
@@ -967,6 +1104,31 @@ export default {
       )
         return shift[2];
     },
+    getDayShifts(date) {
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
+      let thisDate = new Date("2022-02-10T07:00:00");
+
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      // if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      // else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      //   return shift[1];
+      // else if (
+      //   nowDate.getHours() == 23 ||
+      //   (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      // )
+      //   return shift[2];
+      return shift;
+    },
     shiftArrays(array) {
       let c = "";
       c = array[3];
@@ -977,6 +1139,10 @@ export default {
 
       return array;
     },
+    setBoxesData(outputs){
+      console.log(outputs);
+      this.setLoadingValueAction(false);
+    }
   },
 };
 </script>
@@ -988,7 +1154,7 @@ export default {
   flex-direction: column;
   max-height: 80vh; /* You can adjust this value as needed */
   gap: 0.3rem;
-  overflow-y: auto; 
+  overflow-y: auto;
 }
 
 .parent {
@@ -1039,7 +1205,6 @@ export default {
   align-items: center;
   gap: 0.4rem;
   margin: 0 0.6rem;
-
 }
 
 .role {
@@ -1068,7 +1233,7 @@ export default {
 .amname,
 .stsname,
 .rolename {
-  font-size:0.6rem;
+  font-size: 0.6rem;
   font-weight: bold;
   width: fit-content;
 }

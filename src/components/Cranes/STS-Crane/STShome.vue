@@ -180,6 +180,7 @@ export default {
   components: {
     ConfirmDialog,
   },
+
   props: {
     stsplanningData: {
       type: Object,
@@ -301,7 +302,7 @@ export default {
             !isValidIntervals ||
             this.intervals[item.matricule][
               this.intervals[item.matricule].length - 1
-            ].endTime == "15:00"
+            ].endTime == this.endTime
           );
         }
         return true; // Disable if intervals are not defined
@@ -331,7 +332,6 @@ export default {
       "setDriversAction",
       "setLoadingValueAction",
       "setEquipementsAction",
-      "createPlanningAction",
       "addUserToPlanning",
       "addEquipementToPlanning",
       "addEquipementWorkingHoursToPlanning",
@@ -390,7 +390,7 @@ export default {
       this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
       if (this.stsplanningData) {
-        console.log(JSON.stringify(this.stsplanningData));
+        // console.log(JSON.stringify(this.stsplanningData));
         this.actualShift = this.stsplanningData.shift;
         const dateToPlan = new Date(this.stsplanningData.date);
         let year = dateToPlan.getFullYear();
@@ -472,7 +472,7 @@ export default {
           this.endTime = "07:00";
         }
         this.actualShift = this.getActualShift();
-        console.log(this.getActualShift());
+        // console.log(this.getActualShift());
         const response = await this.setShiftByCategory({
           category: this.actualShift,
         });
@@ -657,17 +657,17 @@ export default {
             })
           );
         }
-        console.log("this.keysArray : ", this.keysArray);
-        console.log("this.selectedSTS : ", this.selectedSTSs);
+        // console.log("this.keysArray : ", this.keysArray);
+        // console.log("this.selectedSTS : ", this.selectedSTSs);
         for (let equ in this.keysArray) {
           let equWPlanning = {
             equipement_id: this.selectedSTSs[equ].id,
             planning_id: response.id,
           };
-          console.log("this.equWPlanning : ", this.equWPlanning);
+          // console.log("this.equWPlanning : ", this.equWPlanning);
           equipementPromises.push(
             this.addEquipementToPlanning(equWPlanning).then((response) => {
-              console.log("STS : " + this.selectedSTSs[equ].matricule);
+              // console.log("STS : " + this.selectedSTSs[equ].matricule);
 
               let intervalPromises = [];
 
@@ -684,7 +684,6 @@ export default {
                   );
                 }
               );
-
               return Promise.all(intervalPromises).then(() => {
                 equAddedSuccessfully.push(this.selectedSTSs[equ]);
               });
@@ -831,6 +830,7 @@ export default {
       );
       this.showConfirmDialog = true;
     },
+    
     getActualShift(date) {
       let thisDate = new Date("2022-02-10T07:00:00");
       let nowDate = null;
