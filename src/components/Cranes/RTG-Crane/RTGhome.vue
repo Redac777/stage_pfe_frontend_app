@@ -141,7 +141,7 @@ export default {
       actualShift: null,
       todayDate: "",
       planningId: -1,
-      
+      startTime: "",
     };
   },
 
@@ -242,6 +242,27 @@ export default {
         console.log(JSON.stringify(this.planningData));
         this.actualShift = this.planningData.shift;
         const dateToPlan = new Date(this.planningData.date);
+        let year = dateToPlan.getFullYear();
+        let month = ("0" + (dateToPlan.getMonth() + 1)).slice(-2);
+        let day = ("0" + dateToPlan.getDate()).slice(-2);
+        let formattedDate = `${year}-${month}-${day}`;
+        let dateTime = `${formattedDate}`;
+        const shift = this.getDayShifts(dateTime);
+        const dayIndex = shift.indexOf(this.actualShift);
+        switch (dayIndex) {
+          case 0:
+            this.startTime = 7;
+            break;
+          case 1:
+            this.startTime = 15;
+            break;
+          case 2:
+            this.startTime = 23;
+            break;
+          default:
+            this.startTime = 0;
+            break;
+        }
         this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
         const response = await this.setShiftByCategory({
           category: this.planningData.shift,
@@ -253,6 +274,14 @@ export default {
           shift_id: response[0].id,
         };
       } else {
+        const hours = today.getHours();
+        if (hours >= 7 && hours < 15) {
+          this.startTime = 7;
+        } else if (hours >= 15 && hours < 23) {
+          this.startTime = 15;
+        } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
+          this.startTime = 23;
+        }
         this.actualShift = this.getActualShift();
         console.log(this.getActualShift());
         const response = await this.setShiftByCategory({
@@ -297,7 +326,31 @@ export default {
         []
       );
     },
+    getDayShifts(date) {
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
+      let thisDate = new Date("2022-02-10T07:00:00");
 
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      // if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      // else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      //   return shift[1];
+      // else if (
+      //   nowDate.getHours() == 23 ||
+      //   (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      // )
+      //   return shift[2];
+      return shift;
+    },
     // returns selected drivers and rtgs
     createPlanning() {
       if (this.selectedDrivers.length !== 0 && this.selectedRTGs !== 0) {
@@ -389,22 +442,10 @@ export default {
       this.drivers = this.drivers.sort(function (a, b) {
         return b.workingHours - a.workingHours;
       });
-      let currentTime = new Date().getHours();
-      let startTime = 0;
-      switch (true) {
-        case currentTime >= 7 && currentTime <= 14: // Between 7h and 14h59
-          startTime = 7;
-          break;
-        case currentTime >= 15 && currentTime <= 22: // Between 15h and 22h59
-          startTime = 15;
-          break;
-        default: // Between 23h and 24h or 00h and 6h59
-          startTime = 23;
-          break;
-      }
+
       for (let i = 0; i < nbrCols; i++) {
-        let hours = Math.floor(startTime); // Extract whole hours
-        let minutes = Math.round((startTime - hours) * 60); // Extract remaining minutes and round
+        let hours = Math.floor(this.startTime); // Extract whole hours
+        let minutes = Math.round((this.startTime - hours) * 60); // Extract remaining minutes and round
 
         // Adjust minutes if they exceed 60
         if (minutes >= 60) {
@@ -412,12 +453,19 @@ export default {
           minutes -= 60; // Subtract 60 from minutes
         }
 
-        // Format startTime as "hh:mm"
+        // Format this.startTime as "hh:mm"
         let startTimeFormatted =
-          hours + ":" + (minutes < 10 ? "0" : "") + minutes;
+          (hours < 10 ? "0" : "") +
+          hours +
+          ":" +
+          (minutes < 10 ? "0" : "") +
+          minutes;
 
         // Calculate endTime
-        let endTime = startTime + colDuration / 60;
+        let endTime = this.startTime + colDuration / 60;
+        if (endTime >= 24) {
+          endTime -= 24; // Adjust for overflow past midnight
+        }
 
         let endTimeHours = Math.floor(endTime); // Extract whole hours for end time
         let endTimeMinutes = Math.round((endTime - endTimeHours) * 60); // Extract remaining minutes and round
@@ -430,6 +478,7 @@ export default {
 
         // Format endTime as "hh:mm"
         let endTimeFormatted =
+          (endTimeHours < 10 ? "0" : "") +
           endTimeHours +
           ":" +
           (endTimeMinutes < 10 ? "0" : "") +
@@ -441,9 +490,13 @@ export default {
           sortable: false,
         });
 
-        // Update startTime for the next iteration
-        startTime = endTimeHours + endTimeMinutes / 60;
+        // Update this.startTime for the next iteration
+        this.startTime = endTimeHours + endTimeMinutes / 60;
+        if (this.startTime >= 24) {
+          this.startTime -= 24; // Adjust for overflow past midnight
+        }
       }
+
       const itemsPlanning = [];
       itemsPlanning.push(["Drivers | Time", ...this.tableHeaders]);
 
@@ -616,7 +669,6 @@ export default {
     },
 
     // treating sts data
-    
   },
 };
 </script>

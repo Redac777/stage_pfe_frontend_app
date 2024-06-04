@@ -9,7 +9,7 @@ import RTGhome from '@/components/Cranes/RTG-Crane/RTGhome.vue'
 const Router = createRouter({
     history:createWebHistory(),
     routes : [
-        {path:'/',component:Login},
+        {path:'/',component:Dashboard},
         {path:'/dashboard',component:Dashboard},
         {path: '/users' , component:Users},
         {path:'/equipements' , component:Equipements},

@@ -90,15 +90,19 @@
                 />
               </v-card-text>
               <v-card-actions>
-                <v-btn @click="generatePdf" class="dialogOk">Print as PDF</v-btn>
-                <v-btn @click="printPlanning = false" class="dialogCancel">Close</v-btn>
+                <v-btn @click="generatePdf" class="dialogOk"
+                  >Print as PDF</v-btn
+                >
+                <v-btn @click="printPlanning = false" class="dialogCancel"
+                  >Close</v-btn
+                >
               </v-card-actions>
             </v-card>
           </v-dialog>
         </div>
       </template>
     </div>
-    
+
     <!-- Planning table -->
     <div class="planning">
       <!-- Settings button -->
@@ -677,7 +681,7 @@ export default {
         await this.setCurrentSTSPlanning(dateObject);
         this.planning = this.getCurrentSTSPlanning;
         if (this.planning) {
-          // console.log(JSON.stringify(this.planning))
+          console.log(JSON.stringify(this.planning));
           this.planningId = this.planning.id;
           const planningId = {
             planning_id: this.planning.id,
@@ -1067,6 +1071,7 @@ export default {
             };
           })
           .filter(Boolean);
+          this.filteredEquipements.push("B");
       }
 
       console.log(this.filteredEquipements);
@@ -1156,18 +1161,20 @@ export default {
     },
     saveEdits() {
       // console.log(this.itemsToEdit);
+      const promises = [];
       if (this.itemsToEdit && this.itemsToEdit.length > 0) {
         this.setLoadingValueAction(true);
         this.itemsToEdit.forEach((item) => {
-          this.setBoxUpdateAction(item).then(() => {
-            this.setLoadingValueAction(false);
-          });
+          promises.push(this.setBoxUpdateAction(item));
+        });
+        Promise.all(promises).then(() => {
+          this.setLoadingValueAction(false);
+          this.editState = false;
           this.itemsToEdit = [];
+          window.location.reload();
         });
         // console.log(this.itemsToEdit)
       }
-      this.editState = false;
-      this.itemsToEdit = [];
     },
     searchMe() {
       this.search =
@@ -1201,7 +1208,7 @@ export default {
 
       // Create promises for creating boxes for each time interval
       this.tableHeaders
-        .filter((header) => header.key.startsWith("timeInterval_"))
+        .filter((header) => header.key.startsWith("interval_"))
         .forEach((header, index) => {
           // Prepare data for box creation
           const boxData = {
@@ -1577,12 +1584,12 @@ thead td {
 }
 
 .dialogOk {
-    background-color: blue;
-    color: white;
+  background-color: blue;
+  color: white;
 }
 
 .dialogCancel {
-    background-color: red;
-    color: white;
+  background-color: red;
+  color: white;
 }
 </style>

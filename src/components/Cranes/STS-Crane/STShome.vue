@@ -212,17 +212,10 @@ export default {
       actualShift: null,
       todayDate: "",
       inputs: null,
-      shift: [
-        "15:00-16:00",
-        "16:00-17:00",
-        "17:00-18:00",
-        "18:00-19:00",
-        "19:00-20:00",
-        "20:00-21:00",
-        "21:00-22:00",
-        "22:00-23:00",
-      ],
+      shift: [],
       planningId: -1,
+      startTime: "",
+      endTime: "",
     };
   },
 
@@ -392,6 +385,7 @@ export default {
     //set drivers and equipements data
     async setData() {
       const today = new Date();
+      console.log("startTime : ", this.startTime);
       const options = { year: "numeric", month: "long", day: "numeric" };
       this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
@@ -399,6 +393,62 @@ export default {
         console.log(JSON.stringify(this.stsplanningData));
         this.actualShift = this.stsplanningData.shift;
         const dateToPlan = new Date(this.stsplanningData.date);
+        let year = dateToPlan.getFullYear();
+        let month = ("0" + (dateToPlan.getMonth() + 1)).slice(-2);
+        let day = ("0" + dateToPlan.getDate()).slice(-2);
+        let formattedDate = `${year}-${month}-${day}`;
+        let dateTime = `${formattedDate}`;
+        const shift = this.getDayShifts(dateTime);
+        console.log(shift);
+        const dayIndex = shift.indexOf(this.actualShift);
+        switch (dayIndex) {
+          case 0:
+            this.startTime = "07:00";
+            this.endTime = "15:00";
+            this.shift = [
+              "07:00-08:00",
+              "08:00-09:00",
+              "09:00-10:00",
+              "10:00-11:00",
+              "11:00-12:00",
+              "12:00-13:00",
+              "13:00-14:00",
+              "14:00-15:00",
+            ];
+            break;
+          case 1:
+            this.startTime = "15:00";
+            this.endTime = "23:00";
+            this.shift = [
+              "15:00-16:00",
+              "16:00-17:00",
+              "17:00-18:00",
+              "18:00-19:00",
+              "19:00-20:00",
+              "20:00-21:00",
+              "21:00-22:00",
+              "22:00-23:00",
+            ];
+            break;
+          case 2:
+            this.startTime = "23:00";
+            this.endTime = "07:00";
+            this.shift = [
+              "23:00-00:00",
+              "00:00-01:00",
+              "01:00-02:00",
+              "02:00-03:00",
+              "03:00-04:00",
+              "04:00-05:00",
+              "05:00-06:00",
+              "06:00-07:00",
+            ];
+            break;
+          default:
+            this.startTime = "";
+            this.endTime = "";
+            break;
+        }
         this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
         const response = await this.setShiftByCategory({
           category: this.stsplanningData.shift,
@@ -410,6 +460,17 @@ export default {
           shift_id: response[0].id,
         };
       } else {
+        const hours = today.getHours();
+        if (hours >= 7 && hours < 15) {
+          this.startTime = "07:00";
+          this.endTime = "15:00";
+        } else if (hours >= 15 && hours < 23) {
+          this.startTime = "15:00";
+          this.endTime = "23:00";
+        } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
+          this.startTime = "23:00";
+          this.endTime = "07:00";
+        }
         this.actualShift = this.getActualShift();
         console.log(this.getActualShift());
         const response = await this.setShiftByCategory({
@@ -478,7 +539,7 @@ export default {
       // Check if the end time of the last interval is before 15:00
       const isEndTimeBefore15 =
         currentIntervals.length === 0 ||
-        currentIntervals[currentIntervals.length - 1].endTime < "23:00";
+        currentIntervals[currentIntervals.length - 1].endTime < this.endTime;
 
       // Check if all conditions are met
       if (
@@ -499,9 +560,16 @@ export default {
     startTimeRule(value, item, index) {
       // Reset respected to true at the beginning
       this.respectedStart = true;
-      if (value < "15:00" || value > "23:00") {
-        this.respectedStart = false;
-        return "15:00 <= interval <= 23:00";
+      if (this.startTime === "23:00") {
+        if (value < "23:00" && value > "06:00") {
+          this.respectedStart = false;
+          return `${this.startTime} <= interval <= ${this.endTime}`;
+        }
+      } else {
+        if (value < this.startTime || value > this.endTime) {
+          this.respectedStart = false;
+          return `${this.startTime} <= interval <= ${this.endTime}`;
+        }
       }
 
       if (index === 0) {
@@ -511,7 +579,7 @@ export default {
       const keys = Object.keys(this.intervals);
       const indexX = keys.indexOf(item.matricule);
       const previousItem = this.intervals[keys[indexX]][index - 1];
-      if (value < previousItem.endTime) {
+      if (previousItem.endTime != "23:00" && value < previousItem.endTime) {
         this.respectedStart = false;
         return "Start time > Previous end time !!";
       }
@@ -523,12 +591,15 @@ export default {
       // Reset respected to true at the beginning
       this.respectedEnd = true;
 
-      if (value > "23:00") {
+      if (value > this.endTime) {
         this.respectedEnd = false;
-        return "interval <= 23:00";
+        return `interval <= ${this.endTime}`;
       }
 
-      if (value < this.intervals[item.matricule][index].startTime) {
+      if (
+        this.intervals[item.matricule][index].startTime != "23:00" &&
+        value < this.intervals[item.matricule][index].startTime
+      ) {
         this.respectedEnd = false;
         return "Ends Time > Start Time !!";
       }
@@ -586,14 +657,14 @@ export default {
             })
           );
         }
-        console.log("this.keysArray : " , this.keysArray)
-        console.log("this.selectedSTS : " , this.selectedSTSs)
+        console.log("this.keysArray : ", this.keysArray);
+        console.log("this.selectedSTS : ", this.selectedSTSs);
         for (let equ in this.keysArray) {
           let equWPlanning = {
             equipement_id: this.selectedSTSs[equ].id,
             planning_id: response.id,
           };
-          console.log("this.equWPlanning : " , this.equWPlanning)
+          console.log("this.equWPlanning : ", this.equWPlanning);
           equipementPromises.push(
             this.addEquipementToPlanning(equWPlanning).then((response) => {
               console.log("STS : " + this.selectedSTSs[equ].matricule);
@@ -748,7 +819,7 @@ export default {
         );
         this.showConfirmDialog = true;
       });
-      this.selectedSTSs = Array.from(new Set(this.selectedSTSs))
+      this.selectedSTSs = Array.from(new Set(this.selectedSTSs));
       console.log(this.selectedSTSs);
       if (this.selectedSTSs.length !== this.chunkedSTSs.length)
         this.selectAllSTSs = false;
@@ -760,22 +831,54 @@ export default {
       );
       this.showConfirmDialog = true;
     },
-    getActualShift() {
+    getActualShift(date) {
       let thisDate = new Date("2022-02-10T07:00:00");
-      let nowDate = new Date();
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
       let shift = ["D", "A", "B", "C"];
       let momentDate = moment(thisDate);
       while (momentDate.add(72, "hours").toDate() < nowDate) {
         shift = this.shiftArrays(shift);
       }
-      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
-      else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) {
+        return shift[0];
+      } else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23) {
         return shift[1];
-      else if (
+      } else if (
         nowDate.getHours() == 23 ||
         (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
-      )
+      ) {
         return shift[2];
+      }
+    },
+    getDayShifts(date) {
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
+      let thisDate = new Date("2022-02-10T07:00:00");
+
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      // if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      // else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      //   return shift[1];
+      // else if (
+      //   nowDate.getHours() == 23 ||
+      //   (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      // )
+      //   return shift[2];
+      return shift;
     },
     shiftArrays(array) {
       let c = "";
@@ -1029,21 +1132,38 @@ export default {
       let currentHour = startHour;
       let currentMin = startMin;
 
+      // Function to format time with leading zeros
+      const formatTime = (hour, minute) => {
+        return `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
+      };
+
+      // Determine if we are spanning across midnight
+      const isSpanningMidnight =
+        endHour < startHour || (endHour === startHour && endMin < startMin);
+
       while (
         currentHour < endHour ||
-        (currentHour === endHour && currentMin < endMin)
+        (currentHour === endHour && currentMin < endMin) ||
+        (isSpanningMidnight &&
+          (currentHour !== endHour || currentMin !== endMin))
       ) {
-        const nextHour = currentHour + 1;
-        const formattedCurrentHour = currentHour.toString().padStart(2, "0");
-        const formattedCurrentMin = currentMin.toString().padStart(2, "0");
-        const formattedNextHour = nextHour.toString().padStart(2, "0");
-
+        const nextHour = (currentHour + 1) % 24;
         intervals.push(
-          `${formattedCurrentHour}:${formattedCurrentMin}-${formattedNextHour}:${formattedCurrentMin}`
+          `${formatTime(currentHour, currentMin)}-${formatTime(
+            nextHour,
+            currentMin
+          )}`
         );
 
         currentHour = nextHour;
         currentMin = 0; // Since we are working with hourly intervals, minutes will always be 0
+
+        // If we are spanning midnight and we looped back to the start hour, we can stop
+        if (isSpanningMidnight && currentHour === startHour) {
+          break;
+        }
       }
 
       return intervals;
@@ -1051,7 +1171,7 @@ export default {
     setBoxes(output) {
       const promises = [];
       this.selectedDrivers.sort((a, b) => b.workingHours > a.workingHours);
-      console.log("selected Drivers ",this.selectedDrivers)
+      console.log("selected Drivers ", this.selectedDrivers);
       // Iterate over the selectedDrivers and output table rows, starting from the second row of output
       for (let i = 0; i < this.selectedDrivers.length; i++) {
         let driver = this.selectedDrivers[i];

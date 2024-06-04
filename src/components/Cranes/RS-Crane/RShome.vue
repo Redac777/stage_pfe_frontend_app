@@ -137,7 +137,8 @@ export default {
       selectAllRSs: false,
       actualShift: null,
       todayDate: "",
-      planningId:-1
+      planningId: -1,
+      startTime: 0,
     };
   },
 
@@ -238,6 +239,27 @@ export default {
         // console.log(JSON.stringify(this.rsplanningData));
         this.actualShift = this.rsplanningData.shift;
         const dateToPlan = new Date(this.rsplanningData.date);
+        let year = dateToPlan.getFullYear();
+        let month = ("0" + (dateToPlan.getMonth() + 1)).slice(-2);
+        let day = ("0" + dateToPlan.getDate()).slice(-2);
+        let formattedDate = `${year}-${month}-${day}`;
+        let dateTime = `${formattedDate}`;
+        const shift = this.getDayShifts(dateTime);
+        const dayIndex = shift.indexOf(this.actualShift);
+        switch (dayIndex) {
+          case 0:
+            this.startTime = 7;
+            break;
+          case 1:
+            this.startTime = 15;
+            break;
+          case 2:
+            this.startTime = 23;
+            break;
+          default:
+            this.startTime = 0;
+            break;
+        }
         this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
         const response = await this.setShiftByCategory({
           category: this.rsplanningData.shift,
@@ -248,6 +270,14 @@ export default {
           shift_id: response[0].id,
         };
       } else {
+        const hours = today.getHours();
+        if (hours >= 7 && hours < 15) {
+          this.startTime = 7;
+        } else if (hours >= 15 && hours < 23) {
+          this.startTime = 15;
+        } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
+          this.startTime = 23;
+        }
         this.actualShift = this.getActualShift();
         console.log(this.getActualShift());
         const response = await this.setShiftByCategory({
@@ -305,7 +335,7 @@ export default {
         };
       }
       this.createRSPlanningAction(this.planning).then((response) => {
-        this.planningId = response.id;  
+        this.planningId = response.id;
         const addUserPromises = [];
         const addEquipementPromises = [];
         for (let driver in this.selectedDrivers) {
@@ -370,38 +400,61 @@ export default {
       this.showConfirmDialog = true;
     },
 
-   
+    getDayShifts(date) {
+      let nowDate = null;
+      if (!date) {
+        nowDate = new Date();
+      } else {
+        nowDate = new Date(date);
+      }
+      let thisDate = new Date("2022-02-10T07:00:00");
+
+      let shift = ["D", "A", "B", "C"];
+      let momentDate = moment(thisDate);
+
+      while (momentDate.add(72, "hours").toDate() < nowDate) {
+        shift = this.shiftArrays(shift);
+      }
+      // if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
+      // else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
+      //   return shift[1];
+      // else if (
+      //   nowDate.getHours() == 23 ||
+      //   (nowDate.getHours() >= 0 && nowDate.getHours() < 7)
+      // )
+      //   return shift[2];
+      return shift;
+    },
 
     rsPlanning() {
       let nbrDrivers = this.drivers.length;
       let nbrRtgs = this.rss.length;
-      this.rss.sort((a, b) => (a.matricule === "SBY" ? 1 : b.matricule === "SBY" ? -1 : 0));
+      this.rss.sort((a, b) =>
+        a.matricule === "SBY" ? 1 : b.matricule === "SBY" ? -1 : 0
+      );
       this.drivers = this.drivers.sort(function (a, b) {
         return b.sby_workingHours - a.sby_workingHours;
       });
-      let currentTime = new Date().getHours();
-      let endTime = 0;
-      switch (true) {
-        case currentTime >= 7 && currentTime <= 14: // Between 7h and 14h59
-          endTime = 7;
-          break;
-        case currentTime >= 15 && currentTime <= 22: // Between 15h and 22h59
-          endTime = 15;
-          break;
-        default: // Between 23h and 24h or 00h and 6h59
-          endTime = 23;
-          break;
-      }
+
       let totalHours = 8;
       let intervalEndTime = 0;
+
       for (let i = 0; i < totalHours; i++) {
-        intervalEndTime = endTime + 1;
+        intervalEndTime = this.startTime + 1;
+
+        // Adjust for overflow past midnight
+        if (intervalEndTime >= 24) {
+          intervalEndTime -= 24;
+        }
+
         this.tableHeaders.push({
-          title: endTime + " - " + intervalEndTime,
+          title: this.startTime + " - " + intervalEndTime,
           sortable: false,
         });
-        endTime = intervalEndTime;
+
+        this.startTime = intervalEndTime;
       }
+
       const itemsPlanning = [];
       itemsPlanning.push(["Drivers | Time", ...this.tableHeaders]);
 
@@ -520,7 +573,7 @@ export default {
   flex-direction: column;
   max-height: 80vh; /* You can adjust this value as needed */
   gap: 0.3rem;
-  overflow-y: auto; 
+  overflow-y: auto;
 }
 .parent {
   margin-top: 1rem;
@@ -583,8 +636,9 @@ export default {
   font-size: x-small !important;
 }
 
-.drivername,.rsname {
-  font-size:0.5rem;
+.drivername,
+.rsname {
+  font-size: 0.5rem;
   font-weight: bold;
   width: fit-content;
 }

@@ -1049,7 +1049,7 @@ export default {
 
       // Create promises for creating boxes for each time interval
       this.tableHeaders
-        .filter((header) => header.key.startsWith("timeInterval_"))
+        .filter((header) => header.key.startsWith("interval__"))
         .forEach((header, index) => {
           // Prepare data for box creation
           const boxData = {
@@ -1111,7 +1111,6 @@ export default {
           this.setLoadingValueAction(false);
         });
     },
-
     handleAddDriver() {
       // Add the driver to the planningTable
       // this.addDriverToPlanningTable(this.selectedDriver);
