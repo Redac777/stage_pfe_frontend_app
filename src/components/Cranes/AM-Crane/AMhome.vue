@@ -483,7 +483,7 @@ export default {
       "setShiftByCategory",
       "createAMPlanningAction",
       "setBoxAction",
-      "setProfileGroupByType"
+      "setProfileGroupByType",
     ]),
     toggleSelectAll() {
       if (this.selectAll) {
@@ -558,12 +558,13 @@ export default {
         console.log(JSON.stringify(this.amplanningData));
         this.actualShift = this.amplanningData.shift;
         const dateToPlan = new Date(this.amplanningData.date);
+        console.log(dateToPlan);
         let year = dateToPlan.getFullYear();
         let month = ("0" + (dateToPlan.getMonth() + 1)).slice(-2);
         let day = ("0" + dateToPlan.getDate()).slice(-2);
         let formattedDate = `${year}-${month}-${day}`;
         let dateTime = `${formattedDate}`;
-        const shift = this.getDayShifts(dateTime);
+        const shift = this.getDayShifts();
         console.log(shift);
         const dayIndex = shift.indexOf(this.actualShift);
         switch (dayIndex) {
@@ -618,13 +619,12 @@ export default {
         const response = await this.setShiftByCategory({
           category: this.amplanningData.shift,
         });
-        // console.log(this.stsplanningData);
+        // console.log(this.amplanningData);
         this.inputs = {
           profile_group: "am",
           role: "am",
           shift_id: response[0].id,
         };
-
       } else {
         const hours = today.getHours();
         if (hours >= 7 && hours < 15) {
@@ -677,7 +677,6 @@ export default {
           role: "am",
           shift_id: response[0].id,
         };
-
       }
       this.setDriversAction(this.inputs).then((response) => {
         this.amsList = this.getDrivers;
@@ -833,13 +832,32 @@ export default {
         });
         outputs.sort((a, b) => b.length - a.length);
       });
-      const planning = {
-        shift_id: this.shiftId,
-        profile_group_id: this.profileGroupId,
-        checker_number: this.numWorkers["checker"],
-        deckman_number: this.numWorkers["deckman"],
-        assistant: this.selectedRoles.includes("assistant") ? 1 : 0,
-      };
+      let planning = [];
+      if (this.amplanningData) {
+        const date = new Date(this.amplanningData.date);
+        // Get the year, month, and day components
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
+        const day = String(date.getDate()).padStart(2, "0");
+        // Construct the formatted date string in "YYYY-mm-dd" format
+        const formattedDate = `${year}-${month}-${day}`;
+        planning = {
+          shift_id: this.shiftId,
+          profile_group_id: this.profileGroupId,
+          checker_number: this.numWorkers["checker"],
+          deckman_number: this.numWorkers["deckman"],
+          assistant: this.selectedRoles.includes("assistant") ? 1 : 0,
+          planned_at: formattedDate,
+        };
+      } else {
+        planning = {
+          shift_id: this.shiftId,
+          profile_group_id: this.profileGroupId,
+          checker_number: this.numWorkers["checker"],
+          deckman_number: this.numWorkers["deckman"],
+          assistant: this.selectedRoles.includes("assistant") ? 1 : 0,
+        };
+      }
       this.createAMPlanningAction(planning).then((response) => {
         let userPromises = [];
         let equipementPromises = [];
@@ -1142,6 +1160,7 @@ export default {
       while (momentDate.add(72, "hours").toDate() < nowDate) {
         shift = this.shiftArrays(shift);
       }
+      console.log(shift);
       if (nowDate.getHours() >= 7 && nowDate.getHours() < 15) return shift[0];
       else if (nowDate.getHours() >= 15 && nowDate.getHours() < 23)
         return shift[1];
@@ -1232,7 +1251,7 @@ export default {
       return intervals;
     },
     setBoxesData(outputs) {
-      const promises=[];
+      const promises = [];
       const formattedSelectedAms = this.selectedAMs.map((am) => {
         return {
           id: am.id,
@@ -1280,11 +1299,11 @@ export default {
           let role = "";
           let sts = null;
           let timeInterval = finalPlanning[0][j];
-          let timeIntervalParts = finalPlanning[0][j].split('-');
+          let timeIntervalParts = finalPlanning[0][j].split("-");
           let start = timeIntervalParts[0];
           let end = timeIntervalParts[1];
-          console.log("start time : ",start);
-          console.log("end time : ",end);
+          console.log("start time : ", start);
+          console.log("end time : ", end);
           if (finalPlanning[i][j] === "Assistant") {
             role = "assistant";
           } else if (
@@ -1293,9 +1312,8 @@ export default {
           ) {
             box = finalPlanning[i][j].split("-");
             matricule = box[0];
-            sts =  this.selectedSTSs.find(sts=>sts.matricule===matricule);
-            if(sts)
-            console.log("sts ID : ",sts.id);
+            sts = this.selectedSTSs.find((sts) => sts.matricule === matricule);
+            if (sts) console.log("sts ID : ", sts.id);
             role = box[1];
           }
           const boxObject = {
@@ -1303,7 +1321,7 @@ export default {
             user_id: finalPlanning[i][0],
             equipement_id: sts ? sts.id : null,
             break: finalPlanning[i][j] === "B",
-            role:role,
+            role: role,
             start_time: start,
             ends_time: end,
           };

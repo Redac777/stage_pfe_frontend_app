@@ -159,6 +159,7 @@ export default {
 
     reset() {
       this.clearPlannings();
+      window.location.reload();
     },
 
     handleCreatePlanning(data) {

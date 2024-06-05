@@ -398,8 +398,7 @@ export default {
         let day = ("0" + dateToPlan.getDate()).slice(-2);
         let formattedDate = `${year}-${month}-${day}`;
         let dateTime = `${formattedDate}`;
-        console.log(dateTime);
-        const shift = this.getDayShifts(dateTime);
+        const shift = this.getDayShifts();
         console.log(shift);
         const dayIndex = shift.indexOf(this.actualShift);
         switch (dayIndex) {
@@ -667,10 +666,26 @@ export default {
         });
         outputs.sort((a, b) => b.length - a.length);
       });
-      const planning = {
-        shift_id: this.shiftId,
-        profile_group_id: this.profileGroupId,
-      };
+      let planning=[];
+      if (this.stsplanningData) {
+          const date = new Date(this.stsplanningData.date);
+          // Get the year, month, and day components
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
+          const day = String(date.getDate()).padStart(2, "0");
+          // Construct the formatted date string in "YYYY-mm-dd" format
+          const formattedDate = `${year}-${month}-${day}`;
+          planning = {
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
+            planned_at: formattedDate,
+          };
+        } else {
+          planning = {
+            shift_id: this.shiftId,
+            profile_group_id: this.profileGroupId,
+          };
+        }
       this.createSTSPlanningAction(planning).then((response) => {
         let userPromises = [];
         let equipementPromises = [];

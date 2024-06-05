@@ -669,8 +669,45 @@ export default {
 
       return transformedArray;
     },
+    getUncoveredIntervals(equipmentArray, intervalsArray) {
+      const uncoveredIntervals = [];
+
+      for (const intervalObj of intervalsArray) {
+        const [intervalStart, intervalEnd] =
+          intervalObj.timeInterval.split("-");
+        const uncoveredSts = [];
+
+        for (const equipment of equipmentArray) {
+          for (const workingInterval of equipment.workingHours) {
+            const workingStart = this.timeToMinutes(workingInterval.start_time);
+            const workingEnd = this.timeToMinutes(workingInterval.end_time);
+
+            const start = this.timeToMinutes(intervalStart);
+            const end = this.timeToMinutes(intervalEnd);
+
+            if (
+              start >= workingStart &&
+              end <= workingEnd &&
+              !intervalObj.equipment_ids.includes(equipment.id)
+            ) {
+              uncoveredSts.push(equipment.matricule);
+            }
+          }
+        }
+
+        if (uncoveredSts.length > 0) {
+          uncoveredIntervals.push({
+            interval: intervalObj.timeInterval,
+            sts: uncoveredSts,
+          });
+        }
+      }
+
+      console.log(uncoveredIntervals);
+      return uncoveredIntervals;
+    },
     async DisplayPlanning(dateObject) {
-        console.log(dateObject);
+      console.log(dateObject);
       try {
         await this.setCurrentAMPlanning(dateObject);
         this.planning = this.getCurrentAMPlanning;
@@ -718,7 +755,31 @@ export default {
           });
           this.setPlanningBoxes(planningId).then(() => {
             this.planning = this.getPlanningBoxes;
-           
+
+            const transformed = this.transformPlanningBoxes();
+            console.log(transformed);
+            this.transormedData = transformed;
+            // console.log(transformed)
+            this.uncoveredIntervals = this.getUncoveredIntervals(
+              this.planningEquipments,
+              transformed
+            );
+            // console.log(this.uncoveredIntervals)
+            this.neededSTSIntervals = this.uncoveredIntervals.map((item) => {
+              return item.interval;
+            });
+
+            // console.log(this.neededSTSIntervals);
+            this.transormedData.forEach((item) => {
+              const transData = this.uncoveredIntervals.find((uncovInt) => {
+                return uncovInt.interval === item.timeInterval;
+              });
+              if (transData) {
+                transData.sts.forEach((tData) => {
+                  item.matricules.push(tData);
+                });
+              }
+            });
             // console.log(this.uncoveredIntervals);
             // Extract unique time intervals
             // Initialize an empty array to store unique time intervals
@@ -812,31 +873,23 @@ export default {
                   // console.log(workingMinutes);
                   if (!this.userWorkingHours[user.id]) {
                     // If this.userWorkingHours[user.id] doesn't exist, initialize it as an object with oldValue and totalWorkingHours properties
-                    if (role === "checker") {
-                      this.userWorkingHours[user.id] = {
-                        oldCheckerValue: user.checker_workingHours,
-                        totalCheckerWorkingHours:
-                          user.checker_workingHours + workingMinutes,
-                        oldDeckmanValue: user.deckman_workingHours,
-                        oldAssistantValue: user.assistant_workingHours,
-                      };
-                    } else if (role === "deckman") {
-                      this.userWorkingHours[user.id] = {
-                        oldDeckmanValue: user.deckman_workingHours,
-                        totalDeckmanWorkingHours:
-                          user.deckman_workingHours + workingMinutes,
-                        oldAssistantValue: user.assistant_workingHours,
-                        oldCheckerValue: user.checker_workingHours,
-                      };
-                    } else if (role === "assistant") {
-                      this.userWorkingHours[user.id] = {
-                        oldAssistantValue: user.assistant_workingHours,
-                        totalAssistantWorkingHours:
-                          user.assistant_workingHours + workingMinutes,
-                        oldDeckmanValue: user.deckman_workingHours,
-                        oldCheckerValue: user.checker_workingHours,
-                      };
-                    }
+                    this.userWorkingHours[user.id] = {
+                      oldCheckerValue: user.checker_workingHours,
+                      totalCheckerWorkingHours:
+                        role === "checker"
+                          ? user.checker_workingHours + workingMinutes
+                          : user.checker_workingHours,
+                      oldDeckmanValue: user.deckman_workingHours,
+                      totalDeckmanWorkingHours:
+                        role === "deckman"
+                          ? user.deckman_workingHours + workingMinutes
+                          : user.deckman_workingHours,
+                      oldAssistantValue: user.assistant_workingHours,
+                      totalAssistantWorkingHours:
+                        role === "assistant"
+                          ? user.assistant_workingHours + workingMinutes
+                          : user.assistant_workingHours,
+                    };
                   } else {
                     // If this.userWorkingHours[user.id] already exists, update its properties
                     if (role === "checker") {
@@ -865,6 +918,7 @@ export default {
                   this.userWorkingHours[userId]?.totalAssistantWorkingHours ||
                   0,
               };
+              // console.log(userToUpdate);
               //console.log(userToUpdate)
               this.usersWorkingHours.push(userToUpdate);
               // this.editUserAction(userToUpdate),then((response)=>{
@@ -949,23 +1003,37 @@ export default {
     toggleDatePicker() {
       this.showDatePicker = !this.showDatePicker; // Toggle the visibility
     },
+    timeToMinutes(time) {
+      const [hours, minutes] = time.split(":").map(Number);
+      return hours * 60 + minutes;
+    },
     finishPlanning() {
-      this.usersWorkingHours = this.usersWorkingHours.filter((usWh) => {
-        return (
-          usWh.checker_workingHours != 0 &&
-          usWh.deckman_workingHours != 0 &&
-          usWh.assistant_workingHours != 0
-        );
+      const usersWorkingHoursToSave = this.usersWorkingHours.map((usWh) => {
+        const userWorkingHours = { id: usWh.id };
+
+        if (usWh.checker_workingHours !== 0) {
+          userWorkingHours.checker_workingHours = usWh.checker_workingHours;
+        }
+
+        if (usWh.deckman_workingHours !== 0) {
+          userWorkingHours.deckman_workingHours = usWh.deckman_workingHours;
+        }
+
+        if (usWh.assistant_workingHours !== 0) {
+          userWorkingHours.assistant_workingHours = usWh.assistant_workingHours;
+        }
+
+        return userWorkingHours;
       });
-      console.log(this.usersWorkingHours);
-      //   this.setLoadingValueAction(true);
-      //   this.usersWorkingHours.forEach((user) => {
-      //     this.editUserAction(user).then(() => {
-      //       this.setLoadingValueAction(false);
-      //       console.log("updated successfully");
-      //     });
-      //   });
-      // console.log(this.userWorkingHours);
+      console.log(usersWorkingHoursToSave);
+      this.setLoadingValueAction(true);
+      usersWorkingHoursToSave.forEach((user) => {
+        this.editUserAction(user).then(() => {
+          this.setLoadingValueAction(false);
+          console.log("updated successfully");
+        });
+      });
+      console.log(this.userWorkingHours);
     },
     closeDelete() {
       this.dialogDelete = false;
@@ -1036,7 +1104,7 @@ export default {
       //   console.log(this.userRole);
       this.setEquipementsAction().then(() => {
         this.equipments = this.getEquipements
-          .filter((equipement) => equipement.profile_group.type === "am")
+          .filter((equipement) => equipement.profile_group.type === "sts")
           .map((equip) => equip.matricule);
         this.equipments.push("B");
         // console.log(this.equipments)
@@ -1044,7 +1112,74 @@ export default {
         console.log("shift : " + this.shiftId);
       });
     },
-    openEditDialog(item, key) {},
+    openEditDialog(item, key) {
+      // Reset old value
+      this.oldValue = null;
+      // Get the existing equipment matricules for the column, filtering out "B"
+      let existingEquipements = this.planningTable
+        .map((item) => item[key]?.matricule.split("-")[0])
+        .filter((matricule) => matricule !== "B");
+      existingEquipements = Array.from(new Set(existingEquipements));
+      // console.log(existingEquipements);
+      // Filter equipments, adding a "replace" option
+      const index = parseInt(key.match(/\d+/)[0]);
+      //   console.log(this.tableHeaders[index+1].title)
+      //   console.log(this.uncoveredIntervals)
+      console.log(this.transormedData);
+      const wantedItem = this.transormedData.find(
+        (uncocInt) =>
+          uncocInt.timeInterval === this.tableHeaders[index + 1].title
+      );
+      //   console.log(wantedItem)
+      if (wantedItem) {
+        this.filteredEquipements = wantedItem.matricules
+          .filter((sts) => sts != item[key].sts)
+          .map((sts) => {
+            // Check if the equipment is already in use in the column
+            const isExisting = existingEquipements.includes(sts);
+
+            // If it's the current item being edited, keep it in the list with a "replace" tag
+            // if (isExisting && equipment !== item[key].matricule) {
+            //   return null; // Skip adding to the filtered list
+            // }
+
+            // Add the "replace" label if the equipment is existing
+            return {
+              value: sts,
+              label: isExisting ? `${sts} (replace)` : sts,
+            };
+          })
+          .filter(Boolean);
+        this.filteredEquipements.push("B");
+      }
+      const objectArray = this.filteredEquipements.filter(
+        (item) => typeof item === "object" && item !== null
+      );
+
+      // Create a Map to filter out duplicates based on 'value' property
+      const uniqueObjectsMap = new Map();
+      objectArray.forEach((item) => {
+        uniqueObjectsMap.set(item.value, item);
+      });
+
+      // Convert the map back to an array
+      const uniqueObjectsArray = Array.from(uniqueObjectsMap.values());
+
+      // If you need to include other non-object items (like 'B'), you can do the following:
+      this.filteredEquipements = [
+        ...uniqueObjectsArray,
+        ...this.filteredEquipements.filter((item) => typeof item !== "object" || item === null),
+      ];
+      console.log(this.filteredEquipements);
+      // Set up the item to edit
+      this.itemToEdit.item = item;
+      this.oldValue = item[key]?.matricule;
+      this.itemToEdit.key = key;
+      this.itemToEdit.value = item[key]?.matricule;
+
+      // Open the edit dialog
+      this.showEditDialog = true;
+    },
     saveCell() {
       // this.itemsToEdit = [];
       // Check if this.editableCell is not null
@@ -1234,7 +1369,7 @@ export default {
           buttons.forEach((button) => {
             button.style.display = "flex";
           });
-          const fileName = `sts-planning-${this.formattedDate}-${this.selectedShift}`;
+          const fileName = `am-planning-${this.formattedDate}-${this.selectedShift}`;
           pdf.save(`${fileName}.pdf`);
         }
       );
@@ -1281,7 +1416,7 @@ export default {
 
 td {
   font-weight: bold;
-  font-size: 0.6rem;
+  font-size: 0.58rem;
 }
 
 thead td {
