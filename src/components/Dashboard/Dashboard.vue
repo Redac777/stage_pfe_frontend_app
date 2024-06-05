@@ -1,11 +1,14 @@
 <template>
   <div class="main">
     <div class="content">
-      <!-- <v-btn @click="reset"> Reset </v-btn> -->
+      <!-- <v-btn @click="reset"> Reset </v-btn>  -->
       <DashboardNavigation @updateActiveComponent="updateActiveComponent" />
       <RTGhome
-      v-if="
-          (activeComponent == 'RTGhome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
+        v-if="
+          (activeComponent == 'RTGhome' &&
+            this.role &&
+            this.role.name !== 'driver' &&
+            this.role.name !== 'am' &&
             (!this.plannings ||
               (this.plannings && this.plannings.length === 0))) ||
           this.createdPlanningData
@@ -21,14 +24,17 @@
         "
         @createPlanning="handleCreatePlanning"
       />
-      <STShome  v-if="
-          (activeComponent == 'STShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
+      <STShome
+        v-if="
+          (activeComponent == 'STShome' &&
+            this.role &&
+            this.role.name !== 'driver' &&
+            this.role.name !== 'am' &&
             (!this.stsPlannings ||
               (this.stsPlannings && this.stsPlannings.length === 0))) ||
           this.createdSTSPlanningData
         "
         :stsplanningData="createdSTSPlanningData"
-      
       />
       <STSPlanningOutput
         v-if="
@@ -41,7 +47,10 @@
       />
       <RShome
         v-if="
-          (activeComponent == 'RShome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am') &&
+          (activeComponent == 'RShome' &&
+            this.role &&
+            this.role.name !== 'driver' &&
+            this.role.name !== 'am' &&
             (!this.rsPlannings ||
               (this.rsPlannings && this.rsPlannings.length === 0))) ||
           this.createdRSPlanningData
@@ -57,16 +66,33 @@
         "
         @createPlanning="handleCreateRSPlanning"
       />
-      <AMhome v-if="activeComponent == 'AMhome' && (this.role && this.role.name !== 'driver' && this.role.name !== 'am')" />
+      <AMhome
+        v-if="
+          (activeComponent == 'AMhome' &&
+            this.role &&
+            this.role.name !== 'driver' &&
+            this.role.name !== 'am' &&
+            (!this.amPlannings ||
+              (this.amPlannings && this.amPlannings.length === 0))) ||
+          this.createdAMPlanningData
+        "
+        :amplanningData="createdAMPlanningData"
+      />
+      <AMPlanningOutput
+        v-if="
+          activeComponent == 'AMhome' &&
+          this.amPlannings &&
+          this.amPlannings.length !== 0 &&
+          !this.createdAMPlanningData
+        "
+        @createPlanning="handleCreateAMPlanning"
+      />
     </div>
   </div>
 </template>
 
 <script>
 import { mapActions, mapGetters } from "vuex";
-import RTGPlanningOutput from "../Cranes/RTG-Crane/RTGPlanningOutput.vue";
-import RSPlanningOutput from "../Cranes/RS-Crane/RSPlanningOutput.vue";
-import STSPlanningOutput from "../Cranes/STS-Crane/STSPlanningOutput.vue";
 
 export default {
   data() {
@@ -74,15 +100,23 @@ export default {
       activeComponent: "RTGhome",
       plannings: null,
       rsPlannings: null,
-      stsPlannings:null,
+      stsPlannings: null,
+      amPlannings: null,
       createdPlanningData: null,
       createdRSPlanningData: null,
       createdSTSPlanningData: null,
-      role:null
+      createdAMPlanningData: null,
+      role: null,
     };
   },
   computed: {
-    ...mapGetters(["getPlannings", "getRSPlannings","getSTSPlannings","getUserRole"]),
+    ...mapGetters([
+      "getPlannings",
+      "getRSPlannings",
+      "getSTSPlannings",
+      "getAMPlannings",
+      "getUserRole",
+    ]),
     // includePlanning(){
     //     return this.plannings && this.plannings.length!==0 && this.plannings.find(planning=>planning)
     // }
@@ -107,15 +141,19 @@ export default {
         case "STShome":
           this.createdSTSPlanningData = null;
           break;
-          // this.plannings = null;
+        case "AMhome":
+          this.createdAMPlanningData = null;
+          break;
+        // this.plannings = null;
       }
     },
     getCurrentPlanningMethod() {
       this.plannings = this.getPlannings;
       this.rsPlannings = this.getRSPlannings;
       this.stsPlannings = this.getSTSPlannings;
-      this.role = this.getUserRole
-    
+      this.amPlannings = this.getAMPlannings;
+      this.role = this.getUserRole;
+
       // console.log(this.createdPlanningData)
     },
 
@@ -138,6 +176,11 @@ export default {
       // console.log(data)
       this.createdSTSPlanningData = data;
 
+      // console.log(JSON.stringify(this.createdRSPlanningData))
+    },
+    handleCreateAMPlanning(data) {
+      // console.log(data)
+      this.createdAMPlanningData = data;
       // console.log(JSON.stringify(this.createdRSPlanningData))
     },
   },

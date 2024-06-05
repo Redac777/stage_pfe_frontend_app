@@ -2,33 +2,53 @@ import CustomizedAxios from "../../../plugins/axios";
 const equipementToPlanningModule = {
   state: {
     plannings: [],
-    rsPlannings:[],
-    stsPlannings:[],
+    rsPlannings: [],
+    stsPlannings: [],
+    amPlannings: [],
     currentPlanning: null,
     currentSTSPlanning: null,
     currentRSPlanning: null,
     currentAMPlanning: null,
     planningDrivers: [],
     setPlanningEquipements: [],
-    planningEquipements:[],
+    planningEquipements: [],
   },
   mutations: {
     ADD_PLANNING(state, payload) {
       state.plannings.push(payload);
     },
-    DELETE_RTG_PLANNING(state,payload){
-      state.currentRSPlanning = null
-      state.plannings = state.plannings.filter(planning => planning.id != payload.id)
+    DELETE_RTG_PLANNING(state, payload) {
+      state.currentRSPlanning = null;
+      state.plannings = state.plannings.filter(
+        (planning) => planning.id != payload.id
+      );
     },
-    DELETE_RS_PLANNING(state,payload){
-      state.currentPlanning = null
-      state.rsPlannings = state.rsPlannings.filter(planning => planning.id != payload.id)
+    DELETE_RS_PLANNING(state, payload) {
+      state.currentPlanning = null;
+      state.rsPlannings = state.rsPlannings.filter(
+        (planning) => planning.id != payload.id
+      );
+    },
+    DELETE_AM_PLANNING(state, payload) {
+      state.currentAMPlanning = null;
+      state.amPlannings = state.amPlannings.filter(
+        (planning) => planning.id != payload.id
+      );
+    },
+    DELETE_STS_PLANNING(state, payload) {
+      state.currentSTSPlanning = null;
+      state.stsPlannings = state.stsPlannings.filter(
+        (planning) => planning.id != payload.id
+      );
     },
     ADD_RS_PLANNING(state, payload) {
       state.rsPlannings.push(payload);
     },
     ADD_STS_PLANNING(state, payload) {
       state.stsPlannings.push(payload);
+    },
+    ADD_AM_PLANNING(state, payload) {
+      state.amPlannings.push(payload);
     },
     SET_CURRENT_PLANNING(state, payload) {
       state.currentPlanning = payload;
@@ -38,6 +58,9 @@ const equipementToPlanningModule = {
     },
     SET_CURRENT_STS_PLANNING(state, payload) {
       state.currentSTSPlanning = payload;
+    },
+    SET_CURRENT_AM_PLANNING(state, payload) {
+      state.currentAMPlanning = payload;
     },
     SET_PLANNING_DRIVERS(state, payload) {
       state.planningDrivers = payload;
@@ -49,6 +72,7 @@ const equipementToPlanningModule = {
       state.plannings = [];
       state.rsPlannings = [];
       state.stsPlannings = [];
+      state.amPlannings = [];
       state.currentPlanning = null;
       state.currentSTSPlanning = null;
       state.currentRSPlanning = null;
@@ -56,7 +80,7 @@ const equipementToPlanningModule = {
       state.planningDrivers = [];
       state.setPlanningEquipements = [];
       // Clear other related states as needed
-    }
+    },
   },
   actions: {
     // addEquipementsToPlanningAction({ commit, state }, user) {
@@ -108,12 +132,11 @@ const equipementToPlanningModule = {
           });
       });
     },
-
-    deleteRTGPlanningAction({commit,state},planning){
+    createAMPlanningAction({ commit, state }, planning) {
       return new Promise((resolve, reject) => {
-        CustomizedAxios.post("plannings/delete", planning)
+        CustomizedAxios.post("plannings/add", planning)
           .then((response) => {
-            commit("DELETE_RTG_PLANNING",response.data.payload);
+            commit("ADD_AM_PLANNING", response.data.payload);
             resolve(response.data.payload);
           })
           .catch((error) => {
@@ -121,11 +144,47 @@ const equipementToPlanningModule = {
           });
       });
     },
-    deleteRSPlanningAction({commit,state},planning){
+    deleteRTGPlanningAction({ commit, state }, planning) {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("plannings/delete", planning)
           .then((response) => {
-            commit("DELETE_RS_PLANNING",response.data.payload);
+            commit("DELETE_RTG_PLANNING", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    deleteRSPlanningAction({ commit, state }, planning) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/delete", planning)
+          .then((response) => {
+            commit("DELETE_RS_PLANNING", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    deleteSTSPlanningAction({ commit, state }, planning) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/delete", planning)
+          .then((response) => {
+            commit("DELETE_STS_PLANNING", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    deleteAMPlanningAction({ commit, state }, planning) {
+      return new Promise((resolve, reject) => {
+        CustomizedAxios.post("plannings/delete", planning)
+          .then((response) => {
+            commit("DELETE_AM_PLANNING", response.data.payload);
             resolve(response.data.payload);
           })
           .catch((error) => {
@@ -156,7 +215,6 @@ const equipementToPlanningModule = {
           });
       });
     },
-
     addEquipementWorkingHoursToPlanning(
       { commit, state },
       equipementWWHPlanning
@@ -180,8 +238,8 @@ const equipementToPlanningModule = {
         delete date.profileType;
         CustomizedAxios.post("plannings/getByDate", date)
           .then((response) => {
-              commit("SET_CURRENT_PLANNING", response.data.payload);
-              resolve(response.data.payload);
+            commit("SET_CURRENT_PLANNING", response.data.payload);
+            resolve(response.data.payload);
           })
           .catch((error) => {
             reject(error);
@@ -193,8 +251,8 @@ const equipementToPlanningModule = {
         delete date.profileType;
         CustomizedAxios.post("plannings/getByDate", date)
           .then((response) => {
-              commit("SET_CURRENT_RS_PLANNING", response.data.payload);
-              resolve(response.data.payload);
+            commit("SET_CURRENT_RS_PLANNING", response.data.payload);
+            resolve(response.data.payload);
           })
           .catch((error) => {
             reject(error);
@@ -206,8 +264,21 @@ const equipementToPlanningModule = {
         delete date.profileType;
         CustomizedAxios.post("plannings/getByDate", date)
           .then((response) => {
-              commit("SET_CURRENT_STS_PLANNING", response.data.payload);
-              resolve(response.data.payload);
+            commit("SET_CURRENT_STS_PLANNING", response.data.payload);
+            resolve(response.data.payload);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
+    setCurrentAMPlanning({ commit, state }, date) {
+      return new Promise((resolve, reject) => {
+        delete date.profileType;
+        CustomizedAxios.post("plannings/getByDate", date)
+          .then((response) => {
+            commit("SET_CURRENT_AM_PLANNING", response.data.payload);
+            resolve(response.data.payload);
           })
           .catch((error) => {
             reject(error);
@@ -226,7 +297,6 @@ const equipementToPlanningModule = {
           });
       });
     },
-
     setPlanningEquipements({ commit, state }, planning) {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("equipementsplannings/getByPlanning", planning)
@@ -239,52 +309,47 @@ const equipementToPlanningModule = {
           });
       });
     },
-    
-      clearPlannings({ commit }) {
-        // Clear plannings array and related states
-        commit('CLEAR_PLANNINGS');
-        // Clear data stored in localStorage
-        localStorage.removeItem('plannings');
-        localStorage.removeItem('rsPlannings');
-        localStorage.removeItem('stsPlannings');
-        localStorage.removeItem('currentPlanning');
-        localStorage.removeItem('currentSTSPlanning');
-        localStorage.removeItem('currentRsPlanning');
-        localStorage.removeItem('currentAmPlanning');
-        localStorage.removeItem('planningDrivers');
-        localStorage.removeItem('setPlanningEquipements');
-        // Clear other related data stored in localStorage as needed
-      
-    }
-    
-    
-
-
+    clearPlannings({ commit }) {
+      // Clear plannings array and related states
+      commit("CLEAR_PLANNINGS");
+      // Clear data stored in localStorage
+      localStorage.removeItem("plannings");
+      localStorage.removeItem("rsPlannings");
+      localStorage.removeItem("stsPlannings");
+      localStorage.removeItem("amPlannings");
+      localStorage.removeItem("currentPlanning");
+      localStorage.removeItem("currentSTSPlanning");
+      localStorage.removeItem("currentRSPlanning");
+      localStorage.removeItem("currentAMPlanning");
+      localStorage.removeItem("planningDrivers");
+      localStorage.removeItem("setPlanningEquipements");
+      // Clear other related data stored in localStorage as needed
+    },
   },
   getters: {
     getPlannings(state) {
       return state.plannings;
     },
-    getRSPlannings(state){
+    getRSPlannings(state) {
       return state.rsPlannings;
     },
     getSTSPlannings(state) {
       return state.stsPlannings;
     },
-    getAmPlannings(state) {
+    getAMPlannings(state) {
       return state.amPlannings;
     },
     getCurrentPlanning(state) {
       return state.currentPlanning;
     },
-    getCurrentRSPlanning(state){
-      return state.currentRSPlanning
+    getCurrentRSPlanning(state) {
+      return state.currentRSPlanning;
     },
     getCurrentSTSPlanning(state) {
       return state.currentSTSPlanning;
     },
-    getCurrentAmPlanning(state) {
-      return state.currentAmPlanning;
+    getCurrentAMPlanning(state) {
+      return state.currentAMPlanning;
     },
     getPlanningDrivers(state) {
       return state.planningDrivers;

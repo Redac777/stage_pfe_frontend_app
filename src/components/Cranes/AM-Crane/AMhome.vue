@@ -483,6 +483,7 @@ export default {
       "setShiftByCategory",
       "createAMPlanningAction",
       "setBoxAction",
+      "setProfileGroupByType"
     ]),
     toggleSelectAll() {
       if (this.selectAll) {
@@ -554,6 +555,7 @@ export default {
       this.todayDate = today.toLocaleDateString(undefined, options);
       this.setLoadingValueAction(true);
       if (this.amplanningData) {
+        console.log(JSON.stringify(this.amplanningData));
         this.actualShift = this.amplanningData.shift;
         const dateToPlan = new Date(this.amplanningData.date);
         let year = dateToPlan.getFullYear();
@@ -612,17 +614,58 @@ export default {
             this.endTime = "";
             break;
         }
+        this.todayDate = dateToPlan.toLocaleDateString(undefined, options);
+        const response = await this.setShiftByCategory({
+          category: this.amplanningData.shift,
+        });
+        // console.log(this.stsplanningData);
+        this.inputs = {
+          profile_group: "am",
+          role: "am",
+          shift_id: response[0].id,
+        };
+
       } else {
         const hours = today.getHours();
         if (hours >= 7 && hours < 15) {
           this.startTime = "07:00";
           this.endTime = "15:00";
+          this.shift = [
+            "07:00-08:00",
+            "08:00-09:00",
+            "09:00-10:00",
+            "10:00-11:00",
+            "11:00-12:00",
+            "12:00-13:00",
+            "13:00-14:00",
+            "14:00-15:00",
+          ];
         } else if (hours >= 15 && hours < 23) {
           this.startTime = "15:00";
           this.endTime = "23:00";
+          this.shift = [
+            "15:00-16:00",
+            "16:00-17:00",
+            "17:00-18:00",
+            "18:00-19:00",
+            "19:00-20:00",
+            "20:00-21:00",
+            "21:00-22:00",
+            "22:00-23:00",
+          ];
         } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
           this.startTime = "23:00";
           this.endTime = "07:00";
+          this.shift = [
+            "23:00-00:00",
+            "00:00-01:00",
+            "01:00-02:00",
+            "02:00-03:00",
+            "03:00-04:00",
+            "04:00-05:00",
+            "05:00-06:00",
+            "06:00-07:00",
+          ];
         }
         this.actualShift = this.getActualShift();
         // console.log(this.getActualShift());
@@ -634,6 +677,7 @@ export default {
           role: "am",
           shift_id: response[0].id,
         };
+
       }
       this.setDriversAction(this.inputs).then((response) => {
         this.amsList = this.getDrivers;
@@ -642,13 +686,16 @@ export default {
         }
       });
       this.setEquipementsAction().then(() => {
-        this.setLoadingValueAction(false);
         this.stssList = this.getEquipements.filter(
           (equipement) => equipement.profile_group.type === "sts"
         );
-        if (this.stssList.length > 0) {
-          this.profileGroupId = this.stssList[0].profile_group.id;
-        }
+        const activeType = {
+          type: "am",
+        };
+        this.setProfileGroupByType(activeType).then((response) => {
+          this.profileGroupId = response[0].id;
+          this.setLoadingValueAction(false);
+        });
       });
     },
 
@@ -798,6 +845,7 @@ export default {
         let equipementPromises = [];
         let usersAddedSuccessfully = [];
         let equAddedSuccessfully = [];
+        this.planningId = response.id;
         for (let am in this.selectedAMs) {
           let userWPlanning = {
             user_id: this.selectedAMs[am].id,
@@ -855,7 +903,7 @@ export default {
         Promise.all(userPromises.concat(equipementPromises)).then(() => {
           // console.log(usersAddedSuccessfully);
           // console.log(equAddedSuccessfully);
-          this.setBoxes(outputs);
+          this.setBoxesData(outputs);
         });
       });
     },
@@ -897,7 +945,6 @@ export default {
     // save sts intervals
     saveTime(item) {
       this.isSaved[item.matricule] = true;
-      console.log(item);
       if (this.selectedRole === "ST") {
         // Save ST worker for ST role
         delete this.intervals[item.matricule];
@@ -1139,10 +1186,297 @@ export default {
 
       return array;
     },
-    setBoxesData(outputs){
-      console.log(outputs);
-      this.setLoadingValueAction(false);
-    }
+
+    splitIntoHourlyIntervals({ startTime, endTime }) {
+      const [startHour, startMin] = startTime.split(":").map(Number);
+      const [endHour, endMin] = endTime.split(":").map(Number);
+
+      const intervals = [];
+      let currentHour = startHour;
+      let currentMin = startMin;
+
+      // Function to format time with leading zeros
+      const formatTime = (hour, minute) => {
+        return `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
+      };
+
+      // Determine if we are spanning across midnight
+      const isSpanningMidnight =
+        endHour < startHour || (endHour === startHour && endMin < startMin);
+
+      while (
+        currentHour < endHour ||
+        (currentHour === endHour && currentMin < endMin) ||
+        (isSpanningMidnight &&
+          (currentHour !== endHour || currentMin !== endMin))
+      ) {
+        const nextHour = (currentHour + 1) % 24;
+        intervals.push(
+          `${formatTime(currentHour, currentMin)}-${formatTime(
+            nextHour,
+            currentMin
+          )}`
+        );
+
+        currentHour = nextHour;
+        currentMin = 0; // Since we are working with hourly intervals, minutes will always be 0
+
+        // If we are spanning midnight and we looped back to the start hour, we can stop
+        if (isSpanningMidnight && currentHour === startHour) {
+          break;
+        }
+      }
+
+      return intervals;
+    },
+    setBoxesData(outputs) {
+      const promises=[];
+      const formattedSelectedAms = this.selectedAMs.map((am) => {
+        return {
+          id: am.id,
+          checker_workingHours: am.checker_workingHours
+            ? am.checker_workingHours
+            : 0,
+          deckman_workingHours: am.deckman_workingHours
+            ? am.deckman_workingHours
+            : 0,
+          assistant_workingHours: am.assistant_workingHours
+            ? am.assistant_workingHours
+            : 0,
+        };
+      });
+      const tableHeaders = ["Manutention agents", ...this.shift];
+      // console.log("STS : ");
+      // console.log(outputs);
+      // console.log("AM List : ");
+      // console.log(formattedSelectedAms);
+      // console.log("Roles List : ");
+      // console.log(this.selectedRoles);
+      // console.log(this.numWorkers);
+      const sortedPlanning = this.generatePlanning(outputs, this.shift);
+      // console.log("Sorted Planning : ");
+      // console.table(sortedPlanning);
+      const amsList = this.sortedAmList(
+        formattedSelectedAms,
+        this.numWorkers["deckman"],
+        this.numWorkers["checker"]
+      );
+      // console.log("Sorted AmList : ");
+      // console.log(amsList);
+      const finalPlanning = this.combineAmListWithPlanning(
+        sortedPlanning,
+        amsList
+      );
+      finalPlanning.unshift(tableHeaders);
+      // console.log("Final Planning : ");
+      console.table(finalPlanning);
+
+      for (let i = 1; i < finalPlanning.length; i++) {
+        for (let j = 1; j < tableHeaders.length; j++) {
+          let box = null;
+          let matricule = "";
+          let role = "";
+          let sts = null;
+          let timeInterval = finalPlanning[0][j];
+          let timeIntervalParts = finalPlanning[0][j].split('-');
+          let start = timeIntervalParts[0];
+          let end = timeIntervalParts[1];
+          console.log("start time : ",start);
+          console.log("end time : ",end);
+          if (finalPlanning[i][j] === "Assistant") {
+            role = "assistant";
+          } else if (
+            finalPlanning[i][j] !== "Assistant" &&
+            finalPlanning[i][j] !== "B"
+          ) {
+            box = finalPlanning[i][j].split("-");
+            matricule = box[0];
+            sts =  this.selectedSTSs.find(sts=>sts.matricule===matricule);
+            if(sts)
+            console.log("sts ID : ",sts.id);
+            role = box[1];
+          }
+          const boxObject = {
+            planning_id: this.planningId,
+            user_id: finalPlanning[i][0],
+            equipement_id: sts ? sts.id : null,
+            break: finalPlanning[i][j] === "B",
+            role:role,
+            start_time: start,
+            ends_time: end,
+          };
+          promises.push(this.setBoxAction(boxObject));
+        }
+      }
+      Promise.all(promises).then(() => {
+        this.setLoadingValueAction(false);
+        window.location.reload();
+      });
+    },
+    countAssistants(row) {
+      return row.filter((cell) => cell === "Assistant").length;
+    },
+    sortPlanning(planning) {
+      let checkers = [];
+      let deckmans = [];
+      for (let i = 0; i < planning.length; i++) {
+        if (planning[i].some((cell) => cell.includes("-checker"))) {
+          checkers.push(planning[i]);
+        } else if (planning[i].some((cell) => cell.includes("-deckman"))) {
+          deckmans.push(planning[i]);
+        }
+      }
+      checkers.sort(
+        (a, b) => this.countAssistants(b) - this.countAssistants(a)
+      );
+      deckmans.sort(
+        (a, b) => this.countAssistants(b) - this.countAssistants(a)
+      );
+      let sortedPlanning = checkers.concat(deckmans);
+      return sortedPlanning;
+    },
+    generatePlanning(stsListLastEdition, headers) {
+      const planning = Array.from(
+        { length: stsListLastEdition.length * 2 },
+        () => Array(headers.length).fill("")
+      );
+      const lineBreaks = Array(stsListLastEdition.length).fill(0);
+      for (let j = 0; j < headers.length; j++) {
+        let stsListIndex = 0;
+        let currentStsToPut = stsListLastEdition[stsListIndex];
+        for (let i = 0; i < stsListLastEdition.length; i++) {
+          if (j === 7) {
+            if (lineBreaks[i] === 0) {
+              planning[i][j] = "B";
+              lineBreaks[i]++;
+            } else {
+              if (currentStsToPut.intervals.includes(headers[j])) {
+                planning[i][j] = currentStsToPut.matricule + "-checker";
+                stsListIndex++;
+                currentStsToPut = stsListLastEdition[stsListIndex];
+              } else {
+                planning[i][j] = "B";
+                lineBreaks[i]++;
+                stsListIndex++;
+                currentStsToPut = stsListLastEdition[stsListIndex];
+              }
+            }
+          } else {
+            if (currentStsToPut.intervals.includes(headers[j])) {
+              planning[i][j] = currentStsToPut.matricule + "-checker";
+              stsListIndex++;
+              currentStsToPut = stsListLastEdition[stsListIndex];
+            } else {
+              planning[i][j] = "B";
+              lineBreaks[i]++;
+              stsListIndex++;
+              currentStsToPut = stsListLastEdition[stsListIndex];
+            }
+          }
+        }
+      }
+
+      const deckermanLineBreaks = Array(stsListLastEdition.length).fill(0);
+      for (let j = 0; j < headers.length; j++) {
+        let stsListIndex = 0;
+        let currentStsToPut = stsListLastEdition[stsListIndex];
+        for (
+          let i = stsListLastEdition.length;
+          i < stsListLastEdition.length * 2;
+          i++
+        ) {
+          if (j === 7) {
+            if (deckermanLineBreaks[i - stsListLastEdition.length] === 0) {
+              planning[i][j] = "B";
+              deckermanLineBreaks[i - stsListLastEdition.length]++;
+            } else {
+              if (currentStsToPut.intervals.includes(headers[j])) {
+                planning[i][j] = currentStsToPut.matricule + "-deckman";
+                stsListIndex++;
+                currentStsToPut = stsListLastEdition[stsListIndex];
+              } else {
+                planning[i][j] = "B";
+                deckermanLineBreaks[i - stsListLastEdition.length]++;
+                stsListIndex++;
+                currentStsToPut = stsListLastEdition[stsListIndex];
+              }
+            }
+          } else {
+            if (currentStsToPut.intervals.includes(headers[j])) {
+              planning[i][j] = currentStsToPut.matricule + "-deckman";
+              stsListIndex++;
+              currentStsToPut = stsListLastEdition[stsListIndex];
+            } else {
+              planning[i][j] = "B";
+              deckermanLineBreaks[i - stsListLastEdition.length]++;
+              stsListIndex++;
+              currentStsToPut = stsListLastEdition[stsListIndex];
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < planning.length; i++) {
+        let breakCount = 0;
+        for (let j = 0; j < planning[i].length; j++) {
+          if (planning[i][j] === "B") {
+            breakCount++;
+            if (breakCount > 1) {
+              planning[i][j] = "Assistant";
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < planning.length; i++) {
+        let breakCount = 0;
+        for (let j = 0; j < planning[i].length; j++) {
+          if (planning[i][j] === "B") {
+            breakCount++;
+            if (breakCount > 1) {
+              planning[i][j] = "Assistant";
+            }
+          }
+        }
+      }
+
+      const sortedPlanning = this.sortPlanning(planning);
+      return sortedPlanning;
+    },
+    generateRandomHours(maxHours) {
+      // Generate a random number that is a multiple of 10 up to maxHours
+      return Math.floor(Math.random() * (maxHours / 10 + 1)) * 10;
+    },
+    sortedAmList(amsList, firstLength, secondLength) {
+      amsList.sort(
+        (a, b) =>
+          b.deckman_workingHours - a.deckman_workingHours ||
+          a.checker_workingHours - b.checker_workingHours
+      );
+      const firstHalf = amsList.slice(0, firstLength);
+      const secondHalf = amsList.slice(firstLength, firstLength + secondLength);
+
+      // Sort each half by assistant_workingHours in descending order
+      firstHalf.sort(
+        (a, b) => a.assistant_workingHours - b.assistant_workingHours
+      );
+      secondHalf.sort(
+        (a, b) => a.assistant_workingHours - b.assistant_workingHours
+      );
+
+      // Combine the sorted halves
+      const sortedAmsList = [...firstHalf, ...secondHalf];
+
+      return sortedAmsList;
+    },
+    combineAmListWithPlanning(sortedPlanning, sortedAmList) {
+      for (let i = 0; i < sortedPlanning.length; i++) {
+        sortedPlanning[i].unshift(sortedAmList[i].id);
+      }
+      return sortedPlanning;
+    },
   },
 };
 </script>
@@ -1160,10 +1494,9 @@ export default {
 .parent {
   margin-top: 1rem;
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  gap: 0.2rem;
-  width: fit-content;
+  gap: 2rem;
+  max-width: 80vw;
   height: fit-content;
 }
 

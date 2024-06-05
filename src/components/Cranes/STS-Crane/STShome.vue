@@ -398,6 +398,7 @@ export default {
         let day = ("0" + dateToPlan.getDate()).slice(-2);
         let formattedDate = `${year}-${month}-${day}`;
         let dateTime = `${formattedDate}`;
+        console.log(dateTime);
         const shift = this.getDayShifts(dateTime);
         console.log(shift);
         const dayIndex = shift.indexOf(this.actualShift);
@@ -464,12 +465,42 @@ export default {
         if (hours >= 7 && hours < 15) {
           this.startTime = "07:00";
           this.endTime = "15:00";
+          this.shift = [
+              "07:00-08:00",
+              "08:00-09:00",
+              "09:00-10:00",
+              "10:00-11:00",
+              "11:00-12:00",
+              "12:00-13:00",
+              "13:00-14:00",
+              "14:00-15:00",
+            ];
         } else if (hours >= 15 && hours < 23) {
           this.startTime = "15:00";
           this.endTime = "23:00";
+          this.shift = [
+              "15:00-16:00",
+              "16:00-17:00",
+              "17:00-18:00",
+              "18:00-19:00",
+              "19:00-20:00",
+              "20:00-21:00",
+              "21:00-22:00",
+              "22:00-23:00",
+            ];
         } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
           this.startTime = "23:00";
           this.endTime = "07:00";
+          this.shift = [
+              "23:00-00:00",
+              "00:00-01:00",
+              "01:00-02:00",
+              "02:00-03:00",
+              "03:00-04:00",
+              "04:00-05:00",
+              "05:00-06:00",
+              "06:00-07:00",
+            ];
         }
         this.actualShift = this.getActualShift();
         // console.log(this.getActualShift());
@@ -692,6 +723,7 @@ export default {
         }
 
         Promise.all(userPromises.concat(equipementPromises)).then(() => {
+          console.log(outputs)
           const output = this.setAllDriversPlanning(outputs).thePlanning;
           // output.unshift(this.shift);
           // console.table(output);
@@ -830,7 +862,6 @@ export default {
       );
       this.showConfirmDialog = true;
     },
-    
     getActualShift(date) {
       let thisDate = new Date("2022-02-10T07:00:00");
       let nowDate = null;
@@ -989,6 +1020,7 @@ export default {
     },
     setOneDriverPlanning(stsListtoBegin, driverIndex, outputs) {
       let stsPlanning = [...stsListtoBegin];
+      console.log(this.shift);
       let oneDriverPlanning = [...this.shift];
 
       let countDouble = 0;
