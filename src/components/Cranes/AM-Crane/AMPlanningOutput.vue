@@ -188,14 +188,25 @@
                   class="content"
                   :class="{
                     'red-driver': isDriver(key) && isActiveUser(value),
-                    break: !isDriver(key) && isBreak(value.matricule || value),
+                    'break': !isDriver(key) && isBreak(value.matricule || value),
                     'none-break':
-                      !isDriver(key) && !isBreak(value.matricule || value),
+                      !isDriver(key) &&
+                      !isBreak(value.matricule || value) &&
+                      isST(value.matricule || value),
+                    'st':
+                      !isDriver(key) &&
+                      !isST(value.matricule || value) &&
+                      !isBreak(value.matricule || value) &&
+                      !isAssistant(value),
                   }"
                 >
                   <span
                     class="edit-icon"
-                    v-if="editState && !isDriver(key)"
+                    v-if="
+                      editState &&
+                      !isDriver(key) &&
+                      !isSTSTS(value.matricule || value)
+                    "
                     @click="value !== null && openEditDialog(item, key)"
                   >
                     ✏️
@@ -217,16 +228,27 @@
               >
                 <v-card>
                   <v-card-title>Edit Cell</v-card-title>
-                  <v-card-text>
+                  <v-card-text class="edit-cell">
                     <!-- Display the current cell value and allow the user to edit -->
                     <v-select
-                      v-model="itemToEdit.value"
+                      v-model="equip"
                       :items="filteredEquipements"
                       label="Select Equipment"
-                      item-title="label"
+                      item-title="value"
                       item-value="value"
                       dense
                     ></v-select>
+                    <v-select
+                      v-model="role"
+                      :items="roles"
+                      label="Select Role"
+                      item-title="value"
+                      item-value="value"
+                      dense
+                    ></v-select>
+                    <span v-if="isToReplace" class="replace-span"
+                      >( Replace )</span
+                    >
                   </v-card-text>
                   <v-card-actions>
                     <!-- Save and Cancel buttons -->
@@ -344,6 +366,7 @@ export default {
         item: null,
         key: null,
         value: null,
+        role: null,
       },
       equipments: [],
       filteredEquipements: [],
@@ -354,6 +377,7 @@ export default {
       userActive: null,
       search: "",
       oldValue: null,
+      oldRole: null,
       showAddDialog: false,
       unassignedDrivers: [],
       selectedDriver: {
@@ -367,6 +391,11 @@ export default {
       transormedData: [],
       neededSTSIntervals: [],
       printPlanning: false,
+      roles: ["checker", "deckman", "assistant"],
+      equip: "",
+      role: "",
+      isToReplace: false,
+      stEquipements: [],
     };
   },
   components: {
@@ -389,15 +418,6 @@ export default {
     selectedDayTime(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedCreateDate) {
-          let date = new Date(this.selectedCreateDate);
-          let year = date.getFullYear();
-          let month = ("0" + (date.getMonth() + 1)).slice(-2);
-          let day = ("0" + date.getDate()).slice(-2);
-          let formattedDate = `${year}-${month}-${day}`;
-          let dateTime = `${formattedDate}`;
-          this.shifts = this.getActualShift(dateTime);
-          // console.log(this.shifts);
-          this.shifts.pop();
           switch (this.selectedDayTime) {
             case "Morning":
               this.selectedCreateShift = this.shifts[0];
@@ -417,15 +437,6 @@ export default {
     selectedCreateDate(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedDayTime) {
-          let date = new Date(this.selectedCreateDate);
-          let year = date.getFullYear();
-          let month = ("0" + (date.getMonth() + 1)).slice(-2);
-          let day = ("0" + date.getDate()).slice(-2);
-          let formattedDate = `${year}-${month}-${day}`;
-          let dateTime = `${formattedDate}`;
-          this.shifts = this.getActualShift(dateTime);
-
-          this.shifts.pop();
           switch (this.selectedDayTime) {
             case "Morning":
               this.selectedCreateShift = this.shifts[0];
@@ -440,6 +451,50 @@ export default {
               time = "00:00:00";
           }
         }
+      }
+    },
+    equip(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        if (newVal === "B") {
+          this.role = "";
+        }
+
+        console.log(this.planningTable);
+        const sameCol = [];
+        console.log(sameCol);
+        const sameColPlanning = this.planningTable.filter((item) => {
+          if (item[this.itemToEdit.key]) {
+            return (
+              item[this.itemToEdit.key].matricule ===
+                newVal + "-" + this.role &&
+              item[this.itemToEdit.key].matricule !==
+                this.itemToEdit.value + "-" + this.itemToEdit.role
+            );
+          }
+        });
+        if (sameColPlanning[0]) this.isToReplace = true;
+        else this.isToReplace = false;
+        this.itemToEdit.value = newVal;
+      }
+    },
+    role(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        if (newVal === "assistant") {
+          this.equip = "";
+        }
+        const sameColPlanning = this.planningTable.filter((item) => {
+          if (item[this.itemToEdit.key]) {
+            return (
+              item[this.itemToEdit.key].matricule ===
+                this.equip + "-" + newVal &&
+              item[this.itemToEdit.key].matricule !==
+                this.itemToEdit.value + "-" + this.itemToEdit.role
+            );
+          }
+        });
+        if (sameColPlanning[0]) this.isToReplace = true;
+        else this.isToReplace = false;
+        this.itemToEdit.role = newVal;
       }
     },
   },
@@ -542,7 +597,7 @@ export default {
           // console.log(this.shiftId)
           const inputs = {
             profile_group: "am",
-            role: "driver",
+            role: "am",
             shift_id: this.shiftId,
           };
           // console.log(inputs)
@@ -573,6 +628,17 @@ export default {
     isDriver(key) {
       return key === "driver";
     },
+    isST(value) {
+      return value.includes("STS") || value==="assistant";
+    },
+    isSTSTS(value) {
+      return (
+        !value.includes("-") &&
+        value !== "B" &&
+        value !== "DB" &&
+        value !== "assistant"
+      );
+    },
     isActiveUser(value) {
       return (
         value ===
@@ -586,6 +652,9 @@ export default {
     },
     isBreak(value) {
       return value === "B" || value === "DB";
+    },
+    isAssistant(value) {
+      return value === "assistant";
     },
     setPlanning(value) {
       const today = new Date(this.formattedDate);
@@ -734,7 +803,27 @@ export default {
                 };
               }
             );
-            // console.log(this.planningEquipments);
+            this.stEquipements = this.getPlanningEquipements
+              .filter((pe) => pe.subcontract != null)
+              .map((pe) => {
+                return {
+                  worker: pe.subcontract,
+                  STS: pe.equipement.matricule,
+                };
+              });
+            // console.log(this.stEquipements);
+            this.stEquipements = this.stEquipements.map((item) => {
+              // Create a row starting with the STS property
+              const row = [item.worker];
+
+              // Add 8 columns of the worker property
+              for (let i = 0; i < 8; i++) {
+                row.push(item.STS);
+              }
+
+              return row;
+            });
+            console.log(this.stEquipements);
           });
           this.setPlanningDrivers(planningId).then((response) => {
             // console.log(response);
@@ -824,7 +913,7 @@ export default {
 
             // Extract unique users from the planning array
             const uniqueUsers = Array.from(
-              new Set(this.planning.map((box) => box.user.id))
+              new Set(this.planning.map((box) => box.user.id || box.role))
             );
 
             // Initialize the planning table data
@@ -989,6 +1078,7 @@ export default {
               // console.log(row)
               this.setLoadingValueAction(false);
             });
+            this.planningTable = [...this.planningTable, ...this.stEquipements];
             // console.log(this.planningTable)
           });
         } else {
@@ -1098,6 +1188,14 @@ export default {
     },
     setEquipements() {
       this.setLoadingValueAction(true);
+      let date = new Date(this.selectedCreateDate);
+      let year = date.getFullYear();
+      let month = ("0" + (date.getMonth() + 1)).slice(-2);
+      let day = ("0" + date.getDate()).slice(-2);
+      let formattedDate = `${year}-${month}-${day}`;
+      let dateTime = `${formattedDate}`;
+      this.shifts = this.getActualShift(dateTime);
+      this.shifts.pop();
       this.search = "";
       this.userRole = this.getUserRole;
       this.userActive = this.getUserActive;
@@ -1115,10 +1213,20 @@ export default {
     openEditDialog(item, key) {
       // Reset old value
       this.oldValue = null;
+      this.oldRole = null;
+      this.isToReplace = false;
       // Get the existing equipment matricules for the column, filtering out "B"
-      let existingEquipements = this.planningTable
-        .map((item) => item[key]?.matricule.split("-")[0])
-        .filter((matricule) => matricule !== "B");
+      let existingEquipements = this.planningTable.map((item) => {
+        if (item[key]) {
+          if (item[key].matricule.includes("-")) {
+            return item[key].matricule.split("-")[0];
+          }
+        }
+      });
+      existingEquipements = existingEquipements.filter(
+        (equ) => equ != undefined && equ != "B"
+      );
+
       existingEquipements = Array.from(new Set(existingEquipements));
       // console.log(existingEquipements);
       // Filter equipments, adding a "replace" option
@@ -1146,7 +1254,6 @@ export default {
             // Add the "replace" label if the equipment is existing
             return {
               value: sts,
-              label: isExisting ? `${sts} (replace)` : sts,
             };
           })
           .filter(Boolean);
@@ -1168,15 +1275,29 @@ export default {
       // If you need to include other non-object items (like 'B'), you can do the following:
       this.filteredEquipements = [
         ...uniqueObjectsArray,
-        ...this.filteredEquipements.filter((item) => typeof item !== "object" || item === null),
+        ...this.filteredEquipements.filter(
+          (item) => typeof item !== "object" || item === null
+        ),
       ];
       console.log(this.filteredEquipements);
       // Set up the item to edit
       this.itemToEdit.item = item;
       this.oldValue = item[key]?.matricule;
-      this.itemToEdit.key = key;
-      this.itemToEdit.value = item[key]?.matricule;
 
+      this.itemToEdit.key = key;
+      if (this.oldValue === "B") {
+        this.itemToEdit.value = item[key]?.matricule;
+        this.itemToEdit.role = null;
+      } else if (this.oldValue === "assistant") {
+        this.itemToEdit.role = item[key]?.matricule;
+        this.itemToEdit.value = null;
+      } else {
+        this.itemToEdit.value = item[key]?.matricule.split("-")[0];
+        this.itemToEdit.role = item[key]?.matricule.split("-")[1];
+      }
+      this.equip = this.itemToEdit.value;
+      this.role = this.itemToEdit.role;
+      console.log(this.itemToEdit);
       // Open the edit dialog
       this.showEditDialog = true;
     },
@@ -1185,11 +1306,96 @@ export default {
       // Check if this.editableCell is not null
       if (this.itemToEdit.item && this.itemToEdit.key !== null) {
         // Update the value of the cell in the item object
-        this.showEditDialog = false;
+        let objectToSave = null;
+        if (this.itemToEdit.value === "B") {
+          this.itemToEdit.item[this.itemToEdit.key].matricule =
+            this.itemToEdit.value;
+          objectToSave = {
+            id: this.itemToEdit.item[this.itemToEdit.key].boxId,
+            equipement_id: null,
+            role: null,
+            break: 1,
+          };
+        } else if (this.itemToEdit.role === "assistant") {
+          this.itemToEdit.item[this.itemToEdit.key].matricule =
+            this.itemToEdit.role;
+          objectToSave = {
+            id: this.itemToEdit.item[this.itemToEdit.key].boxId,
+            equipement_id: null,
+            role: this.itemToEdit.role,
+            break: false,
+          };
+        } else {
+          this.itemToEdit.item[this.itemToEdit.key].matricule =
+            this.itemToEdit.value + "-" + this.itemToEdit.role;
+        }
+        const equipement = this.getEquipements.find(
+          (equ) => equ.matricule === this.itemToEdit.value
+        );
+        const sameColumnItem = this.planningTable
+          .filter((it) => {
+            if(it[this.itemToEdit.key]){
+              return (
+              it[this.itemToEdit.key].boxId !=
+                this.itemToEdit.item[this.itemToEdit.key].boxId &&
+              it[this.itemToEdit.key].matricule ===
+                this.itemToEdit.item[this.itemToEdit.key].matricule &&
+              it[this.itemToEdit.key].matricule !== "B" &&
+              it[this.itemToEdit.key].matricule !== "DB" &&
+              it[this.itemToEdit.key].matricule !== "assistant"
+            );
+            }
+            
+          })
+          .map((it) => it[this.itemToEdit.key]);
+        if (sameColumnItem && sameColumnItem.length > 0) {
+          let equipement2 = null;
+          let role = null;
+          if (this.oldValue != "B" && this.oldValue != "assistant") {
+            equipement2 = this.getEquipements.find(
+              (equ) => equ.matricule === this.oldValue.split("-")[0]
+            );
+            role = this.oldValue.split("-")[1];
+          } else if (this.oldValue === "assistant") {
+            role = this.oldValue;
+          }
+          sameColumnItem[0].matricule = this.oldValue;
+          const objectToReplace = {
+            id: sameColumnItem[0].boxId,
+            equipement_id: equipement2 ? equipement2.id : null,
+            role: role,
+            break:
+              sameColumnItem[0].matricule === "B" ||
+              sameColumnItem[0].matricule === "DB",
+          };
+          this.itemsToEdit.push(objectToReplace);
+        }
+        if (
+          equipement ||
+          this.itemToEdit.value === "B" ||
+          this.itemToEdit.value === "DB"
+        ) {
+          objectToSave = {
+            id: this.itemToEdit.item[this.itemToEdit.key].boxId,
+            equipement_id:
+              equipement && this.itemToEdit.role != "assistant"
+                ? equipement.id
+                : null,
+            role: equipement ? this.itemToEdit.role : null,
+            break:
+              this.itemToEdit.value === "B" || this.itemToEdit.value === "DB",
+          };
+        }
+
+        this.itemsToEdit.push(objectToSave);
+        console.log(this.itemsToEdit);
+
         // Reset itemToEdit
         this.itemToEdit.item = null;
         this.itemToEdit.key = null;
         this.itemToEdit.value = null;
+        this.itemToEdit.role = null;
+        this.showEditDialog = false;
       }
       // console.log(this.editableCell.value)
       // console.log(this.editableCell.item[this.editableCell.key])
@@ -1403,6 +1609,14 @@ export default {
   padding: 5px;
   background-color: #79997e;
 }
+.st {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: blue;
+  border-radius: 5px;
+  padding: 5px;
+}
 
 .dialogCancel {
   background-color: red;
@@ -1416,7 +1630,7 @@ export default {
 
 td {
   font-weight: bold;
-  font-size: 0.58rem;
+  font-size: 0.55rem;
 }
 
 thead td {
@@ -1592,5 +1806,16 @@ thead td {
 .dialogCancel {
   background-color: red;
   color: white;
+}
+
+.edit-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.replace-span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>

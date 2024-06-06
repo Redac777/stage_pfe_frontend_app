@@ -125,7 +125,6 @@
           <v-icon>mdi-magnify</v-icon>
         </v-btn>
 
-
         <!-- Create Planning-->
         <v-btn
           @click="openCreateDialog"
@@ -366,6 +365,7 @@ export default {
       transormedData: [],
       neededSTSIntervals: [],
       printPlanning: false,
+      transData: [],
     };
   },
   components: {
@@ -388,15 +388,6 @@ export default {
     selectedDayTime(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedCreateDate) {
-          let date = new Date(this.selectedCreateDate);
-          let year = date.getFullYear();
-          let month = ("0" + (date.getMonth() + 1)).slice(-2);
-          let day = ("0" + date.getDate()).slice(-2);
-          let formattedDate = `${year}-${month}-${day}`;
-          let dateTime = `${formattedDate}`;
-          this.shifts = this.getActualShift(dateTime);
-          // console.log(this.shifts);
-          this.shifts.pop();
           switch (this.selectedDayTime) {
             case "Morning":
               this.selectedCreateShift = this.shifts[0];
@@ -416,15 +407,6 @@ export default {
     selectedCreateDate(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedDayTime) {
-          let date = new Date(this.selectedCreateDate);
-          let year = date.getFullYear();
-          let month = ("0" + (date.getMonth() + 1)).slice(-2);
-          let day = ("0" + date.getDate()).slice(-2);
-          let formattedDate = `${year}-${month}-${day}`;
-          let dateTime = `${formattedDate}`;
-          this.shifts = this.getActualShift(dateTime);
-
-          this.shifts.pop();
           switch (this.selectedDayTime) {
             case "Morning":
               this.selectedCreateShift = this.shifts[0];
@@ -683,7 +665,6 @@ export default {
         await this.setCurrentSTSPlanning(dateObject);
         this.planning = this.getCurrentSTSPlanning;
         if (this.planning) {
-          console.log(JSON.stringify(this.planning));
           this.planningId = this.planning.id;
           const planningId = {
             planning_id: this.planning.id,
@@ -727,7 +708,7 @@ export default {
           this.setPlanningBoxes(planningId).then(() => {
             this.planning = this.getPlanningBoxes;
             const transformed = this.transformPlanningBoxes();
-            console.log(transformed);
+            this.transData = this.transformPlanningBoxes();
             this.transormedData = transformed;
             // console.log(transformed)
             this.uncoveredIntervals = this.getUncoveredIntervals(
@@ -782,28 +763,6 @@ export default {
             });
 
             // Create the table headers
-            this.tableHeaders = [
-              {
-                title: "Driver",
-                align: "start",
-                sortable: false,
-                key: "driver",
-              },
-              ...timeIntervalsTable,
-            ];
-            // console.log("this.needed : ", this.neededSTSIntervals);
-            // console.log("this.tableheaders : ", this.tableHeaders);
-
-            this.tableHeaders.forEach((header) => {
-              if (header.title !== "Driver") {
-                // Assuming the first item doesn't represent a time interval
-                const existsInNeeded = this.neededSTSIntervals.includes(
-                  header.title
-                );
-                header.title = existsInNeeded ? header.title : header.title;
-                header.color = existsInNeeded ? "red" : "black";
-              }
-            });
 
             // Extract unique users from the planning array
             const uniqueUsers = Array.from(
@@ -931,6 +890,73 @@ export default {
               // console.log(row)
               this.setLoadingValueAction(false);
             });
+            console.log(this.planningTable);
+            this.tableHeaders = [
+              {
+                title: "Driver",
+                align: "start",
+                sortable: false,
+                key: "driver",
+              },
+              ...timeIntervalsTable,
+            ];
+            console.log(this.tableHeaders);
+            this.tableHeaders.forEach((header) => {
+              if (header.title != "Driver") {
+                const existingEquipements = this.planningTable
+                  .map(
+                    (item) =>
+                      item[`interval_${this.tableHeaders.indexOf(header)}`]
+                        ?.matricule
+                  )
+                  .filter(
+                    (matricule) => matricule !== "B" && matricule !== "DB"
+                  );
+                console.log(existingEquipements);
+                let tempItems = [...this.filteredEquipements];
+                console.log(this.transData);
+                console.log(header.title);
+                const wantedItem = this.transData.find(
+                  (uncocInt) => uncocInt.timeInterval === header.title
+                );
+                console.log(wantedItem);
+                if (wantedItem) {
+                  tempItems = wantedItem.matricules
+                    .map((sts) => {
+                      // Check if the equipment is already in use in the column
+                      const isExisting = existingEquipements.includes(sts);
+
+                      // If it's the current item being edited, keep it in the list with a "replace" tag
+                      // if (isExisting && equipment !== item[key].matricule) {
+                      //   return null; // Skip adding to the filtered list
+                      // }
+
+                      // Add the "replace" label if the equipment is existing
+                      return {
+                        value: sts,
+                        label: isExisting ? `${sts} (replace)` : sts,
+                      };
+                    })
+                    .filter(Boolean);
+                  console.log(tempItems);
+
+                  const missingSTS = tempItems.filter(
+                    (item) => !item.label.includes("replace")
+                  );
+                  console.log(missingSTS);
+                  console.log(missingSTS.length);
+                  let countSTSNeeded = 0;
+
+                  let titleToCheck = header.title;
+                  const existsInNeeded =
+                    this.neededSTSIntervals.includes(titleToCheck);
+                  header.title = existsInNeeded
+                    ? header.title + "(" + missingSTS.length + ")"
+                    : header.title;
+                  header.color = existsInNeeded ? "red" : "black";
+                }
+              }
+            });
             // console.log(this.planningTable)
           });
         } else {
@@ -1022,6 +1048,14 @@ export default {
     },
     setEquipements() {
       this.setLoadingValueAction(true);
+      let date = new Date(this.selectedCreateDate);
+      let year = date.getFullYear();
+      let month = ("0" + (date.getMonth() + 1)).slice(-2);
+      let day = ("0" + date.getDate()).slice(-2);
+      let formattedDate = `${year}-${month}-${day}`;
+      let dateTime = `${formattedDate}`;
+      this.shifts = this.getActualShift(dateTime);
+      this.shifts.pop();
       this.search = "";
       this.userRole = this.getUserRole;
       this.userActive = this.getUserActive;
@@ -1049,11 +1083,19 @@ export default {
       const index = parseInt(key.match(/\d+/)[0]);
       //   console.log(this.tableHeaders[index+1].title)
       //   console.log(this.uncoveredIntervals)
+      let title = "";
+
+      const indexToFind = this.tableHeaders[index + 1].title.indexOf("(");
+      if (indexToFind !== -1)
+        title = this.tableHeaders[index + 1].title
+          .substring(0, indexToFind)
+          .trim();
+      else title = this.tableHeaders[index + 1].title;
+
       const wantedItem = this.transormedData.find(
-        (uncocInt) =>
-          uncocInt.timeInterval === this.tableHeaders[index + 1].title
+        (uncocInt) => uncocInt.timeInterval === title
       );
-      //   console.log(wantedItem)
+      console.log(wantedItem);
       if (wantedItem) {
         this.filteredEquipements = wantedItem.matricules
           .filter((sts) => sts != item[key].sts)
@@ -1073,7 +1115,7 @@ export default {
             };
           })
           .filter(Boolean);
-          this.filteredEquipements.push("B");
+        this.filteredEquipements.push("B");
       }
 
       console.log(this.filteredEquipements);
@@ -1114,7 +1156,6 @@ export default {
           const equipement2 = this.getEquipements.find(
             (equ) => equ.matricule === this.oldValue
           );
-
           sameColumnItem[0].matricule = this.oldValue;
           const objectToReplace = {
             id: sameColumnItem[0].boxId,

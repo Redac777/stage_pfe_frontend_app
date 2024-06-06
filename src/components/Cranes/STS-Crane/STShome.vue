@@ -465,41 +465,41 @@ export default {
           this.startTime = "07:00";
           this.endTime = "15:00";
           this.shift = [
-              "07:00-08:00",
-              "08:00-09:00",
-              "09:00-10:00",
-              "10:00-11:00",
-              "11:00-12:00",
-              "12:00-13:00",
-              "13:00-14:00",
-              "14:00-15:00",
-            ];
+            "07:00-08:00",
+            "08:00-09:00",
+            "09:00-10:00",
+            "10:00-11:00",
+            "11:00-12:00",
+            "12:00-13:00",
+            "13:00-14:00",
+            "14:00-15:00",
+          ];
         } else if (hours >= 15 && hours < 23) {
           this.startTime = "15:00";
           this.endTime = "23:00";
           this.shift = [
-              "15:00-16:00",
-              "16:00-17:00",
-              "17:00-18:00",
-              "18:00-19:00",
-              "19:00-20:00",
-              "20:00-21:00",
-              "21:00-22:00",
-              "22:00-23:00",
-            ];
+            "15:00-16:00",
+            "16:00-17:00",
+            "17:00-18:00",
+            "18:00-19:00",
+            "19:00-20:00",
+            "20:00-21:00",
+            "21:00-22:00",
+            "22:00-23:00",
+          ];
         } else if (hours >= 23 || (hours >= 0 && hours < 7)) {
           this.startTime = "23:00";
           this.endTime = "07:00";
           this.shift = [
-              "23:00-00:00",
-              "00:00-01:00",
-              "01:00-02:00",
-              "02:00-03:00",
-              "03:00-04:00",
-              "04:00-05:00",
-              "05:00-06:00",
-              "06:00-07:00",
-            ];
+            "23:00-00:00",
+            "00:00-01:00",
+            "01:00-02:00",
+            "02:00-03:00",
+            "03:00-04:00",
+            "04:00-05:00",
+            "05:00-06:00",
+            "06:00-07:00",
+          ];
         }
         this.actualShift = this.getActualShift();
         // console.log(this.getActualShift());
@@ -666,26 +666,26 @@ export default {
         });
         outputs.sort((a, b) => b.length - a.length);
       });
-      let planning=[];
+      let planning = [];
       if (this.stsplanningData) {
-          const date = new Date(this.stsplanningData.date);
-          // Get the year, month, and day components
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
-          const day = String(date.getDate()).padStart(2, "0");
-          // Construct the formatted date string in "YYYY-mm-dd" format
-          const formattedDate = `${year}-${month}-${day}`;
-          planning = {
-            shift_id: this.shiftId,
-            profile_group_id: this.profileGroupId,
-            planned_at: formattedDate,
-          };
-        } else {
-          planning = {
-            shift_id: this.shiftId,
-            profile_group_id: this.profileGroupId,
-          };
-        }
+        const date = new Date(this.stsplanningData.date);
+        // Get the year, month, and day components
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0"); // Month starts from 0
+        const day = String(date.getDate()).padStart(2, "0");
+        // Construct the formatted date string in "YYYY-mm-dd" format
+        const formattedDate = `${year}-${month}-${day}`;
+        planning = {
+          shift_id: this.shiftId,
+          profile_group_id: this.profileGroupId,
+          planned_at: formattedDate,
+        };
+      } else {
+        planning = {
+          shift_id: this.shiftId,
+          profile_group_id: this.profileGroupId,
+        };
+      }
       this.createSTSPlanningAction(planning).then((response) => {
         let userPromises = [];
         let equipementPromises = [];
@@ -738,7 +738,7 @@ export default {
         }
 
         Promise.all(userPromises.concat(equipementPromises)).then(() => {
-          console.log(outputs)
+          console.log(outputs);
           const output = this.setAllDriversPlanning(outputs).thePlanning;
           // output.unshift(this.shift);
           // console.table(output);
@@ -937,6 +937,7 @@ export default {
       return array;
     },
     getDriverinalWOrkingHours(driver, outputs) {
+      console.log(outputs);
       const totalHours = outputs.reduce((total, sts) => {
         return (total += sts.intervals.length);
       }, 0);
@@ -1112,37 +1113,226 @@ export default {
         stsPlanning: stsPlanning,
       };
     },
-    bestEnhancement(thePlanning, stsListtoBegin) {
+    canBeInserted(oneDriverPlanning, sts, columnIndex) {
+      if (oneDriverPlanning[columnIndex] != "-") return false;
+      let occurence = oneDriverPlanning.filter((item) => item === sts).length;
+
+      if (occurence > 0) {
+        if (occurence > 2) {
+          return false;
+        } else if (columnIndex == oneDriverPlanning.length - 1) {
+          if (oneDriverPlanning[columnIndex - 1] != sts) {
+            return false;
+          }
+        } else if (columnIndex == 0) {
+          if (oneDriverPlanning[columnIndex + 1] != sts) {
+            return false;
+          }
+        } else {
+          if (
+            oneDriverPlanning[columnIndex - 1] != sts &&
+            oneDriverPlanning[columnIndex + 1] != sts
+          ) {
+            return false;
+          }
+          if (
+            oneDriverPlanning[columnIndex - 1] == sts &&
+            oneDriverPlanning[columnIndex + 1] != "-"
+          ) {
+            return false;
+          }
+          if (
+            oneDriverPlanning[columnIndex + 1] == sts &&
+            oneDriverPlanning[columnIndex - 1] != "-"
+          ) {
+            return false;
+          }
+        }
+      } else {
+        if (columnIndex == oneDriverPlanning.length - 1) {
+          if (oneDriverPlanning[columnIndex - 1] != "-") return false;
+        } else if (columnIndex == 0) {
+          if (oneDriverPlanning[columnIndex + 1] != "-") return false;
+        }
+        if (
+          oneDriverPlanning[columnIndex - 1] != "-" ||
+          oneDriverPlanning[columnIndex + 1] != "-"
+        )
+          return false;
+      }
+      return true;
+    },
+    countWH(row) {
+      return row.filter((e) => e != "-").length;
+    },
+    TryToMinceAnHour(
+      thePlanning,
+      sts,
+      columnOfTheMissingOne,
+      indexOfTheMissingOne,
+      outputs
+    ) {
+      let minced = false;
+      let thePlanningToReduce = [...thePlanning];
+
+      for (
+        let columnIndex = 0;
+        columnIndex < thePlanningToReduce[indexOfTheMissingOne].length;
+        columnIndex++
+      ) {
+        if (
+          columnOfTheMissingOne != columnIndex &&
+          !minced &&
+          thePlanningToReduce[indexOfTheMissingOne][columnIndex] != "-"
+        )
+          for (
+            let rowIndex = this.selectedDrivers.length - 1;
+            rowIndex >= 0;
+            rowIndex--
+          ) {
+            if (indexOfTheMissingOne != rowIndex && !minced) {
+              if (
+                this.countWH(thePlanningToReduce[rowIndex]) <
+                  this.getDriverinalWOrkingHours(rowIndex,outputs) &&
+                this.canBeInserted(
+                  thePlanningToReduce[rowIndex],
+                  thePlanningToReduce[indexOfTheMissingOne][columnIndex],
+                  columnIndex
+                )
+              ) {
+                thePlanningToReduce[rowIndex][columnIndex] =
+                  thePlanningToReduce[indexOfTheMissingOne][columnIndex];
+                thePlanningToReduce[indexOfTheMissingOne][columnIndex] = "-";
+                minced = true;
+              }
+            }
+          }
+      }
+      return {
+        minced: minced,
+        thePlanningToReduce: thePlanningToReduce,
+      };
+    },
+    insertSTSHour(thePlanning, sts, hour,outputs) {
+      let inserted = false;
+      let thePlanningToReduce = [...thePlanning];
+      let columnIndex = -1;
+      for (let index = 0; index < this.shift.length; index++) {
+        if (this.shift[index] == hour) {
+          columnIndex = index;
+        }
+      }
+
+      if (columnIndex != -1)
+        for (let index = 0; index < this.selectedDrivers.length; index++) {
+          if (
+            this.countWH(thePlanningToReduce[index]) <
+              this.getDriverinalWOrkingHours(index,outputs) &&
+            this.canBeInserted(thePlanningToReduce[index], sts, columnIndex)
+          ) {
+            thePlanningToReduce[index][columnIndex] = sts;
+            inserted = true;
+            break;
+          }
+        }
+
+      //safi hna maymknch dkhl 3adi donc db an9ss mn chi row bach ndkhlha
+      if (!inserted)
+        for (let index = 0; index < this.selectedDrivers.length; index++) {
+          if (
+            this.canBeInserted(thePlanningToReduce[index], sts, columnIndex)
+          ) {
+            if (
+              this.countWH(thePlanningToReduce[index]) <
+              this.getDriverinalWOrkingHours(index,outputs)
+            ) {
+              thePlanningToReduce[index][columnIndex] = sts;
+              inserted = true;
+            } else {
+              //hna khasni n9ss sa3a mn had row : thePlanningToReduce[index]
+
+              let rst = this.TryToMinceAnHour(
+                thePlanning,
+                sts,
+                columnIndex,
+                index,
+                outputs
+              );
+              if (rst.minced) {
+                thePlanningToReduce = [...rst.thePlanningToReduce];
+                thePlanningToReduce[index][columnIndex] = sts;
+
+                inserted = true;
+                break;
+              }
+            }
+          }
+        }
+
+      return {
+        inserted: inserted,
+        thePlanningToReduce2: thePlanningToReduce,
+      };
+    },
+    bestEnhancement(thePlanning, stsListtoBegin,outputs) {
       let stsListToReduce = [
         ...stsListtoBegin.filter((e) => e.intervals.length > 0),
       ];
       let thePlanningToReduce = [...thePlanning];
-      console.log("from bestEnhancement :");
-      console.log(
-        "stsListToReduce.stsPlanning.filter((e)=>e.intervals.length>0).length :",
-        stsListToReduce.length
-      );
-      //while(stsListToReduce.stsPlanning.filter((e)=>e.intervals.length>0)){
-      if (stsListToReduce.length > 0) {
-        for (
-          let planningToEncanceIndex = 0;
-          planningToEncanceIndex < stsListToReduce.length;
-          planningToEncanceIndex++
-        ) {
-          const MissingStsIntervals = stsListToReduce[planningToEncanceIndex];
+      let count = 0;
+      while (count < 10) {
+        if (stsListToReduce.length > 0) {
           for (
-            let MissingStsIntervalsIndex = 0;
-            MissingStsIntervalsIndex < MissingStsIntervals.intervals.length;
-            MissingStsIntervalsIndex++
+            let stsIndex = 0;
+            stsIndex < stsListToReduce.length;
+            stsIndex++
           ) {
-            const stsInterval =
-              MissingStsIntervals.intervals[MissingStsIntervalsIndex];
-            console.log(MissingStsIntervals.matricule + "-" + stsInterval);
-            console.log(this.shift.indexOf(stsInterval));
+            const MissingStsIntervals = stsListToReduce[stsIndex];
+            for (
+              let MissingStsIntervalsIndex = 0;
+              MissingStsIntervalsIndex < MissingStsIntervals.intervals.length;
+              MissingStsIntervalsIndex++
+            ) {
+              const stsInterval =
+                MissingStsIntervals.intervals[MissingStsIntervalsIndex];
+
+              let rst = this.insertSTSHour(
+                thePlanningToReduce,
+                MissingStsIntervals.matricule,
+                stsInterval,
+                outputs
+              );
+              if (rst.inserted) {
+                thePlanningToReduce = [...rst.thePlanningToReduce2];
+                let stsCopy = stsListToReduce.find(
+                  (sts1) => sts1.matricule === MissingStsIntervals.matricule
+                );
+                stsCopy.intervals = [
+                  ...stsCopy.intervals.filter(
+                    (interval) => interval != stsInterval
+                  ),
+                ];
+                stsListToReduce[
+                  stsListToReduce.findIndex(
+                    (sts1) => sts1.matricule === MissingStsIntervals.matricule
+                  )
+                ].intervals = [...stsCopy.intervals];
+              }
+            }
           }
         }
+        stsListToReduce.forEach((element) => {
+          element.intervals.forEach((interval) => {
+            console.log("-" + element.matricule + " - " + interval);
+          });
+        });
+        console.table(thePlanningToReduce);
+        count++;
       }
-      //}
+      return {
+        thePlanningToReduce: thePlanningToReduce,
+        stsListToReduce: stsListToReduce,
+      };
     },
     setAllDriversPlanning(outputs) {
       console.log(outputs);
@@ -1165,7 +1355,21 @@ export default {
         console.table(driverIndex, stsListtoBegin);
         //console.table("stsPlanning :", JSON.parse(JSON.stringify(res.stsPlanning)))
       }
-      //bestEnhancement(thePlanning, stsListtoBegin);
+      stsListtoBegin.forEach((element) => {
+        element.intervals.forEach((interval) => {
+          console.log("-" + element.matricule + " - " + interval);
+        });
+      });
+      console.table(stsListtoBegin);
+      console.table(thePlanning);
+      let rst = this.bestEnhancement(thePlanning, stsListtoBegin,outputs);
+      thePlanning = [...rst.thePlanningToReduce];
+      stsListtoBegin = [...rst.stsListToReduce];
+      stsListtoBegin.forEach((element) => {
+        element.intervals.forEach((interval) => {
+          console.log("-" + element.matricule + " - " + interval);
+        });
+      });
       return {
         thePlanning: thePlanning,
         stsListtoBegin: stsListtoBegin,
@@ -1219,7 +1423,7 @@ export default {
       const promises = [];
       this.selectedDrivers.sort((a, b) => b.workingHours > a.workingHours);
       console.log("selected Drivers ", this.selectedDrivers);
-      // Iterate over the selectedDrivers and output table rows, starting from the second row of output
+      // Iterate over the selectedDrivers and output table this.selectedDrivers.length, starting from the second row of output
       for (let i = 0; i < this.selectedDrivers.length; i++) {
         let driver = this.selectedDrivers[i];
 

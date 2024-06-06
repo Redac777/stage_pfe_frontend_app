@@ -133,16 +133,24 @@ export default {
       switch (value) {
         case "RTGhome":
           this.createdRSPlanningData = null;
+          this.createdSTSPlanningData = null;
+          this.createdAMPlanningData = null;
           // this.rsPlannings = null;
           break;
         case "RShome":
           this.createdPlanningData = null;
+          this.createdSTSPlanningData = null;
+          this.createdAMPlanningData = null;
           break;
         case "STShome":
-          this.createdSTSPlanningData = null;
+          this.createdPlanningData = null;
+          this.createdRSPlanningData = null;
+          this.createdAMPlanningData = null;
           break;
         case "AMhome":
-          this.createdAMPlanningData = null;
+          this.createdPlanningData = null;
+          this.createdRSPlanningData = null;
+          this.createdSTSPlanningData = null;
           break;
         // this.plannings = null;
       }

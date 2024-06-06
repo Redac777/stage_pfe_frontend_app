@@ -333,6 +333,7 @@ export default {
       planningId: -1,
       startTime: "",
       endTime: "",
+      notAffectedSTS: [],
     };
   },
 
@@ -863,6 +864,7 @@ export default {
         let equipementPromises = [];
         let usersAddedSuccessfully = [];
         let equAddedSuccessfully = [];
+        let equSTPromises = [];
         this.planningId = response.id;
         for (let am in this.selectedAMs) {
           let userWPlanning = {
@@ -918,7 +920,19 @@ export default {
             );
           }
         }
-        Promise.all(userPromises.concat(equipementPromises)).then(() => {
+        this.workers.forEach(item=>{
+          let itemToAdd = this.selectedSTSs.find(stsItem=>stsItem.matricule===item.STS);
+          if(itemToAdd){
+            let equWPlanning = {
+              equipement_id: itemToAdd.id,
+              subcontract:item.worker,
+              planning_id: response.id,
+            };
+            equSTPromises.push(this.addEquipementToPlanning(equWPlanning));
+          }
+          
+        })
+        Promise.all(userPromises.concat(equipementPromises,equSTPromises)).then(() => {
           // console.log(usersAddedSuccessfully);
           // console.log(equAddedSuccessfully);
           this.setBoxesData(outputs);
@@ -1137,6 +1151,10 @@ export default {
           this.intervals[key][0].endTime !== ""
       );
       this.showConfirmDialog = true;
+      const objectKeys = Object.keys(this.intervals);
+      this.notAffectedSTS = this.selectedSTSs.filter((sts) => {
+        return !objectKeys.includes(sts.matricule);
+      });
     },
     // remove AM role from confirm dialog
     removeAMRole(role) {
@@ -1251,6 +1269,7 @@ export default {
       return intervals;
     },
     setBoxesData(outputs) {
+      console.log(this.workers);
       const promises = [];
       const formattedSelectedAms = this.selectedAMs.map((am) => {
         return {
@@ -1284,7 +1303,7 @@ export default {
       );
       // console.log("Sorted AmList : ");
       // console.log(amsList);
-      const finalPlanning = this.combineAmListWithPlanning(
+      let finalPlanning = this.combineAmListWithPlanning(
         sortedPlanning,
         amsList
       );
@@ -1321,7 +1340,7 @@ export default {
             user_id: finalPlanning[i][0],
             equipement_id: sts ? sts.id : null,
             break: finalPlanning[i][j] === "B",
-            role: role,
+            role: role?role:null,
             start_time: start,
             ends_time: end,
           };
@@ -1355,113 +1374,123 @@ export default {
       let sortedPlanning = checkers.concat(deckmans);
       return sortedPlanning;
     },
+    bestEnhancement(planning, headers) {
+      const lineSTS = [];
+      let tempValue = "";
+      for (let i = 0; i < planning.length / 2; i++) {
+        let breaks = 0;
+        for (let j = 0; j < headers.length; j++) {
+          if (planning[i][j] != "B") tempValue = planning[i][j];
+          else breaks++;
+        }
+        if (breaks === 0) lineSTS.push(tempValue);
+      }
+
+      let count = 0;
+      let line = 0;
+      let temp = 0;
+      while (count < lineSTS.length) {
+        let found = false;
+        if (planning[line].includes(lineSTS[count])) {
+          for (let j = 0; j < headers.length; j++) {
+            for (let i = 0; i < planning.length; i++) {
+              if (
+                planning[i][j] === "B" &&
+                (planning[i][j - 1] === "B" ||
+                  planning[i][j - 1] === lineSTS[count]) &&
+                (planning[i][j + 1] === "B" ||
+                  planning[i][j + 1] === lineSTS[count])
+              ) {
+                planning[line][j] = "B";
+                planning[i][j] = lineSTS[count];
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+          count++;
+        }
+        line++;
+      }
+      return planning;
+    },
     generatePlanning(stsListLastEdition, headers) {
-      const planning = Array.from(
-        { length: stsListLastEdition.length * 2 },
+      const planningFirstHalf = Array.from(
+        { length: stsListLastEdition.length },
         () => Array(headers.length).fill("")
       );
       const lineBreaks = Array(stsListLastEdition.length).fill(0);
       for (let j = 0; j < headers.length; j++) {
         let stsListIndex = 0;
         let currentStsToPut = stsListLastEdition[stsListIndex];
+
         for (let i = 0; i < stsListLastEdition.length; i++) {
-          if (j === 7) {
-            if (lineBreaks[i] === 0) {
-              planning[i][j] = "B";
-              lineBreaks[i]++;
-            } else {
-              if (currentStsToPut.intervals.includes(headers[j])) {
-                planning[i][j] = currentStsToPut.matricule + "-checker";
-                stsListIndex++;
-                currentStsToPut = stsListLastEdition[stsListIndex];
-              } else {
-                planning[i][j] = "B";
-                lineBreaks[i]++;
-                stsListIndex++;
-                currentStsToPut = stsListLastEdition[stsListIndex];
-              }
-            }
+          if (currentStsToPut.intervals.includes(headers[j])) {
+            planningFirstHalf[i][j] = currentStsToPut.matricule + "-checker";
+            stsListIndex++;
+            currentStsToPut = stsListLastEdition[stsListIndex];
           } else {
-            if (currentStsToPut.intervals.includes(headers[j])) {
-              planning[i][j] = currentStsToPut.matricule + "-checker";
-              stsListIndex++;
-              currentStsToPut = stsListLastEdition[stsListIndex];
-            } else {
-              planning[i][j] = "B";
-              lineBreaks[i]++;
-              stsListIndex++;
-              currentStsToPut = stsListLastEdition[stsListIndex];
-            }
+            planningFirstHalf[i][j] = "B";
+            lineBreaks[i]++;
+            stsListIndex++;
+            currentStsToPut = stsListLastEdition[stsListIndex];
           }
         }
       }
+      const bestEnhancementplanningFirstHalf = this.bestEnhancement(
+        planningFirstHalf,
+        headers
+      );
 
+      const planningSecondHalf = Array.from(
+        { length: stsListLastEdition.length },
+        () => Array(headers.length).fill("")
+      );
       const deckermanLineBreaks = Array(stsListLastEdition.length).fill(0);
       for (let j = 0; j < headers.length; j++) {
         let stsListIndex = 0;
         let currentStsToPut = stsListLastEdition[stsListIndex];
-        for (
-          let i = stsListLastEdition.length;
-          i < stsListLastEdition.length * 2;
-          i++
-        ) {
-          if (j === 7) {
-            if (deckermanLineBreaks[i - stsListLastEdition.length] === 0) {
-              planning[i][j] = "B";
-              deckermanLineBreaks[i - stsListLastEdition.length]++;
-            } else {
-              if (currentStsToPut.intervals.includes(headers[j])) {
-                planning[i][j] = currentStsToPut.matricule + "-deckman";
-                stsListIndex++;
-                currentStsToPut = stsListLastEdition[stsListIndex];
-              } else {
-                planning[i][j] = "B";
-                deckermanLineBreaks[i - stsListLastEdition.length]++;
-                stsListIndex++;
-                currentStsToPut = stsListLastEdition[stsListIndex];
+
+        for (let i = 0; i < stsListLastEdition.length; i++) {
+          if (currentStsToPut.intervals.includes(headers[j])) {
+            planningSecondHalf[i][j] = currentStsToPut.matricule + "-deckman";
+            stsListIndex++;
+            currentStsToPut = stsListLastEdition[stsListIndex];
+          } else {
+            planningSecondHalf[i][j] = "B";
+            deckermanLineBreaks[i]++;
+            stsListIndex++;
+            currentStsToPut = stsListLastEdition[stsListIndex];
+          }
+        }
+      }
+      const bestEnhancementplanningSecondHalf = this.bestEnhancement(
+        planningSecondHalf,
+        headers
+      );
+      const bestEnhancementplanning = [
+        ...bestEnhancementplanningFirstHalf,
+        ...bestEnhancementplanningSecondHalf,
+      ];
+      console.log("selected Roles : ", JSON.stringify(this.selectedRoles));
+      if (this.selectedRoles.includes("assistant")) {
+        for (let i = 0; i < bestEnhancementplanning.length; i++) {
+          let breakCount = 0;
+          for (let j = 0; j < bestEnhancementplanning[i].length; j++) {
+            if (bestEnhancementplanning[i][j] === "B") {
+              breakCount++;
+              if (breakCount > 1) {
+                bestEnhancementplanning[i][j] = "Assistant";
               }
             }
-          } else {
-            if (currentStsToPut.intervals.includes(headers[j])) {
-              planning[i][j] = currentStsToPut.matricule + "-deckman";
-              stsListIndex++;
-              currentStsToPut = stsListLastEdition[stsListIndex];
-            } else {
-              planning[i][j] = "B";
-              deckermanLineBreaks[i - stsListLastEdition.length]++;
-              stsListIndex++;
-              currentStsToPut = stsListLastEdition[stsListIndex];
-            }
           }
         }
       }
 
-      for (let i = 0; i < planning.length; i++) {
-        let breakCount = 0;
-        for (let j = 0; j < planning[i].length; j++) {
-          if (planning[i][j] === "B") {
-            breakCount++;
-            if (breakCount > 1) {
-              planning[i][j] = "Assistant";
-            }
-          }
-        }
-      }
-
-      for (let i = 0; i < planning.length; i++) {
-        let breakCount = 0;
-        for (let j = 0; j < planning[i].length; j++) {
-          if (planning[i][j] === "B") {
-            breakCount++;
-            if (breakCount > 1) {
-              planning[i][j] = "Assistant";
-            }
-          }
-        }
-      }
-
-      const sortedPlanning = this.sortPlanning(planning);
-      return sortedPlanning;
+      // console.table(bestEnhancementplanning);
+      const sortedPlanning = this.sortPlanning(bestEnhancementplanning);
+      return bestEnhancementplanning;
     },
     generateRandomHours(maxHours) {
       // Generate a random number that is a multiple of 10 up to maxHours

@@ -358,15 +358,7 @@ export default {
     selectedDayTime(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedCreateDate) {
-          let date = new Date(this.selectedCreateDate);
-          let year = date.getFullYear();
-          let month = ("0" + (date.getMonth() + 1)).slice(-2);
-          let day = ("0" + date.getDate()).slice(-2);
-          let formattedDate = `${year}-${month}-${day}`;
-          let dateTime = `${formattedDate}`;
-          this.shifts = this.getActualShift(dateTime);
-          // console.log(this.shifts);
-          this.shifts.pop();
+        
           switch (this.selectedDayTime) {
             case "Morning":
               this.selectedCreateShift = this.shifts[0];
@@ -386,15 +378,6 @@ export default {
     selectedCreateDate(newVal, oldVal) {
       if (newVal !== oldVal) {
         if (this.selectedDayTime) {
-          let date = new Date(this.selectedCreateDate);
-          let year = date.getFullYear();
-          let month = ("0" + (date.getMonth() + 1)).slice(-2);
-          let day = ("0" + date.getDate()).slice(-2);
-          let formattedDate = `${year}-${month}-${day}`;
-          let dateTime = `${formattedDate}`;
-          this.shifts = this.getActualShift(dateTime);
-
-          this.shifts.pop();
           switch (this.selectedDayTime) {
             case "Morning":
               this.selectedCreateShift = this.shifts[0];
@@ -909,6 +892,14 @@ export default {
     },
     setEquipements() {
       this.setLoadingValueAction(true);
+      let date = new Date(this.selectedCreateDate);
+      let year = date.getFullYear();
+      let month = ("0" + (date.getMonth() + 1)).slice(-2);
+      let day = ("0" + date.getDate()).slice(-2);
+      let formattedDate = `${year}-${month}-${day}`;
+      let dateTime = `${formattedDate}`;
+      this.shifts = this.getActualShift(dateTime);
+      this.shifts.pop();
       this.search = "";
       this.userRole = this.getUserRole;
       this.userActive = this.getUserActive;
