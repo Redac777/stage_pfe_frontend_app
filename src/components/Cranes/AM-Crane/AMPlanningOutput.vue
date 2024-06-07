@@ -198,6 +198,7 @@
                       !isST(value.matricule || value) &&
                       !isBreak(value.matricule || value) &&
                       !isAssistant(value),
+                    
                   }"
                 >
                   <span
@@ -634,6 +635,7 @@ export default {
     isSTSTS(value) {
       return (
         !value.includes("-") &&
+        !value.includes("AM") &&
         value !== "B" &&
         value !== "DB" &&
         value !== "assistant"
@@ -901,7 +903,7 @@ export default {
             // Create the table headers
             this.tableHeaders = [
               {
-                title: "AM",
+                title: "AM (checker | deckman | assistant)",
                 align: "start",
                 sortable: false,
                 key: "driver",
@@ -1632,6 +1634,9 @@ td {
   font-weight: bold;
   font-size: 0.55rem;
 }
+th{
+  font-size: 0.60rem;
+}
 
 thead td {
   font-weight: bolder;
@@ -1817,5 +1822,8 @@ thead td {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+.stSTS{
+  background-color: blue;
 }
 </style>

@@ -468,6 +468,7 @@ export default {
   mounted() {
     this.setData();
     this.setIsRoleSaved();
+   
   },
 
   //methods
@@ -920,21 +921,25 @@ export default {
             );
           }
         }
-        this.workers.forEach(item=>{
-          let itemToAdd = this.selectedSTSs.find(stsItem=>stsItem.matricule===item.STS);
-          if(itemToAdd){
+        this.workers.forEach((item) => {
+          let itemToAdd = this.selectedSTSs.find(
+            (stsItem) => stsItem.matricule === item.STS
+          );
+          if (itemToAdd) {
             let equWPlanning = {
               equipement_id: itemToAdd.id,
-              subcontract:item.worker,
+              subcontract: item.worker,
               planning_id: response.id,
             };
             equSTPromises.push(this.addEquipementToPlanning(equWPlanning));
           }
-          
-        })
-        Promise.all(userPromises.concat(equipementPromises,equSTPromises)).then(() => {
+        });
+        Promise.all(
+          userPromises.concat(equipementPromises, equSTPromises)
+        ).then(() => {
           // console.log(usersAddedSuccessfully);
-          // console.log(equAddedSuccessfully);
+          // console.log(equAddedSuccessfully);setBoxesData
+
           this.setBoxesData(outputs);
         });
       });
@@ -1293,6 +1298,8 @@ export default {
       // console.log("Roles List : ");
       // console.log(this.selectedRoles);
       // console.log(this.numWorkers);
+      console.log("outputs : ");
+      console.log(JSON.parse(JSON.stringify(outputs)));
       const sortedPlanning = this.generatePlanning(outputs, this.shift);
       // console.log("Sorted Planning : ");
       // console.table(sortedPlanning);
@@ -1340,7 +1347,7 @@ export default {
             user_id: finalPlanning[i][0],
             equipement_id: sts ? sts.id : null,
             break: finalPlanning[i][j] === "B",
-            role: role?role:null,
+            role: role ? role : null,
             start_time: start,
             ends_time: end,
           };
@@ -1377,7 +1384,7 @@ export default {
     bestEnhancement(planning, headers) {
       const lineSTS = [];
       let tempValue = "";
-      for (let i = 0; i < planning.length / 2; i++) {
+      for (let i = 0; i < planning.length; i++) {
         let breaks = 0;
         for (let j = 0; j < headers.length; j++) {
           if (planning[i][j] != "B") tempValue = planning[i][j];
@@ -1389,22 +1396,30 @@ export default {
       let count = 0;
       let line = 0;
       let temp = 0;
+      console.log(lineSTS);
       while (count < lineSTS.length) {
         let found = false;
         if (planning[line].includes(lineSTS[count])) {
+          console.log("yes");
           for (let j = 0; j < headers.length; j++) {
             for (let i = 0; i < planning.length; i++) {
+              
               if (
                 planning[i][j] === "B" &&
                 (planning[i][j - 1] === "B" ||
-                  planning[i][j - 1] === lineSTS[count]) &&
+                  planning[i][j - 1] === lineSTS[count] || planning[i][j - 1]===undefined) &&
                 (planning[i][j + 1] === "B" ||
-                  planning[i][j + 1] === lineSTS[count])
+                  planning[i][j + 1] === lineSTS[count] || planning[i][j + 1]===undefined)
               ) {
+                console.log("undefined");
                 planning[line][j] = "B";
                 planning[i][j] = lineSTS[count];
                 found = true;
+                console.table(planning)
                 break;
+              }
+              else{
+                console.log("nooooo : ",planning[i][j]);
               }
             }
             if (found) break;
@@ -1438,10 +1453,6 @@ export default {
           }
         }
       }
-      const bestEnhancementplanningFirstHalf = this.bestEnhancement(
-        planningFirstHalf,
-        headers
-      );
 
       const planningSecondHalf = Array.from(
         { length: stsListLastEdition.length },
@@ -1465,14 +1476,22 @@ export default {
           }
         }
       }
-      const bestEnhancementplanningSecondHalf = this.bestEnhancement(
-        planningSecondHalf,
+
+      const tempPlanning = [...planningFirstHalf, ...planningSecondHalf];
+      console.log(tempPlanning);
+      for (let i = tempPlanning.length; i < this.selectedAMs.length; i++) {
+        let lines = [];
+        for (let j = 0; j < headers.length; j++) {
+          lines.push("B");
+        }
+        tempPlanning.push(lines);
+      }
+      const bestEnhancementplanning = this.bestEnhancement(
+        tempPlanning,
         headers
       );
-      const bestEnhancementplanning = [
-        ...bestEnhancementplanningFirstHalf,
-        ...bestEnhancementplanningSecondHalf,
-      ];
+      // console.log(bestEnhancementplanning);
+
       console.log("selected Roles : ", JSON.stringify(this.selectedRoles));
       if (this.selectedRoles.includes("assistant")) {
         for (let i = 0; i < bestEnhancementplanning.length; i++) {
@@ -1490,6 +1509,8 @@ export default {
 
       // console.table(bestEnhancementplanning);
       const sortedPlanning = this.sortPlanning(bestEnhancementplanning);
+      console.log("sortedPlanning : ");
+      console.table(sortedPlanning);
       return bestEnhancementplanning;
     },
     generateRandomHours(maxHours) {

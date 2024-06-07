@@ -12,10 +12,10 @@
         <tbody>
           <tr v-for="row in items" :key="row.id">
             <td v-for="header in headers" :key="header.key" :class="{
-                'red' : isBreak(row[header.key].matricule),
+                'red' : isBreak(row[header.key]),
                 'bold-class' : isDriver(row[header.key])
             }">
-              {{ row[header.key].matricule? row[header.key].matricule : row[header.key]}}
+              {{ row[header.key] && row[header.key].matricule? row[header.key].matricule : row[header.key]}}
             </td>
           </tr>
         </tbody>
@@ -44,10 +44,25 @@
             console.log(this.items);
         },
         isBreak(value){
+          if(value){
+            if(value.matricule){
+            return value.matricule==="B" || value.matricule==="DB"
+          }
+          else{
             return value==="B" || value==="DB"
+          }
+          }  
         },
         isDriver(value){
-            return value.matricule ? false : true
+          if(value){
+            if(value.matricule){
+              return value.matricule ? false : true
+            }
+            else{
+              return value ? false : true
+            }
+          }
+            
         }
     }
   }

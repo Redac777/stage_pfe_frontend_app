@@ -366,6 +366,7 @@ export default {
       neededSTSIntervals: [],
       printPlanning: false,
       transData: [],
+      
     };
   },
   components: {
@@ -708,30 +709,30 @@ export default {
           this.setPlanningBoxes(planningId).then(() => {
             this.planning = this.getPlanningBoxes;
             const transformed = this.transformPlanningBoxes();
-            this.transData = this.transformPlanningBoxes();
+            this.transData = transformed;
             this.transormedData = transformed;
             // console.log(transformed)
             this.uncoveredIntervals = this.getUncoveredIntervals(
               this.planningEquipments,
               transformed
             );
-            // console.log(this.uncoveredIntervals)
+            console.log(this.uncoveredIntervals)
             this.neededSTSIntervals = this.uncoveredIntervals.map((item) => {
               return item.interval;
             });
 
             // console.log(this.neededSTSIntervals);
-            this.transormedData.forEach((item) => {
-              const transData = this.uncoveredIntervals.find((uncovInt) => {
+            this.transData.forEach((item) => {
+              const data = this.uncoveredIntervals.find((uncovInt) => {
                 return uncovInt.interval === item.timeInterval;
               });
-              if (transData) {
-                transData.sts.forEach((tData) => {
+              if (data) {
+                data.sts.forEach((tData) => {
                   item.matricules.push(tData);
                 });
               }
             });
-            console.log(this.transormedData);
+            console.log(this.transData);
             // console.log(this.uncoveredIntervals);
             // Extract unique time intervals
             // Initialize an empty array to store unique time intervals
@@ -901,60 +902,21 @@ export default {
               ...timeIntervalsTable,
             ];
             console.log(this.tableHeaders);
+            console.log(this.uncoveredIntervals);
             this.tableHeaders.forEach((header) => {
+              let colNeeded = 0;
+              let itemToFind = this.uncoveredIntervals.find(item=>item.interval===header.title)
+              if(itemToFind){
+                colNeeded = itemToFind.sts.length;
+              }
               if (header.title != "Driver") {
-                const existingEquipements = this.planningTable
-                  .map(
-                    (item) =>
-                      item[`interval_${this.tableHeaders.indexOf(header)}`]
-                        ?.matricule
-                  )
-                  .filter(
-                    (matricule) => matricule !== "B" && matricule !== "DB"
-                  );
-                console.log(existingEquipements);
-                let tempItems = [...this.filteredEquipements];
-                console.log(this.transData);
-                console.log(header.title);
-                const wantedItem = this.transData.find(
-                  (uncocInt) => uncocInt.timeInterval === header.title
-                );
-                console.log(wantedItem);
-                if (wantedItem) {
-                  tempItems = wantedItem.matricules
-                    .map((sts) => {
-                      // Check if the equipment is already in use in the column
-                      const isExisting = existingEquipements.includes(sts);
-
-                      // If it's the current item being edited, keep it in the list with a "replace" tag
-                      // if (isExisting && equipment !== item[key].matricule) {
-                      //   return null; // Skip adding to the filtered list
-                      // }
-
-                      // Add the "replace" label if the equipment is existing
-                      return {
-                        value: sts,
-                        label: isExisting ? `${sts} (replace)` : sts,
-                      };
-                    })
-                    .filter(Boolean);
-                  console.log(tempItems);
-
-                  const missingSTS = tempItems.filter(
-                    (item) => !item.label.includes("replace")
-                  );
-                  console.log(missingSTS);
-                  console.log(missingSTS.length);
-                  let countSTSNeeded = 0;
-
                   let titleToCheck = header.title;
                   const existsInNeeded =
                     this.neededSTSIntervals.includes(titleToCheck);
-                  header.title = existsInNeeded
-                    ? header.title + "(" + missingSTS.length + ")"
-                    : header.title;
+                  header.title = itemToFind?header.title+" ("+colNeeded+")":
+                    header.title;
                   header.color = existsInNeeded ? "red" : "black";
-                }
+                
               }
             });
             // console.log(this.planningTable)
@@ -1073,7 +1035,6 @@ export default {
     openEditDialog(item, key) {
       // Reset old value
       this.oldValue = null;
-
       // Get the existing equipment matricules for the column, filtering out "B"
       const existingEquipements = this.planningTable
         .map((item) => item[key]?.matricule)

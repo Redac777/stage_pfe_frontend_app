@@ -217,6 +217,7 @@ export default {
       planningId: -1,
       startTime: "",
       endTime: "",
+      reformedIntervals:[]
     };
   },
 
@@ -650,22 +651,7 @@ export default {
     createPlanning() {
       this.showConfirmDialog = false;
       this.setLoadingValueAction(true);
-      const outputs = [];
-      Object.keys(this.intervals).forEach((key) => {
-        const keyIntervals = [];
-        this.intervals[key].forEach((interval) => {
-          const intervalHourly = this.splitIntoHourlyIntervals(interval);
-          intervalHourly.forEach((interv) => {
-            keyIntervals.push(interv);
-          });
-        });
-        outputs.push({
-          matricule: key,
-          intervals: keyIntervals,
-          length: keyIntervals.length,
-        });
-        outputs.sort((a, b) => b.length - a.length);
-      });
+      
       let planning = [];
       if (this.stsplanningData) {
         const date = new Date(this.stsplanningData.date);
@@ -738,10 +724,10 @@ export default {
         }
 
         Promise.all(userPromises.concat(equipementPromises)).then(() => {
-          console.log(outputs);
-          const output = this.setAllDriversPlanning(outputs).thePlanning;
+          console.log(this.reformedIntervals);
+          const output = this.setAllDriversPlanning(this.reformedIntervals).thePlanning;
           // output.unshift(this.shift);
-          // console.table(output);
+          console.table(output);
           this.setBoxes(output);
         });
       });
@@ -875,6 +861,25 @@ export default {
           this.intervals[key][0].startTime !== "" &&
           this.intervals[key][0].endTime !== ""
       );
+      const outputs = [];
+      Object.keys(this.intervals).forEach((key) => {
+        const keyIntervals = [];
+        this.intervals[key].forEach((interval) => {
+          const intervalHourly = this.splitIntoHourlyIntervals(interval);
+          intervalHourly.forEach((interv) => {
+            keyIntervals.push(interv);
+          });
+        });
+        outputs.push({
+          matricule: key,
+          intervals: keyIntervals,
+          length: keyIntervals.length,
+        });
+        outputs.sort((a, b) => b.length - a.length);
+      });
+      // console.log(outputs);
+      this.reformedIntervals=[...outputs];
+      console.log(this.reformedIntervals);
       this.showConfirmDialog = true;
     },
     getActualShift(date) {
@@ -1467,7 +1472,7 @@ export default {
       }
       Promise.all(promises).then(() => {
         this.setLoadingValueAction(false);
-        window.location.reload();
+        // window.location.reload();
       });
     },
   },

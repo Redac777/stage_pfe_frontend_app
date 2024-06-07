@@ -97,7 +97,7 @@ import { mapActions, mapGetters } from "vuex";
 export default {
   data() {
     return {
-      activeComponent: "RTGhome",
+      activeComponent: "AMhome",
       plannings: null,
       rsPlannings: null,
       stsPlannings: null,
