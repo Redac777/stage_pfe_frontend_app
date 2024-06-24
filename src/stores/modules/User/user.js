@@ -59,11 +59,17 @@ const usersModule = {
       return new Promise((resolve, reject) => {
         CustomizedAxios.post("users/login", user)
           .then((response) => {
-            commit("LOGIN_USER", response.data.payload);
-            CustomizedAxios.defaults.headers.common[
-              "Authorization"
-            ] = `Bearer ${response.data.payload.token}`;
-            resolve(response.data.payload);
+            if(response.data.payload){
+              commit("LOGIN_USER", response.data.payload);
+              CustomizedAxios.defaults.headers.common[
+                "Authorization"
+              ] = `Bearer ${response.data.payload.token}`;
+              resolve(response.data.payload);
+            }
+            else{
+              resolve(response.data);
+            }
+            
           })
           .catch((error) => {
             reject(error);

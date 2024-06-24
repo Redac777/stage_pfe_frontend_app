@@ -29,7 +29,7 @@
           </div>
           <div v-if="showCredError">
             <p class="error">
-              Matricule or Password Incorrect
+              {{this.showCredError}}
             </p>
           </div>
         </div>
@@ -97,14 +97,20 @@
            this.setLoadingValueAction(true);
            this.LoginAction({matricule:this.matricule,password:this.password})
                .then(user => {
+                  //  console.log("User:", user.error);
+                  if(user.error && user.error==="User is not active"){
+                    this.showCredError = user.error;
+                  }
+                  else if(user.error && user.error==="Unauthorized"){
+                    this.showCredError = "Matricule or Password incorrect";
+                  }
                    console.log("Active user:", this.getUserActive);
                    this.redirectAfterLogin();
                    this.setLoadingValueAction(false);
        })
                .catch(error => {
-                   this.error=error.message
+                   this.showCredError=error.message
                    if(error=="TypeError: Cannot read properties of undefined (reading 'user')")
-                   this.showCredError=true
                    this.setLoadingValueAction(false);
        });
        },
