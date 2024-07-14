@@ -1076,7 +1076,7 @@ export default {
 
       // Create promises for creating boxes for each time interval
       this.tableHeaders
-        .filter((header) => header.key.startsWith("interval__"))
+        .filter((header) => header.key.startsWith("interval_"))
         .forEach((header, index) => {
           // Prepare data for box creation
           const boxData = {
